@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>front door</title>
+    <link rel="Stylesheet" type="text/css" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.0/themes/ui-lightness/jquery-ui.css" media="all"/>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.5.2/jquery.min.js"></script>
+      <style type="text/css" media="all">
+	/* <![CDATA[ */
+	#message, #lastLine {
+background: #C5F180; color: #0A08A2; font-weight: bold;
+font-family: monospace;
+}
+section {
+   background: none repeat scroll 0 0 #E1E1DF;
+    border: 1px solid #595555;
+    float: left;
+    margin: 20px;
+    padding: 20px;
+}
+	/* ]]> */
+</style>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.11/jquery-ui.min.js"></script>
+  </head>
+  <body>
+    <section>
+      <h1>lcd</h1>
+      <div>
+	set message: 
+	<div>
+	  <textarea cols="21" rows="7" id="message"/>
+	</div>
+      </div>
+      <div>
+	backlight:
+	<div id="backlightSlider" style="width: 300px;"/>
+	  </div>
+    </section>
+    <section>
+      <h1>temperature</h1>
+      <div>Current: <span id="temperature"/> 
+      <button id="getTemperature">refresh</button>
+      </div>
+    </section>
+    <section>
+      <h1>door</h1>
+      <div>Current: <span id="door"/>
+      <button id="getDoor">refresh</button>
+      </div>
+    </section>
+    <script type="text/javascript">
+    // <![CDATA[
+    $(function () {
+	
+        $.get("lcd", function (data){ $("#message").val(data) });
+	$("#message").keyup(function() {
+	    $.ajax({
+		type: "PUT",
+		url: "lcd", 
+		data: $("#message").val()
+	    });
+	});
+	
+	$.getJSON("lcd/backlight", function (data) { 
+            $("#backlightSlider").slider({value: data.backlight});
+        });
+	$("#backlightSlider").slider({
+	    min: 0, max: 255, 
+	    slide: function (ev, ui) {
+		$.post("lcd/backlight", {brightness: ui.value});
+	    }});
+
+	function getTemperature() {
+	    $.get("temperature", function (data) { 
+		$("#temperature").text(data); 
+	    });
+	}
+	getTemperature();
+	$("#getTemperature").click(getTemperature);
+
+	function getDoor() {
+	    $.get("door", function (x) { $("#door").text(x) });
+	}
+	getDoor();
+	$("#getDoor").click(getDoor);
+
+    });
+	    // ]]>
+</script>
+  </body>
+</html>

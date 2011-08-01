@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>front door message</title>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>
+  </head>
+  <body>
+
+    Front door message:
+    <div><textarea name="message"></textarea></div>
+    <div><input type="text" name="lastLine"/></div>
+    <div id="save"></div>
+<script type="text/javascript">
+// <![CDATA[
+
+$(function () { 
+
+    function setup(elem, url) {
+	$.get(url, function (data) { elem.val(data) });
+	
+	elem.keyup(function() {
+	    $("#save").css("color", "yellow").text("saving...");
+	    $.ajax({
+		type: "PUT",
+		url: url, 
+		data: elem.val(), 
+		success: function () {
+		    $("#save").css("color", "black").text("ok");
+		}
+	    });
+	});
+    }
+
+    setup($("textarea[name=message]"), "message");
+    setup($("input[name=lastLine]"), "lastLine");
+
+});
+
+// ]]>
+</script>
+
+  </body>
+</html>
