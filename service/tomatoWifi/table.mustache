@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<div xmlns="http://www.w3.org/1999/xhtml" class="wifiNow">
+
+  <table><tr> 
+
+    <th class="name">Name</th> 
+    <th class="lease">Lease</th> 
+    <th class="ip">IP address</th> 
+    <th class="rssi">dBm</th> 
+    <th class="mac">MAC address</th> 
+    <th class="router">Router</th> 
+  </tr>
+  {{#rows}}
+  <tr class="{{cls}}">
+    <td>{{name}}</td>
+    <td class="lease">{{lease}}</td>
+    <td class="ip">{{ip}}</td>
+    <td class="rssi">{{signal}}</td>
+    <td class="mac">{{mac}}</td>
+    <td>{{router}}</td>
+  </tr>
+  {{/rows}}
+  </table>
+
+
+</div>
