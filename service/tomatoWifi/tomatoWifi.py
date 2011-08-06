@@ -13,7 +13,6 @@ Todo: this should be the one polling and writing to mongo, not entrancemusic
 from __future__ import division
 import sys, cyclone.web, simplejson, traceback, time, pystache, datetime
 from dateutil import tz
-from twisted.python import log
 from twisted.internet import reactor, task
 
 from pymongo import Connection, DESCENDING
@@ -24,9 +23,11 @@ from wifi import Wifi
 
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
+from logsetup import log
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
+
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -127,19 +128,19 @@ class Poller(object):
 
             actions = self.computeActions(newWithSignal)
             for action in actions:
+                log.info("action: %s", action)
                 action['created'] = datetime.datetime.now(tz.gettz('UTC'))
                 mongo.save(action)
                 try:
                     self.doEntranceMusic(action)
                 except Exception, e:
-                    print "entrancemusic error", e
+                    log.error("entrancemusic error: %r", e)
                     
             self.lastWithSignal = newWithSignal
             self.lastAddrs = newAddrs
             self.lastPollTime = time.time()
         except Exception, e:
-            print "poll error", e
-            traceback.print_exc()
+            log.error("poll error: %s\n%s", e, traceback.format_exc())
 
     def computeActions(self, newWithSignal):
         def removeVolatile(a):
@@ -174,17 +175,20 @@ class Poller(object):
         return actions
 
 
+    # these need to move out to their own service
     def doEntranceMusic(self, action):
-        # these need to move out to their own service
+        import restkit, jsonlib
         dt = self.deltaSinceLastArrive(action['name'])
+        log.debug("dt=%s", dt)
         if dt > datetime.timedelta(hours=1):
-            import restkit, jsonlib
             hub = restkit.Resource(
                 # PSHB not working yet; "http://bang:9030/"
                 "http://slash:9049/"
                 )
             action = action.copy()
             del action['created']
+            del action['_id']
+            log.info("post to %s", hub)
             hub.post("visitorNet", payload=jsonlib.dumps(action))
 
     def deltaSinceLastArrive(self, name):
@@ -202,8 +206,9 @@ if __name__ == '__main__':
         'servePort' : 9070,
         'pollFrequency' : 1/5,
         }
+    from twisted.python import log as twlog
     #log.startLogging(sys.stdout)
-
+    #log.setLevel(10)
 
     mongo = Connection('bang', 27017)['visitor']['visitor']
 
