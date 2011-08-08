@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:n="http://nevow.com/ns/nevow/0.1">
+  <head>
+    <title>shiftweb</title>
+    <style type="text/css" media="all">
+      /* <![CDATA[ */
+      body {
+	  background: #000000;
+	  color: #888;
+      }
+      h1 {
+	  font-size:100%;
+      }
+      div.manual {
+	  margin: 10px;
+	  padding: 10px;
+	  background: #222;
+	  width:19em;
+      }
+      div.credit {
+	  font-size: 80%;
+	  margin-top:41px;
+      }
+      .colorpicker {
+	  display: inline-block;
+      }
+      /* ]]> */
+    </style>
+    <meta name="viewport" content="width=320; initial-scale=1.3; maximum-scale=2.0; user-scalable=1;"/>
+
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript" src="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.js"></script>
+    <link rel="stylesheet" href="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.css" type="text/css" />
+  </head>
+  <body>
+    <h1>Light color</h1>
+    <div class="colorpicker" id="p0"></div>
+    <div class="colorpicker" id="p1"></div>
+    <div class="colorpicker" id="p2"></div>
+    <div class="colorpicker" id="p3"></div>
+    <div class="colorpicker" id="p4"></div>
+    
+    <script type="text/javascript">
+      $(document).ready(function() {
+
+	  $.each([
+	      ["#p0", "brite/0"],
+	      ["#p1", "brite/1"],
+	      ["#p2", "brite/2"],
+	      ["#p3", "brite/3"],
+	      ["#p4", "brite/4"],
+	  ], function (i, r) {
+	      var elem=r[0], url=r[1];
+
+	      var picker = $.farbtastic(elem, function (newColor) {
+		  $.ajax({
+                      type: "put",
+                      url: url,
+                      contentType: "text/plain",
+                      data: newColor
+		  });
+	      });
+	      
+	      $.get(url, picker.setColor);
+	  });
+      });
+    </script>
+    
+    <div class="credit">
+      Using the 
+      <a href="http://acko.net/dev/farbtastic">Farbtastic color picker</a>
+    </div>
+
+    <hr/>
+
+    <div class="manual">
+      <form method="POST" action="brite/0">
+	<div>
+	  Channel: <input type="text" name="channel" value="0" size="3"/>
+	  Color: <input type="text" name="color" value="#ffffff" size="7"/>
+	</div>
+	<div><input type="submit" value="Post color"/></div>
+      </form>
+    </div>
+
+  </body>
+</html>
