@@ -93,8 +93,12 @@ class HousePowerRaw(PrettyErrorHandler, cyclone.web.RequestHandler):
     """
     def get(self):
         self.set_header("Content-Type", "application/javascript")
-        self.settings.poller.assertIsCurrent()
-        self.write(json.dumps({"irLevels" : [[t1, lev1], [t2,lev2], ]}))
+        pts = []
+        for i in range(60):
+            level = self.settings.arduino.lastLevel()
+            pts.append((round(time.time(), 3), level))
+
+        self.write(json.dumps({"irLevels" : pts}))
 
 class HousePowerThreshold(PrettyErrorHandler, cyclone.web.RequestHandler):
     """
@@ -116,8 +120,8 @@ class Application(cyclone.web.Application):
             (r"/graph", GraphPage),
             (r"/frontDoorMotion", FrontDoorMotion),
             (r'/housePower', HousePower),
-            (r'/housepower/raw', HousePowerRaw),
-            (r'/housepower/threshold', HousePowerThreshold),
+            (r'/housePower/raw', HousePowerRaw),
+            (r'/housePower/threshold', HousePowerThreshold),
         ]
         settings = {"arduino" : ard, "poller" : poller}
         cyclone.web.Application.__init__(self, handlers, **settings)

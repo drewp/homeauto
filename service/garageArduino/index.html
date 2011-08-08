@@ -12,7 +12,6 @@ font-weight: bold;
 } 
 /* ]]> */
     </style>
-
   </head>
   <body>
 
@@ -24,9 +23,13 @@ font-weight: bold;
 
     <p><a href="http://www.jameco.com/webapp/wcs/stores/servlet/ProductDisplay?langId=-1&amp;productId=2006414&amp;catalogId=10001&amp;freeText=2006414&amp;app.products.maxperpage=15&amp;storeId=10001&amp;search_type=jamecoall&amp;ddkey=http:StoreCatalogDrillDownView">phototransistor</a> watching IR pulses on the power meter: last pulse was <span class="val" id="lastPulseAgo"/>; current power usage is <span class="val"><span id="currentWatts"/> watts</span> (assuming <span class="val" id="kwhPerBlink"/> kwh/blink)</p>
 
+    <p>Recent raw IR sensor data: <div><img src="" id="raw"/></div></p>
+
     <p><button type="submit" id="refresh">refresh</button></p>
 
     <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"/>
+
+
     <script type="text/javascript">
      // <![CDATA[
     $(function () {
@@ -36,6 +39,33 @@ font-weight: bold;
 	function refresh() {
 	    $.getJSON("frontDoorMotion", setTexts);
 	    $.getJSON("housePower", setTexts);
+
+	    $.getJSON("housePower/raw", function (data) {
+		var xp=[], yp=[];
+		var start = data.irLevels[0][0];
+		var maxTime = 0;
+		$.each(data.irLevels, function (i, xy) {
+		    maxTime = xy[0] - start;
+		    xp.push(maxTime.toPrecision(3));
+		    yp.push(xy[1]);
+		});
+		// edit with http://imagecharteditor.appspot.com/
+		$("#raw").attr("src",
+			       "http://chart.apis.google.com/chart"+
+			       "?chxr=0,0,"+maxTime+"|1,0,1024"+
+			       "&chds=0,"+maxTime+",0,1024"+
+			       "&chxl=2:|seconds"+
+                               "&chxs=0,676767,11.5,0,lt,676767|1,676767,11.5,-0.5,l,676767"+  
+			       "&chxt=x,y,x"+
+			       "&chs=600x200"+
+			       "&cht=lxy"+
+			       "&chco=76A4FB"+
+			       "&chd=t:"+xp.join(",")+"|"+yp.join(",")+
+			       "&chg=10,20"+
+			       "&chls=2"+
+			       "&chma=40,20,20,30"+
+			       "&chm=h,FF0000,0,0.7:50:2,1");
+	    });
 	}
 	refresh();
 	$("#refresh").click(refresh);
