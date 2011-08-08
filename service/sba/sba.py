@@ -15,6 +15,9 @@ class Sba(object):
         log.msg(str(self.s.__dict__))
         self.sendControl()
 
+    def ping(self):
+        pass # waiting for spec
+
     def sendControl(self):
         controlBits = [0, 1,
                        0, 0, 0,
@@ -93,6 +96,7 @@ class BriteChain(object):
 
 class IndexHandler(cyclone.web.RequestHandler):
     def get(self):
+        self.settings.chain.ping()
         self.set_header("Content-type", "text/html")
         self.write(open("sba.html").read())
 
