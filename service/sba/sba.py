@@ -77,6 +77,9 @@ class BriteChain(object):
         self.sba = sba
         self.colors = []
 
+    def ping(self):
+        self.sba.ping()
+
     def setColor(self, pos, color):
         """color is (r,g,b) 10-bit int. The highest position you ever
         set is how many channels we'll output"""
