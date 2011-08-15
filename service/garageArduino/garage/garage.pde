@@ -8,6 +8,14 @@
   
   // the phototransistor on analog2 is jameco 2006414
 
+  pinMode(3, OUTPUT);
+  digitalWrite(3, LOW);
+  // this drives a relay for the garage door. There is a 
+  // LP filter on it so the garage doesn't open if there's 
+  // an arduino power-on glitch. It may be that atmel has 
+  // circuitry to prevent such glitches, so a pull-down
+  // resistor may be enough. I haven't checked carefully.
+
   Serial.begin(115200);
 }
 
@@ -61,6 +69,11 @@ void loop()
       Serial.print("{\"threshold\":");
       Serial.print(threshold);
       Serial.print("}\n");
+    } else if (cmd == 0x04) {
+      digitalWrite(3, arg);
+      Serial.print("{\"garage\":");
+      Serial.print(arg ? "true" : "false");
+      Serial.print("}\n");     
     }
   }
 }

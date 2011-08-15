@@ -5,19 +5,20 @@ talks to frontdoordriver.pde on an arduino
 
 from __future__ import division
 
-import cyclone.web, json, traceback, os, sys, time
-from twisted.python import log
-from twisted.internet import reactor, task
+import cyclone.web, json, traceback, os, sys, time, logging
+from twisted.internet import reactor, task, defer
 from twisted.web.client import getPage
 sys.path.append("/my/proj/house/frontdoor")
 from loggingserial import LoggingSerial        
+sys.path.append("/my/proj/homeauto/lib")
+from cycloneerr import PrettyErrorHandler
+from logsetup import log
 sys.path.append("../../../room")
 from carbondata import CarbonClient
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph      
 from rdflib import Namespace, RDF, Literal
-sys.path.append("/my/proj/homeauto/lib")
-from cycloneerr import PrettyErrorHandler
+
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
@@ -45,6 +46,11 @@ class ArduinoGarage(object):
         """set 10-bit threshold"""
         self.ser.write("\x60\x03"+chr(max(1 << 2, t) >> 2))
         return self.ser.readJson()['threshold']
+
+    def setGarage(self, level):
+        """set garage door opener pin"""
+        self.ser.write("\x60\x04"+chr(int(bool(level))))
+        return self.ser.readJson()['garage']
 
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
@@ -112,6 +118,19 @@ class HousePowerThreshold(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self):
         pass
 
+class GarageDoorOpen(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def post(self):
+        self.set_header("Content-Type", "text/plain")
+        self.settings.arduino.setGarage(True)
+        self.write("pin high, waiting..\n")
+        self.flush()
+        d = defer.Deferred()
+        def finish():
+            self.settings.arduino.setGarage(False)            
+            self.write("pin low. Done")
+            d.callback(None)
+        reactor.callLater(1.5, finish) # this time depends on the LP circuit
+        return d
 
 class Application(cyclone.web.Application):
     def __init__(self, ard, poller):
@@ -122,6 +141,7 @@ class Application(cyclone.web.Application):
             (r'/housePower', HousePower),
             (r'/housePower/raw', HousePowerRaw),
             (r'/housePower/threshold', HousePowerThreshold),
+            (r'/garageDoorOpen', GarageDoorOpen),
         ]
         settings = {"arduino" : ard, "poller" : poller}
         cyclone.web.Application.__init__(self, handlers, **settings)
@@ -220,7 +240,10 @@ if __name__ == '__main__':
         'boardName' : 'garage', # gets sent with updates
         }
 
-    #log.startLogging(sys.stdout)
+    #from twisted.python import log as twlog
+    #twlog.startLogging(sys.stdout)
+
+    log.setLevel(logging.DEBUG)
 
     ard = ArduinoGarage()
 

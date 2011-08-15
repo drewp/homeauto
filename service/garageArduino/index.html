@@ -19,6 +19,8 @@ font-weight: bold;
 
     <p>Talking to an arduino uno on host <tt>slash</tt></p>
 
+    <p>Pulse pin 3 to trigger garage door opener <form method="post" action="garageDoorOpen"><input type="submit" value="Garage door opener"/></form></p>
+
     <p><a href="http://octopart.com/555-28027-parallax-708653">PIR sensor</a> (in <a href="http://octopart.com/1551ggy-hammond-15686">a box</a>) measuring front door motion: <span class="val" id="frontDoorMotion"/></p>
 
     <p><a href="http://www.jameco.com/webapp/wcs/stores/servlet/ProductDisplay?langId=-1&amp;productId=2006414&amp;catalogId=10001&amp;freeText=2006414&amp;app.products.maxperpage=15&amp;storeId=10001&amp;search_type=jamecoall&amp;ddkey=http:StoreCatalogDrillDownView">phototransistor</a> watching IR pulses on the power meter: last pulse was <span class="val" id="lastPulseAgo"/>; current power usage is <span class="val"><span id="currentWatts"/> watts</span> (assuming <span class="val" id="kwhPerBlink"/> kwh/blink)</p>
