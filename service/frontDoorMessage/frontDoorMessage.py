@@ -3,15 +3,16 @@ holds the current message on the front door lcd
 """
 import cyclone.web, sys
 import restkit
-from twisted.python import log
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
+from logsetup import log
 
 class LcdParts(object):
     def __init__(self, putUrl):
         self.putUrl = putUrl
+        log.info("restarting- message is now empty")
         self.message = ""
         self.lastLine = ""
 
@@ -75,6 +76,5 @@ if __name__ == '__main__':
 
     lcdParts = LcdParts(config['frontDoorArduino'] + 'lcd')
     
-    log.startLogging(sys.stdout)
     reactor.listenTCP(config['servePort'], Application(lcdParts))
     reactor.run()
