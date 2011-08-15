@@ -183,7 +183,7 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.write("onewire reader (also gathers temps from arduinos); logs to graphite.\n\n Last temps: %r" % self.settings.poller.lastDoc)
 
 if __name__ == '__main__':
-    log.setLevel(logging.DEBUG)
+    log.setLevel(logging.INFO)
     poller = Poller()
     poller.sendTemps()
     reactor.listenTCP(9078, cyclone.web.Application([
