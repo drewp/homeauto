@@ -65,7 +65,9 @@ def soundOut(preSound=None, speech='', postSound=None, fast=False):
 class visitorNet(object):
     def POST(self):
         data = jsonlib.loads(web.data())
-
+        if 'name' not in data:
+            data['name'] = 'unknown'
+            
         if data.get('action') == 'arrive':
             
             snd = ('/my/music/entrance/%s.wav' %
