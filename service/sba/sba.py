@@ -1,5 +1,5 @@
 from __future__ import division
-import serial, time, jsonlib, sys, cgi, argparse
+import serial, time, jsonlib, sys, cgi, argparse, os
 import cyclone.web
 from twisted.python import log
 from twisted.internet import reactor
@@ -47,7 +47,7 @@ class Sba(object):
         try:
             self.s.write(cmd + "\r")
         except OSError:
-            self.reset()
+            os.abort()
             
         if getResponse:
             return self.s.readline().strip()
