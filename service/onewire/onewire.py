@@ -134,7 +134,7 @@ class Poller(object):
         ret = {}
         
         for url, name in [("http://star:9014/", "ariroom"),
-                          ("http://space:9080/", "frontDoor"),
+                          ("http://slash:9080/", "frontDoor"),
                           ]:
             for tries in range(3):
                 try:

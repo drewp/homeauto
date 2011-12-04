@@ -69,7 +69,7 @@ class Application(cyclone.web.Application):
 if __name__ == '__main__':
 
     config = {
-        'frontDoorArduino': "http://space:9080/",
+        'frontDoorArduino': "http://slash:9080/",
         'doorChangePost' : 'http://bang.bigasterisk.com:9069/inputChange',
         'servePort' : 9081,
         }
