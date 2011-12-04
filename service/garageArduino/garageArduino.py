@@ -234,7 +234,7 @@ class Poller(object):
 if __name__ == '__main__':
 
     config = { # to be read from a file
-        'arduinoPort': '/dev/ttyACM0',
+        'arduinoPort': '/dev/serial/by-id/usb-Arduino__www.arduino.cc__Arduino_Uno_6493534323335161A2F1-if00',
         'servePort' : 9050,
         'pollFrequency' : 5,
         'boardName' : 'garage', # gets sent with updates
@@ -245,7 +245,7 @@ if __name__ == '__main__':
 
     log.setLevel(logging.DEBUG)
 
-    ard = ArduinoGarage()
+    ard = ArduinoGarage(port=config['arduinoPort'])
 
     period = 1/config['pollFrequency']
     p = Poller(ard, period)
