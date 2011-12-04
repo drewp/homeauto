@@ -15,8 +15,8 @@ section {
    background: none repeat scroll 0 0 #E1E1DF;
     border: 1px solid #595555;
     float: left;
-    margin: 20px;
-    padding: 20px;
+    margin: 5px;
+    padding: 10px;
 }
 	/* ]]> */
 </style>
@@ -48,6 +48,13 @@ section {
       <button id="getDoor">refresh</button>
       </div>
     </section>
+    <section>
+      <h1>yard light</h1>
+      <div>Current: <span id="yardLight"/>
+      <button id="toggleYardLight">toggle</button>
+      </div>
+    </section>
+    
     <script type="text/javascript">
     // <![CDATA[
     $(function () {
@@ -84,6 +91,22 @@ section {
 	getDoor();
 	$("#getDoor").click(getDoor);
 
+	function refreshYardLight() {
+	$.getJSON("yardLight", function (data) {
+	    $("#yardLight").text(data.yardLight);
+	  });
+	}
+	refreshYardLight();
+	$("#toggleYardLight").click(function () {
+	    $.getJSON("yardLight", function (data) {
+		$.ajax({
+		  type: "PUT",
+   	          url: "yardLight",
+		      data: JSON.stringify(!data.yardLight),
+		      success: refreshYardLight
+		});
+	    });
+	});
     });
 	    // ]]>
 </script>
