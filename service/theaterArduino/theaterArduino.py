@@ -129,7 +129,7 @@ class WatchPins(object):
 if __name__ == '__main__':
 
     config = { # to be read from a file
-        'arduinoPort': '/dev/ttyUSB0',
+        'arduinoPort': '/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0',
         'servePort' : 9056,
         'pollFrequency' : 20,
         'post' : 'http://bang:9069/pinChange',
