@@ -1,7 +1,7 @@
 """
 holds the current message on the front door lcd
 """
-import cyclone.web, sys
+import cyclone.web, sys, socket
 import restkit
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
@@ -18,10 +18,13 @@ class LcdParts(object):
 
     def updateLcd(self):
         whole = "%-147s%-21s" % (self.message, self.lastLine)
-        restkit.request(url=self.putUrl,
-                        method="PUT",
-                        body=whole,
-                        headers={"content-type":"text/plain"})
+        try:
+            restkit.request(url=self.putUrl,
+                            method="PUT",
+                            body=whole,
+                            headers={"content-type":"text/plain"})
+        except socket.error, e:
+            log.warn("update lcd failed, %s" % e)
         
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     @inlineCallbacks
