@@ -69,7 +69,7 @@ class Poller(object):
 
     def reset(self):
         log.info("reopening serial port")
-        for port in ['/dev/ttyUSB0', '/dev/ttyUSB1']:
+        for port in ['/dev/serial/by-id/usb-0557_2008-if00-port0']:
             try:
                 self.comm = Comm(port)
                 break

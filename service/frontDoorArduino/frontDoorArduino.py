@@ -181,12 +181,8 @@ class Poller(object):
 
 if __name__ == '__main__':
 
-    port = '/dev/ttyUSB0'
-    if not os.path.exists(port):
-        port = '/dev/ttyUSB1'
-
     config = { # to be read from a file
-        'arduinoPort': port,
+        'arduinoPort': '/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A6004bUG-if00-port0',
         'servePort' : 9080,
         'pollFrequency' : 1,
         'boardName' : 'frontDoor', # gets sent with updates
