@@ -6,6 +6,9 @@ lcd is this wide
 |-------------------|
 22:05 85F in, 71F out
 
+pin 11 senses the door
+pin 12 activates the front yard lights ('out yard')
+
 """
 
 from __future__ import division
@@ -29,10 +32,9 @@ class Board(object):
         self.ser = LoggingSerial(port=port)
         self.ser.flush()
 
-        self.ser.write("\xff\x00\x00")
-        self.ser.write("\xff\x03\x00")
-        self.currentText = ""
-        self.currentBrightness = 0
+        self.setLcd("")
+        self.setLcdBrightness(0)
+        self.setYardLight(0)
 
     def ping(self):
         self.getDoor()
@@ -41,6 +43,13 @@ class Board(object):
         self.ser.write("\xff\x01")
         ret = self.ser.readJson()
         return ret['door']
+
+    def setYardLight(self, level):
+        self.currentYardLight = bool(level)
+        self.ser.write("\xff\x04" + chr(bool(self.currentYardLight)))
+
+    def getYardLight(self):
+        return self.currentYardLight
 
     def getLcd(self):
         return self.currentText
@@ -101,6 +110,21 @@ class Backlight(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.write("ok")
     post = put
 
+
+class YardLight(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self):
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps({
+            "yardLight" : self.settings.board.getYardLight()}))
+        
+    def put(self):
+        """text true or false or 0 or 1"""
+        self.settings.board.setYardLight(
+            self.request.body.strip() in ['true', '1'])
+        self.write("ok")
+    post = put
+
+
 class Door(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header("Content-Type", "text/plain")
@@ -120,6 +144,7 @@ class Application(cyclone.web.Application):
             (r'/door', Door),
             (r'/temperature', Temperature),
             (r'/lcd/backlight', Backlight),
+            (r'/yardLight', YardLight),
         ]
         settings = {"board" : board}
         cyclone.web.Application.__init__(self, handlers, **settings)
@@ -169,7 +194,7 @@ if __name__ == '__main__':
         # todo: need options to preset inputs/outputs at startup
         }
 
-    log.startLogging(sys.stdout)
+    #log.startLogging(sys.stdout)
 
     board = Board(port=config['arduinoPort'])
     
