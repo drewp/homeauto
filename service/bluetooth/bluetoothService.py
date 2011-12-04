@@ -71,7 +71,9 @@ def mongoInsert(msg):
     except UnicodeDecodeError:
         pass
     else:
-        if msg.get('name', '') and msg['name'] not in ['THINKPAD_T43']:
+        if (msg.get('name', '') and
+            msg['name'] not in ['THINKPAD_T43'] and
+            msg['action'] == 'arrive'):
             hub.post("visitorNet", payload=js) # sans datetime
     msg['created'] = datetime.datetime.now(tz.gettz('UTC'))
     mongo.insert(msg, safe=True)
