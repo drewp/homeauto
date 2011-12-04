@@ -3,6 +3,7 @@ import serial, time, jsonlib, sys, cgi, argparse, os
 import cyclone.web
 from twisted.python import log
 from twisted.internet import reactor
+from serial.serialutil import SerialException
 
 class Sba(object):
     def __init__(self, port="/dev/ttyACM0"):
@@ -46,7 +47,7 @@ class Sba(object):
         """
         try:
             self.s.write(cmd + "\r")
-        except OSError:
+        except (OSError, SerialException):
             os.abort()
             
         if getResponse:
