@@ -1,0 +1,44 @@
+@prefix : <http://projects.bigasterisk.com/room/>.
+@prefix bigast: <http://bigasterisk.com/>.
+@prefix dev: <http://projects.bigasterisk.com/device/>.
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix env: <http://projects.bigasterisk.com/device/environment>.
+
+{ <http://bigasterisk.com/wifiDevice/...> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+{ <http://bigasterisk.com/wifiDevice/...> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+
+{ env: :localHour 8 } => { env: :localHour :awakeTime } .
+{ env: :localHour 9 } => { env: :localHour :awakeTime } .
+{ env: :localHour 10 } => { env: :localHour :awakeTime } .
+{ env: :localHour 11 } => { env: :localHour :awakeTime } .
+{ env: :localHour 12 } => { env: :localHour :awakeTime } .
+{ env: :localHour 13 } => { env: :localHour :awakeTime } .
+{ env: :localHour 14 } => { env: :localHour :awakeTime } .
+{ env: :localHour 15 } => { env: :localHour :awakeTime } .
+{ env: :localHour 16 } => { env: :localHour :awakeTime } .
+{ env: :localHour 17 } => { env: :localHour :awakeTime } .
+{ env: :localHour 18 } => { env: :localHour :awakeTime } .
+{ env: :localHour 19 } => { env: :localHour :awakeTime } .
+{ env: :localHour 20 } => { env: :localHour :awakeTime } .
+{ env: :localHour 21 } => { env: :localHour :awakeTime } .
+{ env: :localHour 22 } => { env: :localHour :awakeTime } .
+{ env: :localHour 23 } => { env: :localHour :awakeTime } .
+
+{
+  :auth :near :home .
+  dev:theaterDoorOutsideMotion :state :motion.
+  dev:theaterDoorOpen :state :closed .
+  env: :localHour :awakeTime .
+} => { dev:theaterDoorLock :state :unlocked } .
+
+{ dev:frontDoorOpen :state :closed } => { dev:frontDoorOpenIndicator :text "_" } .
+{ dev:frontDoorOpen :state :open } => { dev:frontDoorOpenIndicator :text "D" } .
+
+{ dev:frontDoorMotion :state :noMotion } => { 
+  dev:frontDoorMotionIndicator :text "_" .
+  dev:frontDoorLcd :brightness 0 .
+} .
+{ dev:frontDoorMotion :state :motion } => { 
+  dev:frontDoorMotionIndicator :text "D" .
+  dev:frontDoorLcd :brightness 255 .
+} .
