@@ -10,8 +10,8 @@ from cycloneerr import PrettyErrorHandler
 from logsetup import log
 
 class LcdParts(object):
-    def __init__(self, putUrl):
-        self.putUrl = putUrl
+    def __init__(self, putUrl, pingUrl):
+        self.putUrl, self.pingUrl = putUrl, pingUrl
         log.info("restarting- message is now empty")
         self.message = ""
         self.lastLine = ""
@@ -25,6 +25,11 @@ class LcdParts(object):
                             headers={"content-type":"text/plain"})
         except socket.error, e:
             log.warn("update lcd failed, %s" % e)
+
+        try:
+            restkit.request(url=self.pingUrl, method="POST", body="")
+        except socket.error, e:
+            log.warn("ping failed, %s" % e)
         
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     @inlineCallbacks
@@ -73,11 +78,12 @@ if __name__ == '__main__':
 
     config = {
         'frontDoorArduino': "http://slash:9080/",
-        'doorChangePost' : 'http://bang.bigasterisk.com:9069/inputChange',
+        'doorChangePost' : 'http://bang:8014/frontDoorChange',
         'servePort' : 9081,
         }
 
-    lcdParts = LcdParts(config['frontDoorArduino'] + 'lcd')
+    lcdParts = LcdParts(config['frontDoorArduino'] + 'lcd',
+                        config['doorChangePost'])
     
     reactor.listenTCP(config['servePort'], Application(lcdParts))
     reactor.run()
