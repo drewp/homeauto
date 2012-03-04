@@ -1,3 +1,14 @@
+/*
+hardware is:
+http://emartee.com/product/41914/Boarduino---USB-%28Arduino-Clone%29
+
+usb boarduino is like a 'duemilanove w atmega328'
+
+
+
+ */
+
+
 int datapin  = 10; // DI
 int latchpin = 11; // LI
 int enablepin = 12; // EI
@@ -92,6 +103,7 @@ void loop() {
       }
       latch();
       Serial.print("{\"ok\":1}\n");
-    }
+    } 
+
   }
 }
