@@ -12,7 +12,8 @@ class Sba(object):
 
     def reset(self):
         log.msg("reopening port")
-        self.s = serial.Serial(self.port, baudrate=115200)
+	# this timeout will fire every few seconds
+        self.s = serial.Serial(self.port, baudrate=115200, timeout=0.020)
         log.msg(str(self.s.__dict__))
         self.sendControl()
 
@@ -168,10 +169,7 @@ def main():
     parser.add_argument('-v', '--verbose', action="store_true", help='logging')
     args = parser.parse_args()
 
-    try:
-        sba = Sba()
-    except serial.SerialException:
-        sba = Sba("/dev/ttyACM1")
+    sba = Sba("/dev/serial/by-id/usb-http:__engr.biz_CDC_RS-232_SB-Av1.0-if00")
 
     chain = BriteChain(sba)
 
