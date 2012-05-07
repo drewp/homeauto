@@ -27,7 +27,7 @@
 
 {
   :auth :near :home .
-  dev:theaterDoorOutsideMotion :state :motion.
+  dev:theaterDoorOutsideMotionRecent :state :motion.
   dev:theaterDoorOpen :state :closed .
   env: :localHour :awakeTime .
 } => { dev:theaterDoorLock :state :unlocked } .
@@ -43,3 +43,5 @@
   dev:frontDoorMotionIndicator :text "D" .
   dev:frontDoorLcd :brightness 255 .
 } .
+
+{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
