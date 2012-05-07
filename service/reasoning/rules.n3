@@ -4,8 +4,9 @@
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix env: <http://projects.bigasterisk.com/device/environment>.
 
-{ <http://bigasterisk.com/wifiDevice/...> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
-{ <http://bigasterisk.com/wifiDevice/...> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :playstation :powerState :on } .
 
 { env: :localHour 8 } => { env: :localHour :awakeTime } .
 { env: :localHour 9 } => { env: :localHour :awakeTime } .
