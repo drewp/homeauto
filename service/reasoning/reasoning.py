@@ -33,6 +33,8 @@ def gatherGraph():
                    "http://bang:9070/graph", # wifi usage
                    "http://bang:9075/graph", # env
                    "http://slash:9050/graph", # garageArduino for front motion
+                   "http://dash:9095/graph", # dash monitor
+                   "http://bang:9095/graph", # bang monitor
                    ]:
         try:
             addTrig(g, source)
@@ -124,31 +126,8 @@ class Reasoning(object):
         self.inferred.add((ROOM['reasoner'], ROOM['inferenceTime'],
                            Literal(inferenceTime)))
 
-        for dev in [DEV.theaterDoorLock]:
-            url = self.deviceGraph.value(dev, ROOM.putUrl)
-
-            putValue = self.deviceGraph.value(ROOM.unlocked, ROOM.putValue)
-            zeroValue = self.deviceGraph.value(dev, ROOM.zeroValue)
-
-            value = putValue if (dev, ROOM.state, ROOM.unlocked) in self.inferred else zeroValue
-            log.info("put %s to %s", value, url)
-            restkit.request(url=url+"/mode", method="PUT", body="output")
-            restkit.request(url=url, method="PUT", body=value)
-
-
-        # todo: shouldn't have to be a special case
-        brt = self.inferred.value(DEV.frontDoorLcd, ROOM.brightness)
-        url = self.deviceGraph.value(DEV.frontDoorLcdBrightness,
-                                       ROOM.putUrl)
-        log.info("put lcd %s brightness %s", url, brt)
-        getPage(str(url) + "?brightness=%s" % str(brt), method="PUT")
-
-        msg = "open %s motion %s" % (self.inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
-                                     self.inferred.value(DEV['frontDoorMotionIndicator'], ROOM.text))
-        # this was meant to be 2 chars in the bottom row, but the
-        # easier test was to replace the whole top msg
-        #restkit.Resource("http://slash:9080/").put("lcd", message=msg)
-
+        self.putResults(self.inferred)
+        
         try:
             inputGraphNt = g.serialize(format="nt")
             inferredNt = self.inferred.serialize(format="nt")
@@ -162,7 +141,76 @@ class Reasoning(object):
             log.error("while sending changes to magma:")
             log.error(e)
             
+
+    def putResults(self, inferred):
+        """
+        some conclusions in the inferred graph lead to PUT requests
+        getting made
+
+        if the graph contains (?d ?p ?o) and ?d and ?p are a device
+        and predicate we support PUTs for, then we look up
+        (?d :putUrl ?url) and (?o :putValue ?val) and call
+        PUT ?url <- ?val
+
+        If the graph doesn't contain any matches, we use (?d
+        :zeroValue ?val) for the value and PUT that.
+        """
+
+        for dev, pred in [
+            # the config of each putUrl should actually be in the
+            # context of a dev and predicate pair, and then that would
+            # be the source of this list
+            (DEV.theaterDoorLock, ROOM.state),
+            (URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
+            ]:
+            url = self.deviceGraph.value(dev, ROOM.putUrl)
+
+            if dev == DEV.theaterDoorLock: # ew
+                restkit.request(url=url+"/mode", method="PUT", body="output")
+
+            inferredObjects = list(inferred.objects(dev, pred))
+            if len(inferredObjects) == 0:
+                self.putZero(dev, pred, url)
+            elif len(inferredObjects) == 1:
+                self.putInferred(dev, pred, url, inferredObjects[0])
+            elif len(inferredObjects) > 1:
+                log.info("conflict, ignoring: %s has %s of %s" %
+                         (dev, pred, inferredObjects))
+                # write about it to the inferred graph?
+            
+        self.frontDoorPuts(inferred)
+
+    def putZero(self, dev, pred, putUrl):
+        # zerovalue should be a function of pred as well.
+        value = self.deviceGraph.value(dev, ROOM.zeroValue)
+        if value is not None:
+            log.info("put zero (%r) to %s", value, putUrl)
+            restkit.request(url=putUrl, method="PUT", body=value)
+            # this should be written back into the inferred graph
+            # for feedback
+
+    def putInferred(self, dev, pred, putUrl, obj):
+        value = self.deviceGraph.value(obj, ROOM.putValue)
+        if value is not None:
+            log.info("put %s to %s", value, putUrl)
+            restkit.request(url=putUrl, method="PUT", body=value)
+        else:
+            log.warn("%s %s %s has no :putValue" %
+                     (dev, pred, obj))
         
+    def frontDoorPuts(self, inferred):
+        # todo: shouldn't have to be a special case
+        brt = inferred.value(DEV.frontDoorLcd, ROOM.brightness)
+        url = self.deviceGraph.value(DEV.frontDoorLcdBrightness,
+                                       ROOM.putUrl)
+        log.info("put lcd %s brightness %s", url, brt)
+        getPage(str(url) + "?brightness=%s" % str(brt), method="PUT")
+
+        msg = "open %s motion %s" % (inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
+                                     inferred.value(DEV['frontDoorMotionIndicator'], ROOM.text))
+        # this was meant to be 2 chars in the bottom row, but the
+        # easier test was to replace the whole top msg
+        #restkit.Resource("http://slash:9080/").put("lcd", message=msg)
 
 
 class Index(cyclone.web.RequestHandler):
