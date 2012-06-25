@@ -29,8 +29,12 @@ font-weight: bold;
 
     <p><button type="submit" id="refresh">refresh</button></p>
 
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"/>
+    <p>Bathroom shiftbrite</p>
+    <div class="colorpicker" id="p0"></div>
 
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"/>
+    <script type="text/javascript" src="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.js"></script>
+    <link rel="stylesheet" href="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.css" type="text/css" />
 
     <script type="text/javascript">
      // <![CDATA[
@@ -71,6 +75,19 @@ font-weight: bold;
 	}
 	refresh();
 	$("#refresh").click(refresh);
+
+        $.each([
+            ["#p0", "brite/0"],
+        ], function (i, row) {
+            var picker = $.farbtastic(row[0], function (newColor) {
+                $.ajax({
+                    type: "put", url: row[1],
+                    contentType: "text/plain", data: newColor
+                });
+            });
+            $.get(row[1], picker.setColor);
+        });
+
     });
      // ]]>
     </script>

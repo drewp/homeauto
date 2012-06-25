@@ -5,7 +5,7 @@ talks to frontdoordriver.pde on an arduino
 
 from __future__ import division
 
-import cyclone.web, json, traceback, os, sys, time, logging
+import cyclone.web, json, traceback, os, sys, time, logging, bitstring
 from twisted.internet import reactor, task, defer
 from twisted.web.client import getPage
 sys.path.append("/my/proj/house/frontdoor")
@@ -18,6 +18,15 @@ from carbondata import CarbonClient
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph      
 from rdflib import Namespace, RDF, Literal
+from webcolors import hex_to_rgb, rgb_to_hex
+
+def rgbFromHex(h):
+    """returns tuple of 0..1023"""
+    norm = hex_to_rgb(h)
+    return tuple([x * 4 for x in norm])
+
+def hexFromRgb(rgb):
+    return rgb_to_hex(tuple([x // 4 for x in rgb]))
 
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
@@ -52,6 +61,25 @@ class ArduinoGarage(object):
         self.ser.write("\x60\x04"+chr(int(bool(level))))
         return self.ser.readJson()['garage']
 
+    def setVideoSelect(self, chan):
+        """set video select bits from 0..3"""
+        self.ser.write("\x60\x05"+chr(chan))
+        return self.ser.readJson()['videoSelect']
+
+    def shiftbrite(self, colors):
+        """
+        shift out this sequence of (r,g,b) triples of 10-bit ints
+        """
+        current = "".join(bitstring.pack("0b01, uint:10, uint:10, uint:10",
+                                         127, 127, 127).bytes
+                          for loop in range(len(colors)))
+        out = "".join(bitstring.pack("0b00, uint:10, uint:10, uint:10",
+                                     b, r, g).bytes
+                      for r,g,b in colors)
+        out = current + out
+        self.ser.write("\x60\x06" + chr(len(out)) + out)
+        msg = self.ser.readJson()
+        assert msg == {"ok":1}, msg
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -132,6 +160,23 @@ class GarageDoorOpen(PrettyErrorHandler, cyclone.web.RequestHandler):
         reactor.callLater(1.5, finish) # this time depends on the LP circuit
         return d
 
+class VideoSelect(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def post(self): 
+        self.set_header("Content-Type", "application/javascript")
+        v = self.settings.arduino.setVideoSelect(int(self.request.body))
+        self.write(json.dumps({"videoSelect" : v}))
+
+class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self, chan):
+        self.set_header("Content-Type", "text/plain")
+        self.write(hexFromRgb(self.settings.colors[int(chan)]))
+        
+    def put(self, chan):
+        s = self.settings
+        s.colors[int(chan)] = rgbFromHex(self.request.body)
+        s.arduino.shiftbrite(s.colors)
+    post = put
+
 class Application(cyclone.web.Application):
     def __init__(self, ard, poller):
         handlers = [
@@ -142,10 +187,12 @@ class Application(cyclone.web.Application):
             (r'/housePower/raw', HousePowerRaw),
             (r'/housePower/threshold', HousePowerThreshold),
             (r'/garageDoorOpen', GarageDoorOpen),
+            (r'/videoSelect', VideoSelect), 
+            (r"/brite/(\d+)", Brite),
         ]
-        settings = {"arduino" : ard, "poller" : poller}
+        colors = [(0,0,0)] * 1 # stored 10-bit
+        settings = {"arduino" : ard, "poller" : poller, "colors" : colors}
         cyclone.web.Application.__init__(self, handlers, **settings)
-
 
 class Poller(object):
     """
