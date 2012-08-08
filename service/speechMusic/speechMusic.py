@@ -3,7 +3,7 @@
 """
 play sounds according to POST requests. cooperate with pubsubhubbub
 """
-import web, sys, jsonlib, subprocess, os, tempfile, logging
+import web, sys, json, subprocess, os, tempfile, logging
 from subprocess import check_call
 sys.path.append("/my/proj/csigen")
 from generator import tts
@@ -64,7 +64,7 @@ def soundOut(preSound=None, speech='', postSound=None, fast=False):
 
 class visitorNet(object):
     def POST(self):
-        data = jsonlib.loads(web.data())
+        data = json.loads(web.data())
         if 'name' not in data:
             data['name'] = 'unknown'
             

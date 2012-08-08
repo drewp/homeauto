@@ -1,5 +1,5 @@
 import re, ast, restkit, logging, socket
-from rdflib import Literal
+from rdflib import Literal, Graph
 
 log = logging.getLogger()
 
@@ -17,7 +17,6 @@ class Wifi(object):
         self.knownMacAddr = jsValue(txt, 'knownMacAddr')
         tomatoUrl = jsValue(txt, 'tomatoUrl')
 
-        from rdflib.Graph import Graph
         g = Graph()
         g.parse(accessN3, format="n3")
         repl = {'/tomato1/' : None, '/tomato2/' : None}
