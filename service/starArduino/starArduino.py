@@ -4,7 +4,7 @@ arduino driver for the nightlight+buttons+temp setup running on star
 """
 from __future__ import division
 
-import sys, jsonlib
+import sys,json
 from twisted.internet import reactor, task
 from twisted.internet.task import LoopingCall
 import cyclone.web, restkit
@@ -31,7 +31,7 @@ class Temperature(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         f = self.settings.arduino.getTemperature()
         self.set_header("Content-Type", "application/json")
-        self.write(jsonlib.write({"temp" : f}))
+        self.write(json.dumps({"temp" : f}))
 
 class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self, pos):
@@ -86,7 +86,7 @@ def barcodeWatch(arduino, postBarcode):
                                 'K':'CODE128',
                                 }[code[0]]
                     code = code[1:-1]
-                    postBarcode.post(payload=jsonlib.dumps(
+                    postBarcode.post(payload=json.dumps(
                         {'barcodeType':codeType, 'code':code}),
                                      headers={"content-type" :
                                               "application/json"})
@@ -113,7 +113,7 @@ if __name__ == '__main__':
                         break
                 else:
                     raise ValueError("timed out waiting for chars")
-            return jsonlib.loads(line)
+            return json.loads(line)
 
     sb = A(numChannels=3)
 

@@ -25,6 +25,15 @@ sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
 from logsetup import log
 
+import rdflib
+from rdflib import plugin
+plugin.register(
+  "sparql", rdflib.query.Processor,
+  "rdfextras.sparql.processor", "Processor")
+plugin.register(
+  "sparql", rdflib.query.Result,
+  "rdfextras.sparql.query", "SPARQLQueryResult")
+
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 

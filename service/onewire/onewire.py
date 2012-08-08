@@ -32,7 +32,7 @@ was getting 1/3 measurements!
 
 """
 from __future__ import division
-import time, logging, traceback, sys, cyclone.web, jsonlib, restkit
+import time, logging, traceback, sys, cyclone.web, restkit, json
 from twisted.internet.task import LoopingCall, deferLater
 from twisted.internet.defer import inlineCallbacks, returnValue
 from twisted.internet import reactor
@@ -139,8 +139,8 @@ class Poller(object):
             for tries in range(3):
                 try:
                     res = restkit.Resource(url, timeout=5)
-                    temp = jsonlib.read(res.get("temperature").body_string(), 
-                                        use_float=True)['temp']
+                    temp = json.loads(res.get("temperature").body_string(), 
+                                      )['temp']
                     log.debug("got http temp %s = %r", name, temp)
                     ret[name] = temp
                     break
