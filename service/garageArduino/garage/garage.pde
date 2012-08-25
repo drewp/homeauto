@@ -147,11 +147,6 @@ void loop()
         one byte for the string length, then a buffer to be shifted
         out to all the shiftbrites
       */
-      /*
-      for (int i=0; i < arg / 4; i++) {
-        setCurrent(127, 127, 127);
-      }
-      */
       for (int i=0; i<arg; i++) {
         while (Serial.available() == 0) NULL;
         SHIFT(Serial.read());
