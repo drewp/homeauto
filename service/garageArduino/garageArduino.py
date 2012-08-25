@@ -70,13 +70,13 @@ class ArduinoGarage(object):
         """
         shift out this sequence of (r,g,b) triples of 10-bit ints
         """
-        current = "".join(bitstring.pack("0b01, uint:10, uint:10, uint:10",
-                                         127, 127, 127).bytes
-                          for loop in range(len(colors)))
+        resetCurrent = "".join(bitstring.pack("0b01, uint:10, uint:10, uint:10",
+                                              127, 127, 127).bytes
+                               for loop in range(len(colors)))
         out = "".join(bitstring.pack("0b00, uint:10, uint:10, uint:10",
                                      b, r, g).bytes
                       for r,g,b in colors)
-        out = current + out
+        out = resetCurrent + out
         self.ser.write("\x60\x06" + chr(len(out)) + out)
         msg = self.ser.readJson()
         assert msg == {"ok":1}, msg
