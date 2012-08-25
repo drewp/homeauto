@@ -63,12 +63,66 @@ Alternate light switch at door and repeated at each side of the bed
 #define SWITCH_SELECT_B 9
 #define SWITCH_SELECT_C 8
 #define SPEAKER_CHOICE 13
+#define SHIFTBRITE_L 5
+#define SHIFTBRITE_D 11
+#define SHIFTBRITE_C 12
+
+unsigned long SB_CommandPacket;
+int SB_CommandMode;
+int SB_BlueCommand;
+int SB_RedCommand;
+int SB_GreenCommand;
+
+#define LEDCHANS 5
+int vals[LEDCHANS * 3];
+
+#define SHIFT(val) shiftOut(SHIFTBRITE_D, SHIFTBRITE_C, MSBFIRST, val)
+
+void SB_SendPacket() {
+   SB_CommandPacket = SB_CommandMode & B11;
+   SB_CommandPacket = (SB_CommandPacket << 10)  | (SB_BlueCommand & 1023);
+   SB_CommandPacket = (SB_CommandPacket << 10)  | (SB_RedCommand & 1023);
+   SB_CommandPacket = (SB_CommandPacket << 10)  | (SB_GreenCommand & 1023);
+
+   SHIFT(SB_CommandPacket >> 24);
+   SHIFT(SB_CommandPacket >> 16);
+   SHIFT(SB_CommandPacket >> 8);
+   SHIFT(SB_CommandPacket);
+
+}
+void latch() {
+   delayMicroseconds(100);
+   digitalWrite(SHIFTBRITE_L, HIGH); // latch data into registers
+   delayMicroseconds(100);
+   digitalWrite(SHIFTBRITE_L, LOW); 
+}
+void refresh() {
+  /* send all pixels */
+  SB_CommandMode = B00;
+  for (int pixel=0; pixel < LEDCHANS; pixel++) {
+    SB_RedCommand = vals[pixel * 3 + 0];
+    SB_GreenCommand = vals[pixel * 3 + 1];
+    SB_BlueCommand = vals[pixel * 3 + 2];
+    SB_SendPacket();
+  } 
+  latch();
+}
+void setCurrent(unsigned char r, unsigned char g, unsigned char b) { 
+ /* 127 = max */ 
+   SB_CommandMode = B01; // Write to current control registers
+   SB_RedCommand = r; 
+   SB_GreenCommand = g;
+   SB_BlueCommand = b;
+   SB_SendPacket();
+   latch();
+}
+
 
 void setup()   {                
-  
+
   pinMode(2, INPUT);
   digitalWrite(2, LOW); 
-// PIR sensor DC-SS015 from http://www.gadgettown.com/Pyroelectric-Infrared-PIR-Motion-Sensor-Detector-Module-E2013.html
+// PIR sensor DC-SS015 from http://www.gadgettown.com/Pyroelectric-Infrared-PIR-Motion-Sensor-Detector-Module-E2013.html but that didn't work well, so I got one from dealextreme that does. It's on analog 4 right now, not D2.
 
   pinMode(SWITCH_X, INPUT); digitalWrite(SWITCH_X, LOW);
   pinMode(SWITCH_Y, INPUT); digitalWrite(SWITCH_Y, LOW);
@@ -77,7 +131,13 @@ void setup()   {
   pinMode(SWITCH_SELECT_B, OUTPUT);
   pinMode(SWITCH_SELECT_C, OUTPUT);
   pinMode(SPEAKER_CHOICE, OUTPUT);
+  pinMode(SHIFTBRITE_L, OUTPUT);
+  pinMode(SHIFTBRITE_D, OUTPUT);
+  pinMode(SHIFTBRITE_C, OUTPUT);
 
+  for (int i=0; i < LEDCHANS; i++) {
+    setCurrent(127, 127, 127);
+  }
   Serial.begin(115200);
 }
 
@@ -88,7 +148,7 @@ void setup()   {
 
 void loop()                     
 {
-  unsigned char head, cmd, arg;
+  unsigned char head, cmd, arg, i;
 
   if (Serial.available() >= 3) {
     head = Serial.read();
@@ -131,14 +191,19 @@ void loop()
       Serial.print(", \"door\":");
       Serial.print(digitalRead(SWITCH_Y));
 
-      Serial.print("}\n");
+      Serial.print(",\"led\":\"v2\"}\n");
     } else if (cmd == 0x02) { // speaker
       digitalWrite(SPEAKER_CHOICE, arg);
       Serial.print("{\"speakerChoice\":");
       Serial.print((int)arg);
       Serial.print("}\n");
+    } else if (cmd == 0x03) { // set leds. arg is the number of data bytes coming
+      while (arg--) {
+	while (Serial.available() < 1) NULL;
+	SHIFT(Serial.read());
+      }
+      latch();
+      Serial.print("{\"ok\":1}\n");
     }
   }
 }
-
-	

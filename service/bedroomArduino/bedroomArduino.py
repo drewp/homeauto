@@ -5,7 +5,7 @@ talks to bed.pde on an arduino
 
 from __future__ import division
 
-import cyclone.web, json, traceback, os, sys, time, logging
+import cyclone.web, json, traceback, os, sys, time, logging, bitstring
 from twisted.internet import reactor, task
 from twisted.web.client import getPage
 sys.path.append("/my/proj/house/frontdoor")
@@ -13,6 +13,9 @@ from loggingserial import LoggingSerial
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
 from logsetup import log
+
+sys.path.append("/my/proj/pixel/shiftweb")
+from shiftweb import hexFromRgb, rgbFromHex
 
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph      
@@ -34,11 +37,28 @@ class ArduinoBedroom(object):
     def poll(self):
         self.ser.write("\x60\x01\x00")
         ret = self.ser.readJson()
+        ret['motion'] = int(ret['motion'] > 100)
         return ret
 
     def setSpeakerChoice(self, pillow):
         self.ser.write("\x60\x02" + chr(pillow))
-        return self.ser.readJson() 
+        return self.ser.readJson()
+
+    def setLeds(self, colors):
+        """
+        shift out this sequence of (r,g,b) triples of 10-bit ints
+        The nearest led gets color[0], etc.
+        """
+        resetCurrent = "".join(bitstring.pack("0b01, uint:10, uint:10, uint:10",
+                                              127, 127, 127).bytes
+                               for loop in range(len(colors)))
+        out = "".join(bitstring.pack("0b00, uint:10, uint:10, uint:10",
+                                     b, r, g).bytes
+                      for r,g,b in reversed(colors))
+        out = resetCurrent + out
+        self.ser.write("\x60\x03" + chr(len(out)) + out)
+        msg = self.ser.readJson()
+        assert msg == {"ok":1}, msg
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -55,6 +75,18 @@ class SpeakerChoice(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self):
         ret = self.settings.arduino.setSpeakerChoice(int(self.get_argument('pillow')))
         self.write(ret)
+
+class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def put(self, which):
+        which = int(which)
+        brites = self.settings.brites
+        if which + 1 > len(brites):
+            brites.extend([(0,0,0)] * (which + 1 - len(brites)))
+        brites[which] = rgbFromHex(self.request.body)
+                          
+        self.settings.arduino.setLeds(brites)
+        self.set_header("Content-Type", "text/plain")
+        self.write("ok")
 
 class GraphPage(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -75,7 +107,7 @@ class Poller(object):
         self.period = period
         self.lastValues = None
         self.lastPollTime = 0
-        self.lastMotion = False
+        self.lastMotion = None
 
     def assertIsCurrent(self):
         """raise an error if the poll data is not fresh"""
@@ -91,8 +123,8 @@ class Poller(object):
             except ValueError, e:
                 print e
             else:
-                print newData
-                return
+                #print newData # for testing
+
                 self.lastPollTime = now
                 self.lastValues = newData # for other data besides the blinks
                 self.processMotion(newData['motion'])
@@ -121,7 +153,7 @@ class Poller(object):
 if __name__ == '__main__':
 
     config = { # to be read from a file
-        'arduinoPort': '/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A4001lVK-if00-port0',
+        'arduinoPort': '/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A4001nIu-if00-port0',
         'servePort' : 9088,
         'pollFrequency' : 6,
         'boardName' : 'bedroom', # gets sent with updates
@@ -142,5 +174,6 @@ if __name__ == '__main__':
         (r"/", Index),
         (r"/graph", GraphPage),
         (r'/speakerChoice', SpeakerChoice),
-        ], arduino=ard, poller=p))
+        (r'/brite/(\d+)', Brite),
+        ], arduino=ard, poller=p, brites=[]))
     reactor.run()
