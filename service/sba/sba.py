@@ -1,5 +1,5 @@
 from __future__ import division
-import serial, time, jsonlib, sys, cgi, argparse, os
+import serial, time, json, sys, cgi, argparse, os
 import cyclone.web
 from twisted.python import log
 from twisted.internet import reactor
@@ -14,7 +14,7 @@ class Sba(object):
         log.msg("reopening port")
 	# this timeout will fire every few seconds
         self.s = serial.Serial(self.port, baudrate=115200, timeout=0.020)
-        log.msg(str(self.s.__dict__))
+        #log.msg(str(self.s.__dict__))
         self.sendControl()
 
     def ping(self):
@@ -122,7 +122,7 @@ class BriteHandler(cyclone.web.RequestHandler):
         if ctype == 'text/plain':
             color = decode8bitHexColor(d)
         elif ctype == 'application/json':
-            color = jsonlib.read(d)['rgb10']
+            color = json.loads(d)['rgb10']
         elif ctype == 'application/x-www-form-urlencoded':
             color = decode8bitHexColor(cgi.parse_qs(d)['color'][0])
         else:
@@ -169,7 +169,7 @@ def main():
     parser.add_argument('-v', '--verbose', action="store_true", help='logging')
     args = parser.parse_args()
 
-    sba = Sba("/dev/serial/by-id/usb-http:__engr.biz_CDC_RS-232_SB-Av1.0-if00")
+    sba = Sba("/dev/ttyUSB3")#/dev/serial/by-id/usb-http:__engr.biz_CDC_RS-232_SB-Av1.0-if00-port0")
 
     chain = BriteChain(sba)
 
