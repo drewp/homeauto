@@ -94,9 +94,11 @@ def hubDevice(usbId="1a40:0101"):
 def haveDevice(usbId):
     try:
         log.debug("checking for %s", usbId)
-        hubDevice(usbId)
+        dev = hubDevice(usbId)
+        # sometimes the dev will exist but fail to open
+        open(dev, "r")
         return True
-    except ValueError:
+    except (ValueError, IOError):
         return False
 
 def resetDevice(dev):
@@ -184,16 +186,16 @@ class Background(object):
 
                 if not haveDevice(Id.ftdi):
                     if haveFrontHub3:
-                        resetDevice(Id.frontDoorHub3)
+                        resetDevice(hubDevice(Id.frontDoorHub3))
                     else:
                         if haveFrontHub2:
-                            resetDevice(Id.frontDoorHub2)
+                            resetDevice(hubDevice(Id.frontDoorHub2))
                         else:
                             if haveFrontHub1:
-                                resetDevice(Id.frontDoorHub1)
+                                resetDevice(hubDevice(Id.frontDoorHub1))
                             else:
                                 if haveFrontHub0:
-                                    resetDevice(Id.frontDoorHub0)
+                                    resetDevice(hubDevice(Id.frontDoorHub0))
                                 else:
                                     raise ValueError("don't have the first hub")
                 else:
@@ -201,10 +203,10 @@ class Background(object):
 
                 if not haveDevice(Id.garagePowerSerial):
                     if haveGarageHub1:
-                        resetDevice(Id.garageHub1)
+                        resetDevice(hubDevice(Id.garageHub1))
                     else:
                         if haveGarageHub0:
-                            resetDevice(Id.garageHub0)
+                            resetDevice(hubDevice(Id.garageHub0))
                         else:
                             raise ValueError("don't have the first hub")
                 else:
@@ -232,7 +234,7 @@ class Background(object):
 
             elif hostname == 'dash':
                 if not os.path.exists("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900gbcG-if00-port0"):
-                    resetDevice("/dev/bus/usb/003/001")
+                    resetDevice(hubDevice("/dev/bus/usb/003/001"))
 
             else:
                 raise NotImplementedError
