@@ -35,7 +35,9 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 class ArduinoGarage(object):
     def __init__(self, port='/dev/ttyACM0'):
         self.ser = LoggingSerial(port=port, baudrate=115200, timeout=1)
+        time.sleep(2)  # wait for a arduino reset to pass
         self.ser.flush()
+        self.ping()
 
     def ping(self):
         self.ser.write("\x60\x00\x00")
@@ -223,6 +225,7 @@ class Poller(object):
                 newData = ard.poll()
             except ValueError, e:
                 print e
+                os.abort()
             else:
                 self.lastPollTime = now
                 self.lastValues = newData # for other data besides the blinks
