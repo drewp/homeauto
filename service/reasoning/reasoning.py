@@ -15,7 +15,7 @@ from twisted.internet import reactor, task
 from twisted.web.client import getPage
 import time, traceback, sys, json
 from rdflib.Graph import Graph, ConjunctiveGraph
-from rdflib import Namespace, URIRef,  Literal
+from rdflib import Namespace, URIRef, Literal, RDF
 import restkit
 from FuXi.Rete.RuleStore import N3RuleStore
 import cyclone.web
@@ -37,11 +37,13 @@ def gatherGraph():
                    "http://bang:9095/graph", # bang monitor
                    ]:
         try:
-            addTrig(g, source)
-        except:
-            log.error("adding source %s", source)
-            raise
-
+            fetchTime = addTrig(g, source)
+        except Exception, e:
+            log.error("adding source %s: %s", source, e)
+            g.add((URIRef(source), ROOM['graphLoadError'], Literal(str(e))))
+            g.add((URIRef(source), RDF.type, ROOM['FailedGraphLoad']))
+        else:
+            g.add((URIRef(source), ROOM['graphLoadSecs'], Literal(fetchTime)))
     return g
 
 def graphWithoutMetadata(g, ignorePredicates=[]):
@@ -177,7 +179,7 @@ class Reasoning(object):
                 log.info("conflict, ignoring: %s has %s of %s" %
                          (dev, pred, inferredObjects))
                 # write about it to the inferred graph?
-            
+
         self.frontDoorPuts(inferred)
 
     def putZero(self, dev, pred, putUrl):
@@ -197,7 +199,7 @@ class Reasoning(object):
         else:
             log.warn("%s %s %s has no :putValue" %
                      (dev, pred, obj))
-        
+
     def frontDoorPuts(self, inferred):
         # todo: shouldn't have to be a special case
         brt = inferred.value(DEV.frontDoorLcd, ROOM.brightness)
@@ -253,10 +255,23 @@ class Rules(cyclone.web.RequestHandler):
         self.set_header("Content-Type", "text/plain")
         self.write(self.settings.reasoning.rulesN3)
 
+class Status(cyclone.web.RequestHandler):
+    def get(self):
+        self.set_header("Content-Type", "text/plain")
+        g = self.settings.reasoning.prevGraph
+        msg = ""
+        for badSource in g.subjects(RDF.type, ROOM['FailedGraphLoad']):
+            msg += "GET %s failed (%s). " % (
+                badSource, g.value(badSource, ROOM['graphLoadError']))
+        if not msg:
+            self.write("all inputs ok")
+        self.set_status(500)
+        self.finish(msg)
+
 class Static(cyclone.web.RequestHandler):
     def get(self, p):
         self.write(open(p).read())
-        
+
 class Application(cyclone.web.Application):
     def __init__(self, reasoning):
         handlers = [
@@ -265,6 +280,7 @@ class Application(cyclone.web.Application):
             (r'/(lastInput|lastOutput)Graph', GraphResource),
             (r'/ntGraphs', NtGraphs),
             (r'/rules', Rules),
+            (r'/status', Status),
         ]
         cyclone.web.Application.__init__(self, handlers, reasoning=reasoning)
 
@@ -272,7 +288,7 @@ if __name__ == '__main__':
     r = Reasoning()
     #import twisted.python.log
     #twisted.python.log.startLogging(sys.stdout)
-    
+
     task.LoopingCall(r.poll).start(1.0)
     reactor.listenTCP(9071, Application(r))
     reactor.run()
