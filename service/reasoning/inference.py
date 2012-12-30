@@ -58,5 +58,8 @@ def logTime(func):
     return inner
 
 def addTrig(graph, url):
+    t1 = time.time()
     trig = restkit.request(url).body_string()
+    fetchTime = time.time() - t1
     graph.addN(parseTrig(trig))
+    return fetchTime
