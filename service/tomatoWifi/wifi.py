@@ -1,7 +1,13 @@
-import re, ast, restkit, logging, socket
+import re, ast, logging, socket
+from twisted.internet.defer import inlineCallbacks, returnValue
+from cyclone.httpclient import fetch
 from rdflib import Literal, Graph
 
 log = logging.getLogger()
+
+class Router(object):
+    def __repr__(self):
+        return repr(self.__dict__)
 
 class Wifi(object):
     """
@@ -37,12 +43,14 @@ class Wifi(object):
             for k, v in repl.items():
                 url = url.replace(k, v)
 
-            r = restkit.Resource(url, timeout=2)
+            r = Router()
+            r.url = url.replace('root:admin@', '')
+            r.headers = {'Authorization': ['Basic cm9vdDphZG1pbg==']}
             r.name = {'tomato1' : 'bigasterisk3',
                       'tomato2' : 'bigasterisk4'}[name.split('/')[1]]
             self.routers.append(r)
 
-
+    @inlineCallbacks
     def getPresentMacAddrs(self):
         aboutIp = {}
         byMac = {} # mac : [ip]
@@ -50,7 +58,8 @@ class Wifi(object):
         for router in self.routers:
             log.debug("GET %s", router)
             try:
-                data = router.get().body_string()
+                data = yield fetch(router.url, headers=router.headers,
+                                   timeout=2)
             except socket.error:
                 log.warn("get on %s failed" % router)
                 continue
@@ -62,7 +71,7 @@ class Wifi(object):
                     mac=mac,
                     iface=iface,
                     ))
-            
+
                 byMac.setdefault(mac, set()).add(ip)
 
             for (name, ip, mac, lease) in jsValue(data, 'dhcpd_lease'):
@@ -74,9 +83,9 @@ class Wifi(object):
                     mac=mac,
                     lease=lease
                     ))
-                
+
                 byMac.setdefault(mac, set()).add(ip)
-                
+
             for iface, mac, signal in jsValue(data, 'wldev'):
                 matched = False
                 for addr in aboutIp.values():
@@ -102,7 +111,7 @@ class Wifi(object):
                     addr['name'] = 'unknown'
             ret.append(addr)
 
-        return ret
+        returnValue(ret)
 
 
 def jsValue(js, variableName):

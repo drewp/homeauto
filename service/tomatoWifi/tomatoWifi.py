@@ -11,9 +11,13 @@ Returns:
 Todo: this should be the one polling and writing to mongo, not entrancemusic
 """
 from __future__ import division
-import sys, cyclone.web, simplejson, traceback, time, pystache, datetime, restkit
+import sys, cyclone.web, json, traceback, time, pystache, datetime, logging
+from cyclone.httpclient import fetch
+sys.path.append("/home/drewp/projects/photo/lib/python2.7/site-packages")
 from dateutil import tz
 from twisted.internet import reactor, task
+from twisted.internet.defer import inlineCallbacks, returnValue
+
 
 from pymongo import Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef
@@ -36,7 +40,7 @@ plugin.register(
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
-reasoning = restkit.Resource("http://bang:9071/")
+reasoning = "http://bang:9071/"
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -44,7 +48,7 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         age = time.time() - self.settings.poller.lastPollTime
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
-        
+
         self.write("this is wifiusage. needs index page that embeds the table")
 
 class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
@@ -64,14 +68,14 @@ class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
                                            a.get('name'),
                                            a.get('mac'))))))
 
-        
+
 class Json(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header("Content-Type", "application/json")
         age = time.time() - self.settings.poller.lastPollTime
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
-        self.write(simplejson.dumps({"wifi" : self.settings.poller.lastAddrs,
+        self.write(json.dumps({"wifi" : self.settings.poller.lastAddrs,
                                      "dataAge" : age}))
 
 class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
@@ -99,7 +103,7 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
 
         self.set_header('Content-type', 'application/x-trig')
         self.write(g.asTrig())
-       
+
 class Application(cyclone.web.Application):
     def __init__(self, wifi, poller):
         handlers = [
@@ -111,7 +115,7 @@ class Application(cyclone.web.Application):
         ]
         settings = {
             'wifi' : wifi,
-            'poller' : poller, 
+            'poller' : poller,
             'mongo' : Connection('bang', 27017,
                                  tz_aware=True)['house']['sensor']
             }
@@ -128,10 +132,11 @@ class Poller(object):
     def assertCurrent(self):
         dt = time.time() - self.lastPollTime
         assert dt < 10, "last poll was %s sec ago" % dt
-        
+
+    @inlineCallbacks
     def poll(self):
         try:
-            newAddrs = self.wifi.getPresentMacAddrs()
+            newAddrs = yield self.wifi.getPresentMacAddrs()
 
             newWithSignal = [a for a in newAddrs if a.get('signal')]
 
@@ -144,15 +149,11 @@ class Poller(object):
                     self.doEntranceMusic(action)
                 except Exception, e:
                     log.error("entrancemusic error: %r", e)
-                    
+
             self.lastWithSignal = newWithSignal
             if actions: # this doesn't currently include signal strength changes
-                try:
-                    reasoning.put("immediateUpdate",
-                                  # workaround for https://github.com/benoitc/restkit/issues/113
-                                  headers={'User_Agent': 'tomatoWifi'})
-                except Exception, e:
-                    log.warn(e)
+                fetch(reasoning + "immediateUpdate",
+                      headers={'user-agent': 'tomatoWifi'}).addErrback(log.warn)
             self.lastAddrs = newAddrs
             self.lastPollTime = time.time()
         except Exception, e:
@@ -215,7 +216,7 @@ class Poller(object):
         now = datetime.datetime.now(tz.gettz('UTC'))
         last = results[0]['created'].replace(tzinfo=tz.gettz('UTC'))
         return now - last
-        
+
 
 if __name__ == '__main__':
     config = {
@@ -225,6 +226,7 @@ if __name__ == '__main__':
     from twisted.python import log as twlog
     #log.startLogging(sys.stdout)
     #log.setLevel(10)
+    log.setLevel(logging.DEBUG)
 
     mongo = Connection('bang', 27017)['visitor']['visitor']
 
