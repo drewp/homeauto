@@ -11,7 +11,7 @@ Returns:
 Todo: this should be the one polling and writing to mongo, not entrancemusic
 """
 from __future__ import division
-import sys, cyclone.web, simplejson, traceback, time, pystache, datetime
+import sys, cyclone.web, simplejson, traceback, time, pystache, datetime, restkit
 from dateutil import tz
 from twisted.internet import reactor, task
 
@@ -36,7 +36,7 @@ plugin.register(
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
-
+reasoning = restkit.Resource("http://bang:9071/")
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -146,6 +146,13 @@ class Poller(object):
                     log.error("entrancemusic error: %r", e)
                     
             self.lastWithSignal = newWithSignal
+            if actions: # this doesn't currently include signal strength changes
+                try:
+                    reasoning.put("immediateUpdate",
+                                  # workaround for https://github.com/benoitc/restkit/issues/113
+                                  headers={'User_Agent': 'tomatoWifi'})
+                except Exception, e:
+                    log.warn(e)
             self.lastAddrs = newAddrs
             self.lastPollTime = time.time()
         except Exception, e:
