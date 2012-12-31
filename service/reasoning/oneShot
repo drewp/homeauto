@@ -1,0 +1,28 @@
+#!/usr/bin/python
+"""
+send a statement to the reasoning server for one update cycle. Args
+are s/p/o in n3 notation, with many prefixes predefined here.
+"""
+import sys, restkit
+s, p, o = sys.argv[1:]
+
+prefixes = {
+'room' : 'http://projects.bigasterisk.com/room/',
+    }
+
+def expand(term):
+    if ':' not in term:
+        return term
+    left, right = term.split(':', 1)
+    if left in prefixes:
+        return '<%s%s>' % (prefixes[left], right)
+    return term
+
+stmt = '%s %s %s .' % (expand(s), expand(p), expand(o))
+print "Sending: %s" % stmt
+
+reasoning = restkit.Resource("http://bang:9071/")
+reasoning.post("oneShot",
+               headers={"content-type": "text/n3"},
+               payload=stmt)
+
