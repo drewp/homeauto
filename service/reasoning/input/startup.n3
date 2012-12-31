@@ -1,0 +1,10 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+<http://bang:9069/graph> is :source of :reasoning; rdfs:label "arduino watchpins" .
+<http://bang:9070/graph> is :source of :reasoning;  rdfs:label "wifi usage" .
+<http://bang:9075/graph> is :source of :reasoning;  rdfs:label "env" .
+<http://slash:9050/graph> is :source of :reasoning;  rdfs:label "garageArduino for front motion" .
+<http://dash:9095/graph> is :source of :reasoning;  rdfs:label "dash monitor" .
+<http://bang:9095/graph> is :source of :reasoning;  rdfs:label "bang monitor" .
+<http://bang:9099/graph> is :source of :reasoning;  rdfs:label "trails" .
