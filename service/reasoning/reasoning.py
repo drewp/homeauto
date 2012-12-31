@@ -26,6 +26,7 @@ import restkit
 from FuXi.Rete.RuleStore import N3RuleStore
 import cyclone.web
 from inference import addTrig, infer
+from graphop import graphEqual
 
 sys.path.append("../../lib")
 from logsetup import log
@@ -34,35 +35,6 @@ log.setLevel(logging.DEBUG)
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
-def graphWithoutMetadata(g, ignorePredicates=[]):
-    """
-    graph filter that removes any statements whose subjects are
-    contexts in the graph and also any statements with the given
-    predicates
-    """
-    ctxs = map(URIRef, set(g.contexts())) # weird they turned to strings
-
-    out = ConjunctiveGraph()
-    for stmt in g.quads((None, None, None)):
-        if stmt[0] not in ctxs and stmt[1] not in ignorePredicates:
-            out.addN([stmt])
-    return out
-
-def graphEqual(a, b, ignorePredicates=[]):
-    """
-    compare graphs, omitting any metadata statements about contexts
-    (especially modification times) and also any statements using the
-    given predicates
-    """
-    stmtsA = graphWithoutMetadata(a, ignorePredicates)
-    stmtsB = graphWithoutMetadata(b, ignorePredicates)
-    if log.getEffectiveLevel() <= logging.DEBUG:
-        diff = set(stmtsA).symmetric_difference(set(stmtsB))
-        if diff:
-            log.debug("changing statements:")
-            for s in diff:
-                log.debug(str(s))
-    return set(stmtsA) == set(stmtsB)
 
 class InputGraph(object):
     def __init__(self, inputDirs, onChange):
