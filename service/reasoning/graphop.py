@@ -1,3 +1,6 @@
+import logging
+from rdflib import URIRef, ConjunctiveGraph
+log = logging.getLogger()
 
 def graphWithoutMetadata(g, ignorePredicates=[]):
     """

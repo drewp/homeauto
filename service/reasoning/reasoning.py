@@ -30,7 +30,8 @@ from graphop import graphEqual
 
 sys.path.append("../../lib")
 from logsetup import log
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
+outlog = logging.getLogger('output')
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
@@ -39,12 +40,19 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 class InputGraph(object):
     def __init__(self, inputDirs, onChange):
         """
-        all .n3 files from inputDirs will be read.
+        this has one Graph that's made of:
+          - all .n3 files from inputDirs (read at startup)
+          - all the remote graphs, specified in the file graphs
 
-        onChange(self) is called if the contents of the full graph change
-        (in an interesting way) during updateFileData or
+        call updateFileData or updateRemoteData to reread those
+        graphs. getGraph to access the combined graph.
+
+        onChange(self) is called if the contents of the full graph
+        change (in an interesting way) during updateFileData or
         updateRemoteData. Interesting means statements other than the
-        ones with the predicates on the boring list.
+        ones with the predicates on the boring list. onChange(self,
+        oneShot=True) means: don't store the result of this change
+        anywhere; it needs to be processed only once
         """
         self.inputDirs = inputDirs
         self.onChange = onChange
@@ -116,10 +124,12 @@ class InputGraph(object):
         the addition of this graph
         """
         self._oneShotAdditionGraph = g
+        self._combinedGraph = None
         try:
-            self.onChange(self)
+            self.onChange(self, oneShot=True)
         finally:
             self._oneShotAdditionGraph = None
+            self._combinedGraph = None
 
     def getGraph(self):
         """rdflib Graph with the file+remote contents of the input graph"""
@@ -166,34 +176,44 @@ class Reasoning(object):
             log.error(traceback.format_exc())
             self.lastError = str(e)
 
-    def graphChanged(self, inputGraph):
-        # i guess these are getting consumed each inference
+    def graphChanged(self, inputGraph, oneShot=False):
+        oldInferred = self.inferred
         try:
-            t1 = time.time()
-            self.readRules()
-            ruleParseTime = time.time() - t1
-        except ValueError, e:
-            # this is so if you're just watching the inferred output,
-            # you'll see the error too
-            self.inferred = Graph()
-            self.inferred.add((ROOM['reasoner'], ROOM['ruleParseError'],
-                               Literal(traceback.format_exc())))
-            raise
+            try:
+                t1 = time.time()
+                self.readRules()
+                ruleParseTime = time.time() - t1
+            except ValueError, e:
+                # this is so if you're just watching the inferred output,
+                # you'll see the error too
+                self.inferred = Graph()
+                self.inferred.add((ROOM['reasoner'], ROOM['ruleParseError'],
+                                   Literal(traceback.format_exc())))
+                raise
 
-        g = inputGraph.getGraph()
+            g = inputGraph.getGraph()
+            self.inferred = self._makeInferred(g)
+            self.inferred.add((ROOM['reasoner'], ROOM['ruleParseTime'],
+                               Literal(ruleParseTime)))
+
+            self.putResults(self.inferred)
+            self._postToMagma(g)
+        finally:
+            if oneShot:
+                self.inferred = oldInferred
+
+    def _makeInferred(self, inputGraph):
         t1 = time.time()
-        self.inferred = infer(g, self.ruleStore)
+        out = infer(inputGraph, self.ruleStore)
         inferenceTime = time.time() - t1
 
-        self.inferred.add((ROOM['reasoner'], ROOM['ruleParseTime'],
-                           Literal(ruleParseTime)))
-        self.inferred.add((ROOM['reasoner'], ROOM['inferenceTime'],
+        out.add((ROOM['reasoner'], ROOM['inferenceTime'],
                            Literal(inferenceTime)))
+        return out
 
-        self.putResults(self.inferred)
-
+    def _postToMagma(self, inputGraph):
         try:
-            inputGraphNt = g.serialize(format="nt")
+            inputGraphNt = inputGraph.serialize(format="nt")
             inferredNt = self.inferred.serialize(format="nt")
             body = json.dumps({"input": inputGraphNt,
                                "inferred": inferredNt})
@@ -204,7 +224,6 @@ class Reasoning(object):
             traceback.print_exc()
             log.error("while sending changes to magma:")
             log.error(e)
-
 
     def putResults(self, inferred):
         """
@@ -249,7 +268,7 @@ class Reasoning(object):
         # zerovalue should be a function of pred as well.
         value = deviceGraph.value(dev, ROOM.zeroValue)
         if value is not None:
-            log.info("put zero (%r) to %s", value, putUrl)
+            outlog.info("put zero (%r) to %s", value, putUrl)
             restkit.request(url=putUrl, method="PUT", body=value)
             # this should be written back into the inferred graph
             # for feedback
@@ -257,10 +276,10 @@ class Reasoning(object):
     def putInferred(self, deviceGraph, dev, pred, putUrl, obj):
         value = deviceGraph.value(obj, ROOM.putValue)
         if value is not None:
-            log.info("put %s to %s", value, putUrl)
+            outlog.info("put %s to %s", value, putUrl)
             restkit.request(url=putUrl, method="PUT", body=value)
         else:
-            log.warn("%s %s %s has no :putValue" %
+            outlog.warn("%s %s %s has no :putValue" %
                      (dev, pred, obj))
 
     def frontDoorPuts(self, deviceGraph, inferred):
@@ -269,9 +288,9 @@ class Reasoning(object):
         if brt is None:
             return
         url = deviceGraph.value(DEV.frontDoorLcdBrightness, ROOM.putUrl)
-        log.info("put lcd %s brightness %s", url, brt)
+        outlog.info("put lcd %s brightness %s", url, brt)
         def failed(err):
-            log.error("lcd brightness: %s", err)
+            outlog.error("lcd brightness: %s", err)
         getPage(str(url) + "?brightness=%s" % str(brt),
                 method="PUT").addErrback(failed)
 
@@ -305,6 +324,9 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
         Using PUT because this is idempotent and retryable and
         everything.
         """
+        print self.request.headers
+        log.info("immediateUpdate from %s",
+                 self.request.headers.get('User-Agent', '?'))
         r.poll()
         self.set_status(202)
 
