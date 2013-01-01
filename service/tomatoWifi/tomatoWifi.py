@@ -153,7 +153,8 @@ class Poller(object):
             self.lastWithSignal = newWithSignal
             if actions: # this doesn't currently include signal strength changes
                 fetch(reasoning + "immediateUpdate",
-                      headers={'user-agent': 'tomatoWifi'}).addErrback(log.warn)
+                      timeout=2,
+                      headers={'user-agent': ['tomatoWifi']}).addErrback(log.warn)
             self.lastAddrs = newAddrs
             self.lastPollTime = time.time()
         except Exception, e:

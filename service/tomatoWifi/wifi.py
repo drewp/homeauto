@@ -44,8 +44,10 @@ class Wifi(object):
                 url = url.replace(k, v)
 
             r = Router()
-            r.url = url.replace('root:admin@', '')
-            r.headers = {'Authorization': ['Basic cm9vdDphZG1pbg==']}
+            http, tail = url.split('//', 1)
+	    userPass, tail = tail.split("@", 1)
+            r.url = http + '//' + tail
+            r.headers = {'Authorization': ['Basic %s' % userPass.encode('base64').strip()]}
             r.name = {'tomato1' : 'bigasterisk3',
                       'tomato2' : 'bigasterisk4'}[name.split('/')[1]]
             self.routers.append(r)
@@ -58,11 +60,12 @@ class Wifi(object):
         for router in self.routers:
             log.debug("GET %s", router)
             try:
-                data = yield fetch(router.url, headers=router.headers,
+                resp = yield fetch(router.url, headers=router.headers,
                                    timeout=2)
             except socket.error:
                 log.warn("get on %s failed" % router)
                 continue
+            data = resp.body
 
             for (ip, mac, iface) in jsValue(data, 'arplist'):
                 aboutIp.setdefault(ip, {}).update(dict(
