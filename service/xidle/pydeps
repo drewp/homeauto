@@ -1,0 +1,5 @@
+PyXSS==2.1
+bottle==0.11.4
+gunicorn==0.17.2
+python-dateutil==2.1
+rdflib==3.2.3
