@@ -17,12 +17,19 @@ import cyclone.web, json, traceback, os, sys
 from twisted.python import log
 from twisted.internet import reactor, task
 from twisted.web.client import getPage
+from rdflib import Namespace, Literal, URIRef
 
 sys.path.append("/my/proj/house/frontdoor")
 from loggingserial import LoggingSerial        
 
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
+
+sys.path.append("/my/site/magma")
+from stategraph import StateGraph
+
+DEV = Namespace("http://projects.bigasterisk.com/device/")
+ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 class Board(object):
     """
@@ -88,6 +95,26 @@ class index(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.set_header("Content-Type", "application/xhtml+xml")
         self.write(open("index.html").read())
 
+class GraphResource(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self):
+        g = StateGraph(ctx=DEV['frontDoorArduino'])
+
+        board = self.settings.board
+        g.add((DEV['frontDoorOpen'], ROOM['state'],
+               ROOM['open'] if board.getDoor() else ROOM['closed']))
+        g.add((DEV['frontYardLight'], ROOM['state'],
+               ROOM['on'] if board.getYardLight() else ROOM['off']))
+        g.add((DEV['frontDoorLcd'], ROOM['text'],
+               Literal(board.getLcd())))
+        g.add((DEV['frontDoorLcd'], ROOM['brightness'],
+               Literal(board.getLcdBrightness())))
+
+        # not temperature yet because it's slow and should be cached from
+        # the last poll
+        
+        self.set_header('Content-type', 'application/x-trig')
+        self.write(g.asTrig())
+
 class Lcd(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header("Content-Type", "text/plain")
@@ -140,6 +167,7 @@ class Application(cyclone.web.Application):
     def __init__(self, board):
         handlers = [
             (r"/", index),
+            (r"/graph", GraphResource),
             (r'/lcd', Lcd),
             (r'/door', Door),
             (r'/temperature', Temperature),
@@ -159,6 +187,8 @@ class Poller(object):
 
     def poll(self):
         try:
+            # this should be fetching everything and pinging reasoning
+            # if anything is new
             new = self.board.getDoor()
             if new != self.last:
                 msg = json.dumps(dict(board=self.boardName, 
