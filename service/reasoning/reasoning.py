@@ -112,6 +112,8 @@ class InputGraph(object):
                 URIRef("http://bigasterisk.com/map#lastSeenAgoSec"),
                 URIRef("http://bigasterisk.com/map#lastSeenAgo"),
                 URIRef("http://projects.bigasterisk.com/room/usingPower"),
+                URIRef("http://projects.bigasterisk.com/room/idleTimeMinutes"),
+                URIRef("http://projects.bigasterisk.com/room/idleTimeMs"),
                 ])):
             log.debug("  remote graph changed")
             self.onChange(self)
@@ -323,6 +325,9 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
 
         Using PUT because this is idempotent and retryable and
         everything.
+
+        todo: this should do the right thing when many requests come
+        in very quickly
         """
         print self.request.headers
         log.info("immediateUpdate from %s",

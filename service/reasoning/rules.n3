@@ -3,6 +3,7 @@
 @prefix dev: <http://projects.bigasterisk.com/device/>.
 @prefix foaf: <http://xmlns.com/foaf/0.1/> .
 @prefix env: <http://projects.bigasterisk.com/device/environment>.
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
 
 { <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 { <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
@@ -27,7 +28,7 @@
 
 {
   :auth :near :home .
-  dev:theaterDoorOutsideMotionRecent :state :motion.
+  dev:theaterDoorOutsideMotion :state :motion.
   dev:theaterDoorOpen :state :closed .
   env: :localHour :awakeTime .
 } => { dev:theaterDoorLock :state :unlocked } .
@@ -44,4 +45,21 @@
   dev:frontDoorLcd :brightness 255 .
 } .
 
-{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
+{ :darkKey :state :press } => {
+  <http://bigasterisk.com/host/dash/monitor> :powerState :off .
+} .
+
+#{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
+
+{
+  # this won't update right, currently, since I don't let the exact
+  # idle time into the rules recalculator. This threshold should be
+  # applied upstream.
+ 
+  <http://bigasterisk.com/host/dash/xidle> :idleTimeMinutes ?idle .
+  ?idle math:lessThan 30 .
+} => {
+  :drew :at :desk .
+  # the plan here is that as soon as we can show that I'm not at my
+  # desk (cell phone wifi, asleep, etc), power the screen off
+} .
