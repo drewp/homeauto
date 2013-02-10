@@ -1,10 +1,8 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
   <head>
     <title>wallscreen</title>
-    <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400' rel='stylesheet' type='text/css'>
+    <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400' rel='stylesheet' type='text/css'></link>
       <style type="text/css" media="all">
 	/* <![CDATA[ */
 	body {
@@ -42,7 +40,6 @@
 	}
 
 	#clock {
-
     bottom: 25px;
     color: #4E8B4E;
     font-size: 56px;
@@ -51,8 +48,6 @@
     right: 5px;
     text-align: right;
     width: 134px;
-
-
 	}
 
 	#todo {
@@ -121,7 +116,7 @@
 #thermostat {
 position: absolute;
 left: 8px;
-top: 650px;
+top: 640px;
 }
 
 	/* ]]> */
@@ -161,7 +156,7 @@ top: 650px;
 	</ul>
       </div>
       <div id="thermostat">
-        Thermostat at <span data-bind="text: requestedF"></span>. Use knob to adjust
+        Thermostat at <span style="color: #FAB1FA;" data-bind="text: requestedF"></span>. Use knob to adjust.
       </div>
 
     </div>
@@ -198,7 +193,7 @@ setInterval(function () {
 $.getJSON("/thermostat", function (data) {
   model.requestedF(data.tempF);
 });
-}, 3000);
+}, 1000);
 
   ko.applyBindings(model);
 
