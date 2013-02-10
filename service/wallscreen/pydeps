@@ -1,0 +1,11 @@
+Twisted==12.3.0
+cyclone==1.0-rc15
+distribute==0.6.24
+ipdb==0.7
+ipython==0.13.1
+isodate==0.4.9
+pyOpenSSL==0.13
+python-dateutil==2.1
+rdflib==3.2.3
+six==1.2.0
+zope.interface==4.0.3
