@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>wallscreen</title>
+    <link href='http://fonts.googleapis.com/css?family=Yanone+Kaffeesatz:400' rel='stylesheet' type='text/css'>
+      <style type="text/css" media="all">
+	/* <![CDATA[ */
+	body {
+	    background: black;
+	    margin: 0;
+	}
+	p, ul {
+	    margin: 0;
+	}
+	#edge {
+	    position: absolute;
+	    left: 14px;
+	    top: 11px;
+	    width: 463px;
+	    height: 680px;
+
+	    background: black;
+	    color: gray;
+	    font-size: 30px;
+	    line-height: 25px;
+	    font-family: 'Yanone Kaffeesatz', sans-serif;
+	    overflow: hidden;
+	}
+
+	#edge.rot {
+	    left: 113px;
+	    top: -101px;
+	    transform: rotate(90deg);
+	    width: 463px;
+	    height: 680px;
+	}
+
+	@media screen and (-webkit-min-device-pixel-ratio:0) {
+	    #edge { border: 1px solid red; }
+	}
+
+	#clock {
+
+    bottom: 25px;
+    color: #4E8B4E;
+    font-size: 56px;
+    line-height: 63px;
+    position: absolute;
+    right: 5px;
+    text-align: right;
+    width: 134px;
+
+
+	}
+
+	#todo {
+	    width: 70%;
+	    height: 60%;
+	    overflow: hidden;
+	}
+	#todo h1 {
+
+	}
+	.fg2 {
+	    color: #2a2aa8;
+	}
+	.depth0 { padding-left: 0px; color: #fff; background: #1f2324}
+	.depth1 { padding-left: 20px; color: #777; }
+	.depth2 { padding-left: 40px; color: #3c3535; }
+	.depth3 { padding-left: 60px; color: #221e1e; }
+
+	#events {
+	    width: 70%;
+	    height: 40%;
+	    overflow: hidden;
+	} 
+	#events > ul > li {
+	    list-style: none;
+	    margin-left: -26px;
+	}	
+	#events h2 {
+	    margin: 0;
+	    padding: 0;
+	    font-weight: normal;
+	    font-size: 100%;
+	    padding-left: 27px;
+	    background: url(static/Free%20Blockie%20Set/Blue%20Glass/PNG%2024/calendar.png) no-repeat;
+
+	}
+
+	#events li.today h2 {
+	    background: url(static/Free%20Blockie%20Set/Golden/PNG%2024/calendar.png) no-repeat;
+
+	}
+	li.timeEvent {
+	    list-style: none;
+	    margin-left: -26px;
+	    padding-left: 27px;
+	    background: url(static/Free%20Blockie%20Set/Blue%20Glass/PNG%2024/clock.png) no-repeat;
+	}
+
+	.today .timeEvent {
+	    background: url(static/Free%20Blockie%20Set/Golden/PNG%2024/clock.png) no-repeat;
+
+	}
+	h2 .dayName {
+	    color: #666688;
+	    font-size: 70%;
+	}
+
+	#events > ul > li {
+	    padding: 4px;
+	}
+	#events > li.today {
+	    background: #432;
+	    color: white;
+	}
+
+#thermostat {
+position: absolute;
+left: 8px;
+top: 650px;
+}
+
+	/* ]]> */
+      </style>
+
+  </head>
+  <body>
+    <div id="edge" class="rot">
+      <div id="clock">..:..</div>
+
+      <div id="todo">
+	<p>Todo list:</p>
+	<ul data-bind="foreach: tasks">
+	  <li data-bind="attr: {class: ('depth'+depth+' '+(mark || ''))}">
+	    <span data-bind="text: content"></span>
+	  </li>
+	</ul>
+      </div>
+
+      <div id="events">
+	<p>Calendar:</p>
+	<ul data-bind="foreach: events">
+	  <li data-bind="css: {today: $root.isToday($data)}">
+	    <h2>
+	      <span data-bind="text: date"></span> 
+	      <span class="dayName" data-bind="text: weekdayName"></span>
+	    </h2>
+	    <ul>
+	      <!-- ko foreach: dayEvents -->
+	      <li><span data-bind="text: title"></span></li>
+	      <!-- /ko -->
+	      <!-- ko foreach: timeEvents -->
+	      <li class="timeEvent"><span class="time" data-bind="text: time"></span> <span data-bind="text: title"></span></li>
+	      <!-- /ko -->
+	    </ul>
+	  </li>
+	</ul>
+      </div>
+      <div id="thermostat">
+        Thermostat at <span data-bind="text: requestedF"></span>. Use knob to adjust
+      </div>
+
+    </div>
+<script src="static/jquery-1.8.3.min.js"></script>
+<script src="static/underscore-1.4.2.min.js"></script>
+<script src="static/knockout-2.1.0.min.js"></script>
+<script src="static/moment.min.js"></script>
+<script type="text/javascript">
+var reloadData;
+  $(function () {
+  setTimeout(function () {
+  window.resizeTo(702,480);
+  }, 10000);
+
+  var model = {
+    requestedF: ko.observable(),
+    tasks: ko.observableArray([]),
+    events: ko.observableArray([]),
+    isToday: function (ev) {
+      var today = moment().format("YYYY-MM-DD");
+      return ev.date == today;
+    }
+  };
+  reloadData = function() {
+    $.getJSON("content", function (data) {
+      model.tasks(data.tasks);
+      model.events(data.events);
+    });
+  }
+  setInterval(reloadData, 30*60*1000);
+  reloadData();
+
+setInterval(function () {
+$.getJSON("/thermostat", function (data) {
+  model.requestedF(data.tempF);
+});
+}, 3000);
+
+  ko.applyBindings(model);
+
+
+  if (navigator.userAgent == "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:18.0) Gecko/18.0 Firefox/18.0") {
+    $(".rot").removeClass("rot");
+  }
+
+  function updateClock() {
+    var now = moment();
+    var s = (new Date()).toLocaleTimeString();
+    $("#clock").html(
+"<div>"+now.format("dddd")+"</div>"+
+"<div>"+now.format("MMM Do")+"</div>"+
+"<div>"+now.format("HH:mm")+"</div>"
+)
+  }
+  setInterval(updateClock, 20000)
+  updateClock();
+
+  });
+</script>
+
+  </body>
+</html>
