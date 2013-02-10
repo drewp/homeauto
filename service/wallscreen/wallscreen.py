@@ -4,9 +4,9 @@ for raspberry pi screen.
 and then fix the window with this:
   echo "window.resizeTo(702,480)" | nc localhost 9999
 """
-import json, sys
+import json, sys, time
 from dateutil.parser import parse
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.httpclient, cyclone.websocket
 from rdflib import Graph, URIRef, Namespace, Literal, RDF
@@ -72,20 +72,41 @@ class Content(PrettyErrorHandler, cyclone.web.RequestHandler):
 
         self.write(json.dumps({'tasks':out, 'events' : events}))
 
-class Thermostat(PrettyErrorHandler, cyclone.web.RequestHandler):
-    @inlineCallbacks
-    def get(self):
-        self.write((yield cyclone.httpclient.fetch("http://bang:10001/requestedTemperature")).body)
+@inlineCallbacks
+def pushThermostat():
+    f = json.loads((yield cyclone.httpclient.fetch("http://bang:10001/requestedTemperature")).body)
+    [c.sendMessage(f) for c in liveClients]
     
-    
+class RefreshTemperature(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def post(self):
+        return pushThermostat()
+
+liveClients = set()
+
+class Live(cyclone.websocket.WebSocketHandler):
+    def connectionMade(self, *args, **kwargs):
+        log.info("websocket opened")
+        liveClients.add(self)
+
+    def connectionLost(self, reason):
+        log.info("websocket closed")
+        liveClients.remove(self)
+
+    def messageReceived(self, message):
+        log.info("got message %s" % message)
+        self.sendMessage(message)
+
 if __name__ == '__main__':
     from twisted.python import log as twlog
     #twlog.startLogging(sys.stdout)
-            
+
+    task.LoopingCall(pushThermostat).start(1)
+    
     port = 9102
     reactor.listenTCP(port, cyclone.web.Application(handlers=[
         (r'/content', Content),
-        (r'/thermostat', Thermostat),        
+        (r'/live', Live),
+        (r'/refreshTemperature', RefreshTemperature),
         (r'/(.*)', cyclone.web.StaticFileHandler,
          {"path" : ".", # security hole- serves this dir too
           "default_filename" : "index.html"}),
