@@ -5,8 +5,8 @@
 
   <table><tr> 
 
-    <th class="name">Name</th> 
-    <th class="lease">Lease</th> 
+    <th class="name">Name</th>
+    <th class="connected">Connected</th>
     <th class="ip">IP address</th> 
     <th class="rssi">dBm</th> 
     <th class="mac">MAC address</th> 
@@ -15,7 +15,7 @@
   {{#rows}}
   <tr class="{{cls}}">
     <td>{{name}}</td>
-    <td class="lease">{{lease}}</td>
+    <td class="connected">{{connectedAgo}}</td>
     <td class="ip">{{ip}}</td>
     <td class="rssi">{{signal}}</td>
     <td class="mac">{{mac}}</td>
