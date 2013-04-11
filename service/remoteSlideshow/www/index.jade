@@ -1,0 +1,21 @@
+html
+  head
+    style
+      body { 
+        background: black;
+        color: white;
+      }
+      img#main {
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        width: 100%;
+        height: 100%;
+        z-index: -10;
+      }
+  body
+    img(id='main', src="#")
+    h1 Ari's bed cactus
+    script(src="../lib/jquery-1.9.1.min.js")
+    script(src='show.js')
+     
