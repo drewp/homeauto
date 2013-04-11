@@ -49,6 +49,11 @@
   <http://bigasterisk.com/host/dash/monitor> :powerState :off .
 } .
 
+{ <http://projects.bigasterisk.com/room/star/button/grn> :change :down . } =>
+{
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://bigasterisk.com/host/star/slideshow/advance> .
+} .
+
 #{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
 
 {
