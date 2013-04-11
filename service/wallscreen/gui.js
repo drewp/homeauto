@@ -28,7 +28,7 @@ $(function () {
             model.requestedF(d.tempF);
         }
     }
-    reconnectingWebSocket("ws://localhost:9102/live", onMessage);
+    reconnectingWebSocket("ws://bang.bigasterisk.com:9102/live", onMessage);
 
     ko.applyBindings(model);
 
