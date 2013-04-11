@@ -1,5 +1,5 @@
 #!bin/python
-
+from __future__ import division
 """
 X server idle time is now available over http!
 """
@@ -34,9 +34,11 @@ def monitor():
 @get("/graph")
 def graph():
     g = StateGraph(ctx=DEV['xidle/%s' % host])
-    g.add((URIRef("http://bigasterisk.com/host/%s/xidle" % host),
-           ROOM['idleTimeMs'],
-           Literal(xss.get_info().idle)))
+
+    ms = xss.get_info().idle
+    subj = URIRef("http://bigasterisk.com/host/%s/xidle" % host)
+    g.add((subj, ROOM['idleTimeMs'], Literal(ms)))
+    g.add((subj, ROOM['idleTimeMinutes'], Literal(ms / 1000 / 60)))
 
     response.set_header('Content-type', 'application/x-trig')
     return g.asTrig()
