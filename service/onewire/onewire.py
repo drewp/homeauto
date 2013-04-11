@@ -168,7 +168,7 @@ class Poller(object):
                 }.get(str(k), str(k)), float(v)
             self.carbon.send(row[0], row[1], now)
             rows.append(row)
-
+#anythinh new? serve a graph and put immediateUpdate, i think. or maybe this is the wrong layer for that?
         self.lastPollTime = now
         self.lastDoc = rows
 
@@ -182,12 +182,17 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.set_header("Content-Type", "text/plain")
         self.write("onewire reader (also gathers temps from arduinos); logs to graphite.\n\n Last temps: %r" % self.settings.poller.lastDoc)
 
+class Graph(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self):
+        self.write("trig graph of temps")
+
 if __name__ == '__main__':
     log.setLevel(logging.INFO)
     poller = Poller()
     poller.sendTemps()
     reactor.listenTCP(9078, cyclone.web.Application([
         (r'/', Index),
+        (r'/graph', Graph),
         ], poller=poller))
 
     LoopingCall(poller.sendTemps).start(interval=120)
