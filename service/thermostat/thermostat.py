@@ -17,7 +17,7 @@ db = pymongo.Connection("bang")['thermostat']
 @inlineCallbacks
 def http(method, url, body=None):
     resp = (yield fetch(url, method=method, postdata=body,
-                        headers={'user-agent': ['thermostat']}))
+                        headers={'user-agent': ['thermostat.py']}))
     if resp.code != 200:
         raise ValueError("%s returned %s: %s" % (url, resp.code, resp.body))
     returnValue(resp.body)
@@ -44,12 +44,16 @@ class Therm(object):
     def setRequest(self, f):
         db['request'].insert({'tempF': f, 't':datetime.datetime.now(tzlocal())})
         self.step()
+        http('POST', 'http://bang:9102/refreshTemperature')
+        # magma might also like to know
         
     @inlineCallbacks
     def step(self):
         roomF = yield self.getRoomTempF()
         requestedF = self.getRequest()
         active = yield self.active()
+        # bug here where, if something else turned off the heater, we
+        # don't count minsOff right
         minsOff = self.minutesSinceOff()
         minsOn = self.minutesSinceOn()
 

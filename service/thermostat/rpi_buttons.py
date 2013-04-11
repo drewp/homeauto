@@ -34,7 +34,7 @@ print("reading knob and button, writing to %s" % requestedTemperature)
 prev = None
 prevButton = 0
 buttonHold = 0
-step = .05
+step = .02
 while True:
     a, b = pinInput(PIN_KNOB_A), pinInput(PIN_KNOB_B)
     button = not pinInput(PIN_BUTTON)
