@@ -61,38 +61,38 @@ class BarcodeBeep(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.write(str(ser.readJson()))
 
 def barcodeWatch(arduino, postBarcode):
-    try:
-        arduino.ser.write("\xff\xfb")
-        ret = arduino.readJson()
-        if ret['barcode']:
-            if ret['barcode'] == "27 80 48 13 ":
-                pass # scanner's beep response
-            else:
-                arduino.ser.write("\xff\xfc")
-                arduino.readJson() # my beep response
-                s = ''.join(chr(int(x)) for x in ret['barcode'].split())
-                for code in s.split('\x02'):
-                    if not code:
-                        continue
-                    if not code.endswith('\x03'):
-                        print "couldn't read %r" % code
-                        return
-                    codeType = {'A':'UPC-A',
-                                'B':'JAN-8',
-                                'E':'UPC-E',
-                                'N':'NW-7',
-                                'C':'CODE39',
-                                'I':'ITF',
-                                'K':'CODE128',
-                                }[code[0]]
-                    code = code[1:-1]
-                    postBarcode.post(payload=json.dumps(
-                        {'barcodeType':codeType, 'code':code}),
-                                     headers={"content-type" :
-                                              "application/json"})
+    arduino.ser.write("\xff\xfb")
+    ret = arduino.readJson()
+    if not ret['barcode']:
+        return
+    if ret['barcode'] == "27 80 48 13 ":
+        return # scanner's beep response
 
-    except ValueError, e:
-        print "err", e
+    arduino.ser.write("\xff\xfc")
+    arduino.readJson() # my beep response
+    s = ''.join(chr(int(x)) for x in ret['barcode'].split())
+    for code in s.split('\x02'):
+        if not code:
+            continue
+        if not code.endswith('\x03'):
+            print "couldn't read %r" % code
+            return
+        codeType = {'A':'UPC-A',
+                    'B':'JAN-8',
+                    'E':'UPC-E',
+                    'N':'NW-7',
+                    'C':'CODE39',
+                    'I':'ITF',
+                    'K':'CODE128',
+                    }[code[0]]
+        code = code[1:-1]
+        try:
+            postBarcode.post(payload=json.dumps(
+                {'barcodeType':codeType, 'code':code}),
+                             headers={"content-type" :
+                                      "application/json"})
+        except Exception, e:
+            print "post err", e
 
     
 class Graph(PrettyErrorHandler, cyclone.web.RequestHandler):    
