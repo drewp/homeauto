@@ -25,16 +25,21 @@ last line comes out like this:
 this is a py expression:
 (((0) << (((0 +8)+8)+14)) | ((ord('U')) << (0 +8)) | (((20)) << 0) | ((0) << ((0 +8)+8)))
 
+----------------
+
+also this other usb reset:
+
+http://davidjb.com/blog/2012/06/restartreset-usb-in-ubuntu-12-04-without-rebooting
 
 """
 
 from __future__ import division
 
-import cyclone.web, json, traceback, os, sys, time, logging
+import cyclone.web, json, traceback, os, sys, time, logging, re
 import os, fcntl, commands, socket, logging, time, xmlrpclib, subprocess
 
 from twisted.internet import reactor, task
-from twisted.internet.defer import inlineCallbacks, returnValue
+from twisted.internet.defer import inlineCallbacks, returnValue, Deferred
 from twisted.web.client import getPage
 sys.path.append("/my/proj/house/frontdoor")
 from loggingserial import LoggingSerial        
@@ -105,12 +110,14 @@ def resetDevice(dev):
     """
     send USBDEVFS_RESET to the given /dev address
     """
+    d = Deferred()
     log.debug("resetting %s" % dev)
     f=os.open(dev, os.O_WRONLY)
     ret = fcntl.ioctl(f, USBDEVFS_RESET, 0)
     if ret != 0:
         raise ValueError("ioctl failed with %s" % ret)
-    time.sleep(3)
+    reactor.callLater(3, d.callback, None)
+    return d
 
 def supervisorRestart(cmds, supervisor="http://localhost:9001"):
     serv = xmlrpclib.ServerProxy(supervisor)
@@ -150,16 +157,16 @@ class Background(object):
                 if (not haveDevice(Id.bedroomCam) or
                     not haveDevice(Id.bedroomArduino)):
                     if haveDevice(Id.bedroomHub3):
-                        resetDevice(hubDevice(Id.bedroomHub3))
+                        yield resetDevice(hubDevice(Id.bedroomHub3))
                     else:
                         if haveDevice(Id.bedroomHub2):
-                            resetDevice(hubDevice(Id.bedroomHub2))
+                            yield resetDevice(hubDevice(Id.bedroomHub2))
                         else:
                             if haveDevice(Id.bedroomHub1):
-                                resetDevice(hubDevice(Id.bedroomHub1))
+                                yield resetDevice(hubDevice(Id.bedroomHub1))
                             else:
                                 if haveDevice(Id.bedroomHub0):
-                                    resetDevice(hubDevice(Id.bedroomHub0))
+                                    yield resetDevice(hubDevice(Id.bedroomHub0))
                                 else:
                                     raise ValueError(
                                         "don't even have the first hub")
@@ -186,16 +193,16 @@ class Background(object):
 
                 if not haveDevice(Id.ftdi):
                     if haveFrontHub3:
-                        resetDevice(hubDevice(Id.frontDoorHub3))
+                        yield resetDevice(hubDevice(Id.frontDoorHub3))
                     else:
                         if haveFrontHub2:
-                            resetDevice(hubDevice(Id.frontDoorHub2))
+                            yield resetDevice(hubDevice(Id.frontDoorHub2))
                         else:
                             if haveFrontHub1:
-                                resetDevice(hubDevice(Id.frontDoorHub1))
+                                yield resetDevice(hubDevice(Id.frontDoorHub1))
                             else:
                                 if haveFrontHub0:
-                                    resetDevice(hubDevice(Id.frontDoorHub0))
+                                    yield resetDevice(hubDevice(Id.frontDoorHub0))
                                 else:
                                     raise ValueError("don't have the first hub")
                 else:
@@ -203,10 +210,10 @@ class Background(object):
 
                 if not haveDevice(Id.garagePowerSerial):
                     if haveGarageHub1:
-                        resetDevice(hubDevice(Id.garageHub1))
+                        yield resetDevice(hubDevice(Id.garageHub1))
                     else:
                         if haveGarageHub0:
-                            resetDevice(hubDevice(Id.garageHub0))
+                            yield resetDevice(hubDevice(Id.garageHub0))
                         else:
                             raise ValueError("don't have the first hub")
                 else:
@@ -214,14 +221,14 @@ class Background(object):
                     
                 if not haveDevice(Id.garageArduino):
                     if haveGarageHub1:
-                        resetDevice(hubDevice(Id.garageHub1))
+                        yield resetDevice(hubDevice(Id.garageHub1))
                     else:
                         raise ValueError("don't even have the first hub")
                     resetModules(['gspca_zc3xx'])
                     supervisorRestart(['frontDoorArduino_9080'])
                 else:
                     if not haveFrontArduinoServe:
-                        resetDevice(hubDevice(Id.frontDoorHub3))
+                        yield resetDevice(hubDevice(Id.frontDoorHub3))
                         supervisorRestart(['frontDoorArduino_9080'])
                         time.sleep(10)
                     else:
@@ -234,7 +241,7 @@ class Background(object):
 
             elif hostname == 'dash':
                 if not os.path.exists("/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900gbcG-if00-port0"):
-                    resetDevice(hubDevice("/dev/bus/usb/003/001"))
+                    yield resetDevice(hubDevice("/dev/bus/usb/003/001"))
 
             else:
                 raise NotImplementedError
@@ -251,7 +258,35 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.settings.background.assertIsCurrent()
         
         self.set_header("Content-Type", "application/xhtml+xml")
-        self.write("usbreset is ok")#open("index.html").read())
+        self.write(open("index.html").read())
+
+class Devices(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self):
+        out = []
+        for line in commands.getoutput("lsusb").splitlines():
+            words = line.split(None, 6)
+            for name, usbId in Id.__dict__.items():
+                if usbId == words[5]:
+                    break
+            else:
+                name = "?"
+            out.append(dict(dev="/dev/bus/usb/%s/%s" % (words[1], words[3].rstrip(':')),
+                            name=name,
+                            usbId=words[5],
+                            usbName=words[6] if len(words) > 6 else ""))
+
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps({'devices':out}))
+
+class Reset(PrettyErrorHandler, cyclone.web.RequestHandler):
+    @inlineCallbacks
+    def post(self):
+        dev = self.get_argument('dev')
+        assert re.match("^[a-z0-9/]+$", dev), dev
+        yield resetDevice(dev)
+        
+        self.set_header("Content-Type", "text/plain")
+        self.write("ok")
 
 if __name__ == '__main__':
     config = { # to be read from a file
@@ -262,12 +297,14 @@ if __name__ == '__main__':
     from twisted.python import log as twlog
     #twlog.startLogging(sys.stdout)
 
-    log.setLevel(logging.INFO)
+    log.setLevel(logging.DEBUG)
 
     p = Background(config, config['checkPeriod'])
     task.LoopingCall(p.step).start(config['checkPeriod'])
 
     reactor.listenTCP(config['servePort'], cyclone.web.Application([
         (r"/", Index),
-        ], background=p))
+        (r"/devices", Devices),
+        (r"/devices/reset", Reset),
+        ], background=p, static_path="static"))
     reactor.run()
