@@ -281,11 +281,18 @@ class Reasoning(object):
         # nothing in this actually makes them one-shot yet. they'll
         # just fire as often as we get in here, which is not desirable
         for s, p in [
-            (URIRef('http://bigasterisk.com/host/star/slideshow'), ROOM.postAction),
+                (URIRef('http://bigasterisk.com/host/star/slideshow'), ROOM.postAction),
+                (URIRef('http://bigasterisk.com/host/star/sound'), ROOM.postAction),
+                (URIRef('http://bigasterisk.com/host/slash/sound'), ROOM.postAction),
             ]:
+            log.info("find inferred objs %r %r" % (s, p))
             for postTarget in inferred.objects(s, p):
+                log.info("post target %r", postTarget)
                 sendToLiveClients({"s":s, "p":p, "o":postTarget})
-                if 0:
+                if s in [URIRef('http://bigasterisk.com/host/star/sound'),
+                         URIRef('http://bigasterisk.com/host/slash/sound'),
+                         URIRef('http://bigasterisk.com/host/star/slideshow'),
+                        ]:
                     try:
                         response = restkit.request(url=postTarget, method="POST", body="")
                     except Exception, e:
