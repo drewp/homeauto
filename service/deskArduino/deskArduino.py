@@ -30,7 +30,7 @@ def hexFromRgb(rgb):
     return rgb_to_hex(tuple([x // 4 for x in rgb]))
 
 class ArduinoDesk(object):
-    def __init__(self, ports=['/dev/ttyUSB0', '/dev/ttyUSB1']):
+    def __init__(self, ports=['/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900gbcG-if00-port0']):
         self.ser = LoggingSerial(ports=ports, baudrate=115200, timeout=1)
 
     def ping(self):
