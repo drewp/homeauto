@@ -1,30 +1,29 @@
 #!bin/python
-
 """
-play sounds according to POST requests. cooperate with pubsubhubbub
+play sounds according to POST requests.
 """
-import web, sys, json, subprocess, os, tempfile, logging
-from subprocess import check_call
+from __future__ import division
+import sys, tempfile, logging, pyjade
+from pyjade.ext.mako import preprocessor as mako_preprocessor
+from mako.template import Template
+from mako.lookup import TemplateLookup
+sys.path.append("python-openal")
+import openal
+from twisted.internet import reactor
 sys.path.append("/my/proj/csigen")
 from generator import tts
 import xml.etree.ElementTree as ET
-logging.basicConfig(level=logging.INFO, format="%(created)f %(asctime)s %(levelname)s %(message)s")
+from klein import Klein
+from twisted.web.static import File
+logging.basicConfig(level=logging.INFO,
+                    format="%(created)f %(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger()
 
-sensorWords = {"wifi" : "why fi",
-               "bluetooth" : "bluetooth"}
+templates = TemplateLookup(directories=['.'],
+                           preprocessor=mako_preprocessor,
+                           filesystem_checks=True)
 
-def aplay(device, filename):
-    paDeviceName = {
-        'garage' : 'alsa_output.pci-0000_01_07.0.analog-stereo',
-        'living' : 'alsa_output.pci-0000_00_04.0.analog-stereo',
-        }[device]
-    subprocess.call(['paplay',
-                     '-d', paDeviceName,
-                     filename])
-
-def soundOut(preSound=None, speech='', postSound=None, fast=False):
-
+def makeSpeech(speech, fast=False):
     speechWav = tempfile.NamedTemporaryFile(suffix='.wav')
 
     root = ET.Element("SABLE")
@@ -35,92 +34,103 @@ def soundOut(preSound=None, speech='', postSound=None, fast=False):
         div.set("TYPE", "sentence")
         div.text = sentence
 
-    sounds = []
-    delays = []
-
-    if preSound is not None:
-        sounds.append(preSound)
-        delays.extend([0,0]) # assume stereo
-    
     speechSecs = tts(root, speechWav.name)
-    sounds.append(speechWav.name)
-    delays.append(.4)
-    if postSound is not None:
-        sounds.append(postSound)
-        delays.extend([speechSecs + .4]*2) # assume stereo
-    
-    if len(sounds) == 1:
-        outName = sounds[0]
-    else:
-        outWav = tempfile.NamedTemporaryFile(suffix='.wav')
-        check_call(['/usr/bin/sox', '--norm', '--combine', 'merge',
-                    ]+sounds+[
-                    outWav.name,
-                    'delay', ]+map(str, delays)+[
-                    'channels', '1'])
-        outName = outWav.name
+    return openal.Buffer(speechWav.name), speechSecs
 
-    aplay('living', outName)
+class SoundEffects(object):
+    def __init__(self):
+        # for names to pass to this, see alcGetString with ALC_ALL_DEVICES_SPECIFIER
+        device = openal.Device()
+        self.contextlistener = device.ContextListener()
 
-class visitorNet(object):
-    def POST(self):
-        data = json.loads(web.data())
-        if 'name' not in data:
-            data['name'] = 'unknown'
+        # also '/my/music/entrance/%s.wav' then speak "Neew %s. %s" % (sensorWords[data['sensor']], data['name']),
+
+        print "loading"
+        self.buffers = {
+            'leave': openal.Buffer('/my/music/entrance/leave.wav'),
+            'highlight' : openal.Buffer('/my/music/snd/Oxygen/KDE-Im-Highlight-Msg-44100.wav'),
+            'question' : openal.Buffer('/my/music/snd/angel_ogg/angel_question.wav'),
+            'jazztrumpet': openal.Buffer('/my/music/snd/sampleswap/MELODIC SAMPLES and LOOPS/Acid Jazz Trumpet Lines/acid-jazz-trumpet-11.wav'),
+            'beep1': openal.Buffer('/my/music/snd/bxfr/beep1.wav'),
+            'beep2': openal.Buffer('/my/music/snd/bxfr/beep2.wav'),
+        }
+        print "loaded sounds"
+        self.playingSources = []
+        self.queued = []
+
+    def playEffect(self, name):
+        return self.playBuffer(self.buffers[name])
+
+    def playSpeech(self, txt, preEffect=None, postEffect=None, preEffectOverlap=0):
+        buf, secs = makeSpeech(txt)
+        t = 0
+        if preEffect:
+            t += self.playEffect(preEffect)
+            t -= preEffectOverlap
             
-        if data.get('action') == 'arrive':
+        reactor.callLater(t, self.playBuffer, buf)
+        t += secs
+
+        if postEffect:
+            self.playBufferLater(t, self.buffers[postEffect])
+
+    def playBufferLater(self, t, buf):
+        self.queued.append(reactor.callLater(t, self.playBuffer, buf))
             
-            snd = ('/my/music/entrance/%s.wav' %
-                   data['name'].replace(' ', '_').replace(':', '_'))
-            if not os.path.exists(snd):
-                snd = None
+    def playBuffer(self, buf):
+        src = self.contextlistener.get_source()
+        src.buffer = buf
+        src.play()
 
-            soundOut(preSound="/my/music/snd/angel_ogg/angel_question.wav",
-                     # sic:
-                     speech="Neew %s. %s" % (sensorWords[data['sensor']],
-                                            data['name']),
-                     postSound=snd, fast=True)
-            return 'ok'
+        secs = buf.size / (buf.frequency * buf.channels * buf.bits / 8)
+        self.playingSources.append(src)
+        reactor.callLater(secs + .1, self.done, src)
+        return secs
 
-        if data.get('action') == 'leave':
-            soundOut(preSound='/my/music/entrance/leave.wav',
-                     speech="lost %s. %s" % (sensorWords[data['sensor']],
-                                             data['name']),
-                     fast=True)
-            return 'ok'
+    def done(self, src):
+        try:
+            self.playingSources.remove(src)
+        except ValueError:
+            pass
+
+    def stopAll(self):
+        while self.playingSources:
+            self.playingSources.pop().stop()
+        for q in self.queued:
+            q.cancel()
+
+class Server(object):
+    app = Klein()
+    def __init__(self, sfx):
+        self.sfx = sfx
+
+    @app.route('/static/', branch=True)
+    def static(self, request):
+        return File("./static")
+
+    @app.route('/', methods=['GET'])
+    def index(self, request):
+        t = templates.get_template("index.jade")
+        return t.render(effectNames=[
+            dict(name=k, postUri='effects/%s' % k)
+            for k in self.sfx.buffers.keys()])
+
+    @app.route('/speak', methods=['POST'])
+    def speak(self, request):
+        self.sfx.playSpeech(request.args['msg'][0])
+        return "ok"
+
+    @app.route('/effects/<string:name>', methods=['POST'])
+    def effect(self, request, name):
+        self.sfx.playEffect(name)
+        return "ok"
+
+    @app.route('/stopAll', methods=['POST'])
+    def stopAll(self, request):
+        self.sfx.stopAll()
+        return "ok"
         
-        return "nothing to do"
+sfx = SoundEffects()
 
-class index(object):
-    def GET(self):
-        web.header('Content-type', 'text/html')
-        return '''
-<p><form action="speak" method="post">say: <input type="text" name="say"> <input type="submit"></form></p>
-<p><form action="testSound" method="post"> <input type="submit" value="test sound"></form></p>
-'''
-
-class speak(object):
-    def POST(self):
-        txt = web.input()['say']
-        log.info("speak: %r", txt)
-        soundOut(preSound='/my/music/snd/Oxygen/KDE-Im-Highlight-Msg-44100.wav',
-                 speech=txt)
-        return "sent"
-
-class testSound(object):
-    def POST(self):
-        soundOut(preSound='/my/music/entrance/leave.wav')
-        return 'ok'
-
-urls = (
-    r'/', 'index',
-    r'/speak', 'speak',
-    r'/testSound', 'testSound',
-    r'/visitorNet', 'visitorNet',
-    )
-
-app = web.application(urls, globals(), autoreload=True)
-
-if __name__ == '__main__':
-    sys.argv.append("9049")
-    app.run()
+server = Server(sfx)
+server.app.run("0.0.0.0", 9049)
