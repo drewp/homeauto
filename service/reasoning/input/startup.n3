@@ -7,4 +7,12 @@
 <http://slash:9050/graph> is :source of :reasoning;  rdfs:label "garageArduino for front motion" .
 <http://dash:9095/graph> is :source of :reasoning;  rdfs:label "dash monitor" .
 <http://bang:9095/graph> is :source of :reasoning;  rdfs:label "bang monitor" .
+<http://star:9095/graph> is :source of :reasoning;  rdfs:label "star monitor" .
 <http://bang:9099/graph> is :source of :reasoning;  rdfs:label "trails" .
+<http://dash:9107/graph> is :source of :reasoning;  rdfs:label "dash x idle" .
+<http://star:9107/graph> is :source of :reasoning;  rdfs:label "star x idle" .
+<http://slash:9080/graph> is :source of :reasoning;  rdfs:label "frontDoorArduino" .
+<http://bang:9055/graph> is :source of :reasoning; rdfs:label "portupdate" .
+
+# also, http://bang:9072/bang/processStatus
+
