@@ -57,7 +57,7 @@ class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
         def rowDict(row):
             row['cls'] = "signal" if row.get('connected') else "nosignal"
             if 'name' not in row:
-                row['name'] = row['clientHostname']
+                row['name'] = row.get('clientHostname', '-')
             if 'signal' not in row:
                 row['signal'] = 'yes' if row['connected'] else 'no'
 
