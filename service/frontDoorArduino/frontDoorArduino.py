@@ -101,7 +101,7 @@ class GraphResource(PrettyErrorHandler, cyclone.web.RequestHandler):
 
         board = self.settings.board
         g.add((DEV['frontDoorOpen'], ROOM['state'],
-               ROOM['open'] if board.getDoor() else ROOM['closed']))
+               ROOM['open'] if board.getDoor() == 'open' else ROOM['closed']))
         g.add((DEV['frontYardLight'], ROOM['state'],
                ROOM['on'] if board.getYardLight() else ROOM['off']))
         g.add((DEV['frontDoorLcd'], ROOM['text'],
