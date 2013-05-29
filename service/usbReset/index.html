@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>usbreset</title>
+    <style>
+    body {
+	font-family: helvetica;
+	font-size: 12px;
+    }
+    table {
+	border-collapse: collapse;
+    }
+    td, th {
+	border: 1px solid #ccc;
+	padding: 3px 15px;
+    }
+    tr:nth-child(even) { background: #f8f8f8; }
+    tr:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+
+    <table>
+      <thead>
+	<tr>
+	  <th>dev</th>
+	  <th>usbId</th>
+	  <th>name</th>
+	  <th>usbName</th>
+	</tr>
+      </thead>
+      <tbody data-bind="foreach: devices">
+	<tr>
+	  <td>
+	    <span data-bind="text: dev"/>
+	    <button data-bind="click: reset">Reset</button>
+	  </td>
+	  <td data-bind="text: usbId"></td>
+	  <td data-bind="text: name"></td>
+	  <td data-bind="text: usbName"></td>
+	</tr>
+      </tbody>
+    </table>
+    <pre id="error"></pre>
+    <script src="static/jquery-1.8.3.min.js"></script>
+    <script src="static/knockout-2.2.0.js"></script>
+    <script type="text/javascript">
+    // <![CDATA[
+    $(function () {
+	var model = {
+	    devices: ko.observable(),
+	};
+	
+	ko.applyBindings(model);
+
+	$("#error").ajaxSend(function () {
+	    $(this).text("");
+	}).ajaxError(function (ev, xhr, settings, error) {
+	    $(this).text(xhr.responseText);
+	});
+
+	function reloadDevices() {
+
+	$.getJSON("devices", function (ret) {
+	    ret.devices.forEach(function (dev) {
+		dev.reset = function (row, ev) {
+		    var target = $(ev.target);
+		    target.text("...");
+		    $.ajax({
+			type: "POST",
+			url: "devices/reset",
+			data: {dev: dev.dev},
+			success: function () {
+			    target.text("ok");
+			    // resetting hubs can renumber the deeper devices
+			    reloadDevices();
+			},
+			error: function () {
+			    target.text("failed");
+			},
+		    });
+		};
+	    });
+	    model.devices(ret.devices);
+	});
+	}
+	reloadDevices();
+	
+    });
+// ]]>
+</script>
+  </body>
+</html>
