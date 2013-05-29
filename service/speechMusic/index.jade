@@ -1,0 +1,60 @@
+doctype html
+html
+  head
+    title
+      | speechMusic
+    style
+      input[type=text] {
+        font-size: 40px;
+        font-family: monospace;
+        font-variant: small-caps;
+        width: 100%;
+      }
+      button {
+        margin: 10px;
+        padding: 10px;
+      }
+  body
+    h1 Speech   
+    h2 Speak
+    form(method='POST', action='speak')
+      input(type='text', name='msg', autocomplete="off")
+      button(type='submit') Say
+
+    h2 Effects
+    ul
+      each effect in effectNames
+        li
+          form(method='POST', action="#{effect['postUri']}")
+            button(type='submit')
+              | #{effect['name']}
+              
+    h2 Stop all
+    form(method='POST', action='stopAll')
+      button(type='submit') Stop all sounds
+
+    p#status
+    
+
+    script(src="static/jquery-2.0.1.min.js")
+    script(type="text/javascript")
+      $("input[type=text]").focus();
+
+      $("form").submit(function() { 
+        $("#status").text("submitting...");
+        $.ajax({
+          data: $(this).serialize(),
+          url: this.action,
+          type: this.method,
+          success: function (result) {
+            $("#status").text(result);
+            $(this).find("input").val("");
+          }.bind(this),
+          error: function (xhr, status, err) {
+            $("#status").text("Error: "+err);
+          }
+        });
+        $("input[type=text]").focus();
+        return false;
+      });
+    
