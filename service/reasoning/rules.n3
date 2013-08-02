@@ -49,9 +49,24 @@
   <http://bigasterisk.com/host/dash/monitor> :powerState :off .
 } .
 
-{ <http://projects.bigasterisk.com/room/star/button/grn> :change :down . } =>
+{ <http://projects.bigasterisk.com/room/star/button/blu> :change :down . } =>
 {
   <http://bigasterisk.com/host/star/slideshow> :postAction <http://bigasterisk.com/host/star/slideshow/advance> .
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/beep2> .
+} .
+
+
+{ <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
+{
+  <http://bigasterisk.com/host/star/sound> :postAction <http://star:9049/sound?filename=/my/music/ubuntuone/Daft+Punk/Discovery/Harder+Better+Faster+Stronger.mp3> .
+} .
+
+{ <http://projects.bigasterisk.com/room/livingRoom/shuttlepro/dial> :change :up . } => {
+  <http://bigasterisk.com/host/slash/sound> :postAction <http://slash:9049/volume?offset=.05&max=.6> .
+} .
+
+{ <http://projects.bigasterisk.com/room/livingRoom/shuttlepro/dial> :change :down . } => {
+  <http://bigasterisk.com/host/slash/sound> :postAction <http://slash:9049/volume?offset=-.05&max=.6> .
 } .
 
 #{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
