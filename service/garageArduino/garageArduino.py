@@ -253,7 +253,7 @@ class Poller(object):
                 dth = dt / 3600.
                 watts = self.kwhPerBlink / dth
 
-                if watts > 10000:
+                if watts > 20000:
                     # this pulse (or the previous one) is
                     # likely noise. Too late for the previous
                     # one, but we're going to skip this one
