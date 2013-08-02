@@ -21,7 +21,7 @@ EV = Namespace("http://bigasterisk.com/event#")
 class Content(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         out = []
-        if 0: # needs to be rewritten for trello
+        if 1:
             g = Graph()
             g.parse("http://bang:9103/graph", format="n3")
 
