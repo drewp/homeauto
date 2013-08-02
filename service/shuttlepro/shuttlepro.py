@@ -352,9 +352,16 @@ class _contour_remapper(object):
 
         return event
 
+import restkit
+reasoning = restkit.Resource("http://bang:9071/", timeout=1)
+
+from rdflib import Namespace
+SHUTTLEPRO = Namespace("http://projects.bigasterisk.com/room/livingRoom/shuttlepro/")
+ROOM = Namespace("http://projects.bigasterisk.com/room/")
+
 if __name__ == '__main__':
-    import restkit
-    mpd = restkit.Resource("http://bang:9009/")
+    import restkit, urllib
+    mpd = restkit.Resource("http://slash:9009/")
     def ev(what):
         print 'ev', what
         if 'key' in what and what['press']:
