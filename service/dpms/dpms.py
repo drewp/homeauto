@@ -6,12 +6,18 @@ sample supervisord block
 [program:dpms_9095]
 directory=/my/proj/homeauto/service/dpms
 command=/my/proj/homeauto/service/dpms/bin/python dpms.py
-environment=DISPLAY=:0.0
 user=drewp
 
 On one box, this goes super slow when avahi daemon is running. Maybe
 it's for an attempted dns lookup of the requesting IP address, which I
 wish I could switch off.
+
+--
+
+may need this:
+ps axf | grep /run/gdm
+18339 tty7     Ss+    0:00      \_ /usr/bin/X :0 -background none -verbose -auth /run/gdm/auth-for-gdm-iQoCDZ/database -nolisten tcp vt7
+eval xauth add `sudo xauth -f /run/gdm/auth-for-gdm-iQoCDZ/database list :0`
 
 """
 
@@ -23,6 +29,8 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph
+sys.path.append("../../lib")
+from localdisplay import setDisplayToLocalX
 
 def getMonitorState():
     out = subprocess.check_output(['xset', 'q'])
@@ -31,7 +39,7 @@ def getMonitorState():
         if line == 'Monitor is On':
             response.set_header('content-type', 'text/plain')
             return 'on'
-        elif line == 'Monitor is Off':
+        elif line in ['Monitor is Off', 'Monitor is in Suspend', 'Monitor is in Standby']:
             response.set_header('content-type', 'text/plain')
             return 'off'
     raise NotImplementedError("no matching monitor line in xset output")
@@ -62,11 +70,13 @@ def graph():
     host = socket.gethostname()
     g = StateGraph(ctx=DEV['dpms/%s' % host])
     g.add((URIRef("http://bigasterisk.com/host/%s/monitor" % host),
-           ROOM['powerState'],
+           ROOM['powerStateMeasured'],
            ROOM[getMonitorState()]))
     
     response.set_header('Content-type', 'application/x-trig')
     return g.asTrig()
-    
-run(host="0.0.0.0", port=9095, quiet=True)
+
+setDisplayToLocalX()
+
+run(host="0.0.0.0", server='gunicorn', port=9095, quiet=True)
 
