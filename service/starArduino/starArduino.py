@@ -6,7 +6,6 @@ from __future__ import division
 
 import sys,json
 from twisted.internet import reactor, task
-from twisted.internet.task import LoopingCall
 import cyclone.web, restkit
 
 sys.path.append("/my/proj/pixel/shiftweb")
@@ -49,16 +48,16 @@ class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
 class Barcode(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header("Content-Type", "text/plain")
-        ser = self.settings.arduino.ser
-        ser.write("\x60\x02")
-        self.write(str(ser.readJson()))
+        ard = self.settings.arduino
+        ard.ser.write("\x60\x02")
+        self.write(str(ard.readJson()))
 
 class BarcodeBeep(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self):
         self.set_header("Content-Type", "text/plain")
-        ser = self.settings.arduino.ser
-        ser.write("\x60\x03")
-        self.write(str(ser.readJson()))
+        ard = self.settings.arduino
+        ard.ser.write("\x60\x03")
+        self.write(str(ard.readJson()))
 
 def barcodeWatch(arduino, postBarcode):
     arduino.ser.write("\xff\xfb")
