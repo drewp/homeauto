@@ -1,12 +1,20 @@
 <!doctype html>
 <html lang="en" ng-app>
-<head>
-  <title>laundry pi</title>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0rc1/angular.min.js"></script>
-</head>
-<body>
- 
-  <p>Nothing here {{'yet' + '!'}}</p>
- 
-</body>
+  <head>
+    <title>laundry pi</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.0rc1/angular.min.js"></script>
+    <script src="gui.js"></script>
+  </head>
+  <body ng-controller="Ctrl">
+    <h1>laundry room pi</h1>
+    <div>
+      <div>motion: {{status.motion}}</div>
+      <div>switch1: {{status.switch1}}</div>
+      <div>switch2: {{status.switch2}}</div>
+      <div>switch3: {{status.switch3}}</div>
+      <div>doorClosed: {{status.doorClosed}}</div>
+      <div>orange led: {{status.led}}</div>
+    </div>
+    <div>Status: {{status | json}}</div>
+  </body>
 </html>
