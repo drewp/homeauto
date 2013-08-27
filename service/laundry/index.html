@@ -8,12 +8,23 @@
   <body ng-controller="Ctrl">
     <h1>laundry room pi</h1>
     <div>
+      <div>
+        current <a href="status">/status</a>
+        (as an rdf <a href="graph">graph</a>)
+      </div>
       <div>motion: {{status.motion}}</div>
       <div>switch1: {{status.switch1}}</div>
       <div>switch2: {{status.switch2}}</div>
       <div>switch3: {{status.switch3}}</div>
       <div>doorClosed: {{status.doorClosed}}</div>
-      <div>orange led: {{status.led}}</div>
+      <hr>
+      <div>
+        orange led: {{status.led}}
+        <button ng-click="setLed('on')">on</button>
+        <button ng-click="setLed('off')">off</button>
+      </div>
+      <div>strike: <button>unlock for 3 seconds</button></div>
+      <div>speaker: <button>beep</button></div>
     </div>
     <div>Status: {{status | json}}</div>
   </body>
