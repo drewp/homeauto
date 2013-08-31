@@ -70,14 +70,14 @@ func SetupIo() Pins {
 		OutStrike:      GetPin("GPIO9"),
 	}
 	
-	if err := hwio.PinMode(pins.InMotion,		hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch1,		hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch2,		hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch3,		hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InDoorClosed,	hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutLed,		hwio.OUTPUT); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutSpeaker,		hwio.OUTPUT); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutStrike,		hwio.OUTPUT); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InMotion,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InSwitch1,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InSwitch2,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InSwitch3,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InDoorClosed, hwio.INPUT_PULLUP); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.OutLed,       hwio.OUTPUT); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.OutSpeaker,	  hwio.OUTPUT); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.OutStrike,	  hwio.OUTPUT); err != nil { panic(err) }
 	return pins
 }
 	
