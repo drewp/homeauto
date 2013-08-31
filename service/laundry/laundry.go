@@ -61,11 +61,11 @@ func DigitalRead(p hwio.Pin) int {
 
 func SetupIo() Pins {
 	pins := Pins{
-		InMotion:		GetPin("GPIO0"),
-		InSwitch3:		GetPin("GPIO1"),
+		InMotion:		GetPin("GPIO0"), // pi rev2 calls it GPIO2
+		InSwitch3:		GetPin("GPIO1"), // pi rev2 calls it GPIO3
 		InSwitch1:		GetPin("GPIO4"),
 		InSwitch2:		GetPin("GPIO17"),
-		OutLed:			GetPin("GPIO21"),
+		OutLed:			GetPin("GPIO21"), // pi rev2 calls it GPIO27
 		OutSpeaker:		GetPin("GPIO22"),
 		InDoorClosed:	GetPin("GPIO10"),
 		OutStrike:      GetPin("GPIO9"),
