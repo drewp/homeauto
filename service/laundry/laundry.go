@@ -6,9 +6,13 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"net"
+	"os"
 	"encoding/json"
-	"github.com/bmizerany/pat"
+	"os/signal"
 	"github.com/mrmorphic/hwio"
+	"github.com/stretchr/goweb"
+	"github.com/stretchr/goweb/context"
 )
 
 /*
@@ -98,19 +102,15 @@ func booleanBody(w http.ResponseWriter, r *http.Request) (level int, err error) 
 func main() {
 	pins := SetupIo()
 
-	m := pat.New()
+	goweb.MapStatic("/static", "static")
+
+	// this one needs to fail if the hardware is broken in
+	// any way that we can determine, though I'm not sure
+	// what that will mean on rpi
+	goweb.MapStaticFile("/", "index.html")
 	
-	m.Get("/", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		// this one needs to fail if the hardware is broken in
-		// any way that we can determine, though I'm not sure
-		// what that will mean on rpi
-		http.ServeFile(w, r, "index.html")
-	}));
-
-	m.Get("/static/:any", http.FileServer(http.Dir("./")));
-
-	m.Get("/status", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		jsonEncode := json.NewEncoder(w)
+	goweb.Map("GET", "/status", func(c context.Context) error {
+		jsonEncode := json.NewEncoder(c.HttpResponseWriter())
 		jsonEncode.Encode(map[string]int{
 			"motion": DigitalRead(pins.InMotion),
 			"switch1": DigitalRead(pins.InSwitch1),
@@ -120,8 +120,10 @@ func main() {
 			"led": pins.LastOutLed,
 			"strike": pins.LastOutStrike,
 		})
-	}));
-	
+		return nil
+	})
+
+	/*
 	m.Put("/led", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -182,11 +184,49 @@ func main() {
 		// queue a beep
 		http.Error(w, "", http.StatusAccepted)
 	}))
+*/
+
+	address := ":8081"
 	
-	http.Handle("/", m)
-	log.Printf("Listening on port 8081")
-	err := http.ListenAndServe(":8081", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+	s := &http.Server{
+		Addr:           address,
+		Handler:        goweb.DefaultHttpHandler(),
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
+	
+	log.Printf("Listening on port %s", address)
+	listener, listenErr := net.Listen("tcp", address)
+
+	log.Printf("%s", goweb.DefaultHttpHandler())
+	
+	if listenErr != nil {
+		log.Fatalf("Could not listen: %s", listenErr)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for _ = range c {
+
+			// sig is a ^C, handle it
+
+			// stop the HTTP server
+			log.Print("Stopping the server...")
+			listener.Close()
+
+			/*
+			   Tidy up and tear down
+			*/
+			log.Print("Tearing down...")
+
+			// TODO: tidy code up here
+
+			log.Fatal("Finished - bye bye.  ;-)")
+
+		}
+	}()
+	log.Fatalf("Error in Serve: %s", s.Serve(listener))
+
 }
