@@ -1,5 +1,6 @@
 'use strict';
 
+
 function Ctrl($scope, $http) {
     function refresh() {
         $http.get("status").success(function (data) {
