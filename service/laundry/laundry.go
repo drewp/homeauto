@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+
 	"log"
 	"net/http"
 	"strconv"
@@ -86,19 +86,6 @@ func SetupIo() Pins {
 }
 	
 
-func booleanBody(w http.ResponseWriter, r *http.Request) (level int, err error) {
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		panic(err)
-	}
-	level, err2 := strconv.Atoi(string(body[:]))
-	if err2 != nil {
-		http.Error(w, "body must be '0' or '1'", http.StatusBadRequest)
-		return 0, err
-	}
-	return level, nil
-}
-
 func main() {
 	pins := SetupIo()
 
@@ -123,50 +110,55 @@ func main() {
 		return nil
 	})
 
-	/*
-	m.Put("/led", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		body, err := ioutil.ReadAll(r.Body)
+	goweb.Map("PUT", "/led", func(c context.Context) error {
+		body, err := c.RequestBody()
 		if err != nil {
 			panic(err)
 		}
+		
 		var level int
 		if string(body) == "on" {
 			level = 1
 		} else if string(body) == "off" {
 			level = 0
 		} else {
-			http.Error(w, "body must be 'on' or 'off'", http.StatusBadRequest)
-			return 
+			http.Error(c.HttpResponseWriter(), "body must be 'on' or 'off'", http.StatusBadRequest)
+			return nil
 		}
 
 		hwio.DigitalWrite(pins.OutLed, level)
 		pins.LastOutLed = level
-		http.Error(w, "", http.StatusAccepted)
-	}))
+		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
+		return nil
+	})
 
 	setStrike := func (level int) {
 		hwio.DigitalWrite(pins.OutStrike, level)
 		pins.LastOutStrike = level
 	}
 	
-	m.Put("/strike", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		level, err := booleanBody(w, r)
+	goweb.Map("PUT", "/strike", func(c context.Context) error {
+		body, err := c.RequestBody()
 		if err != nil {
 			panic(err)
 		}
-		setStrike(level)
-		http.Error(w, "", http.StatusAccepted)
-	}))
-	
-	m.Put("/strike/temporaryUnlock", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
-		err := r.ParseForm()
-		if err != nil {
-			panic(err)
-		}
-		seconds, err2 := strconv.ParseFloat(string(r.Form["seconds"][0]), 32)
+
+		level, err2 := strconv.Atoi(string(body[:]))
 		if err2 != nil {
-			http.Error(w, "seconds must be a float", http.StatusBadRequest)
-			return
+			http.Error(c.HttpResponseWriter(), "body must be '0' or '1'", http.StatusBadRequest)
+			return nil
+		}
+
+		setStrike(level)
+		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
+		return nil
+	})
+	
+	goweb.Map("PUT", "/strike/temporaryUnlock", func(c context.Context) error {
+		seconds, err2 := strconv.ParseFloat(c.FormValue("seconds"), 32)
+		if err2 != nil {
+			http.Error(c.HttpResponseWriter(), "seconds must be a float", http.StatusBadRequest)
+			return nil
 		}
 
 		// This is not correctly reentrant. There should be a
@@ -177,14 +169,16 @@ func main() {
 			time.Sleep(time.Duration(seconds * float64(time.Second)))
 			setStrike(0)
 		}()
-		http.Error(w, "", http.StatusAccepted)
-	}))
+		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
+		return nil
+	})
 
-	m.Put("/speaker/beep", http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+	goweb.Map("PUT", "/speaker/beep", func(c context.Context) error {
 		// queue a beep
-		http.Error(w, "", http.StatusAccepted)
-	}))
-*/
+		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
+		return nil
+	})
+
 
 	address := ":8081"
 	
