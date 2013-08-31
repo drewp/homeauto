@@ -1,15 +1,12 @@
 package main
 
 import (
-
+	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"time"
-	"net"
-	"os"
-	"encoding/json"
-	"os/signal"
 	"github.com/mrmorphic/hwio"
 	"github.com/stretchr/goweb"
 	"github.com/stretchr/goweb/context"
@@ -155,10 +152,14 @@ func main() {
 	})
 	
 	goweb.Map("PUT", "/strike/temporaryUnlock", func(c context.Context) error {
-		seconds, err2 := strconv.ParseFloat(c.FormValue("seconds"), 32)
-		if err2 != nil {
-			http.Error(c.HttpResponseWriter(), "seconds must be a float", http.StatusBadRequest)
-			return nil
+		type TemporaryUnlockRequest struct {
+			Seconds float64
+		}
+
+		var req TemporaryUnlockRequest
+		err := json.NewDecoder(c.HttpRequest().Body).Decode(&req)
+		if err != nil {
+			panic(err)
 		}
 
 		// This is not correctly reentrant. There should be a
@@ -166,7 +167,7 @@ func main() {
 		// and status should show you any running effects.
 		setStrike(1)
 		go func() {
-			time.Sleep(time.Duration(seconds * float64(time.Second)))
+			time.Sleep(time.Duration(req.Seconds * float64(time.Second)))
 			setStrike(0)
 		}()
 		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
@@ -187,40 +188,13 @@ func main() {
 		Handler:        goweb.DefaultHttpHandler(),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
 	}
-	
+
 	log.Printf("Listening on port %s", address)
-	listener, listenErr := net.Listen("tcp", address)
-
 	log.Printf("%s", goweb.DefaultHttpHandler())
-	
+	listener, listenErr := net.Listen("tcp", address)
 	if listenErr != nil {
-		log.Fatalf("Could not listen: %s", listenErr)
+		panic(listenErr)
 	}
-
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for _ = range c {
-
-			// sig is a ^C, handle it
-
-			// stop the HTTP server
-			log.Print("Stopping the server...")
-			listener.Close()
-
-			/*
-			   Tidy up and tear down
-			*/
-			log.Print("Tearing down...")
-
-			// TODO: tidy code up here
-
-			log.Fatal("Finished - bye bye.  ;-)")
-
-		}
-	}()
-	log.Fatalf("Error in Serve: %s", s.Serve(listener))
-
+	s.Serve(listener)
 }
