@@ -10,6 +10,7 @@ import (
 	"github.com/mrmorphic/hwio"
 	"github.com/stretchr/goweb"
 	"github.com/stretchr/goweb/context"
+	"bitbucket.org/ww/goraptor"
 )
 
 /*
@@ -81,9 +82,26 @@ func SetupIo() Pins {
 	if err := hwio.PinMode(pins.OutStrike,	  hwio.OUTPUT); err != nil { panic(err) }
 	return pins
 }
-	
+
+
+func serializeGowebResponse(
+	c context.Context,
+	syntaxName string,
+	statements chan *goraptor.Statement) error {
+	serializer := goraptor.NewSerializer(syntaxName)
+	defer serializer.Free()
+
+	str, err := serializer.Serialize(statements, "")
+	if err != nil {
+		panic(err);
+	}
+	c.HttpResponseWriter().Header().Set("Content-Type",
+		goraptor.SerializerSyntax[syntaxName].MimeType)
+	return goweb.Respond.With(c, 200, []byte(str))
+}
 
 func main() {
+	log.Printf("%v", goraptor.SerializerSyntax)
 	pins := SetupIo()
 
 	goweb.MapStatic("/static", "static")
@@ -107,6 +125,24 @@ func main() {
 		return nil
 	})
 
+	goweb.Map("GET", "/graph", func(c context.Context) error {
+		u1 := goraptor.Uri("http://example.com/s")
+
+		statements := make(chan *goraptor.Statement, 1)
+
+		st := goraptor.Statement{
+			Subject: &u1,
+			Predicate: &u1,
+			Object: &u1,
+			Graph: &u1,
+		}
+		statements <- &st
+		close(statements)
+		// type should be chosen with accept header. trig is
+		// causing segfaults.
+		return serializeGowebResponse(c, "nquads", statements)
+	})
+
 	goweb.Map("PUT", "/led", func(c context.Context) error {
 		body, err := c.RequestBody()
 		if err != nil {
@@ -119,7 +155,7 @@ func main() {
 		} else if string(body) == "off" {
 			level = 0
 		} else {
-			return goweb.Respond.With(c, http.StatusBadRequest, "body must be 'on' or 'off'")
+			return goweb.Respond.With(c, http.StatusBadRequest, []byte("body must be 'on' or 'off'"))
 		}
 
 		hwio.DigitalWrite(pins.OutLed, level)
@@ -138,9 +174,9 @@ func main() {
 			panic(err)
 		}
 
-		level, err2 := strconv.Atoi(string(body[:]))
-		if err2 != nil {
-			return goweb.Respond.With(c, http.StatusBadRequest, "body must be '0' or '1'")
+		level, err := strconv.Atoi(string(body[:]))
+		if err != nil {
+			return goweb.Respond.With(c, http.StatusBadRequest, []byte("body must be '0' or '1'"))
 		}
 
 		setStrike(level)
