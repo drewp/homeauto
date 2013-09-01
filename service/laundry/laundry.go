@@ -1,18 +1,17 @@
 package main
 
 import (
+	"bitbucket.org/ww/goraptor"
 	"encoding/json"
-	"log"
-	"net"
-	"net/http"
-	"strconv"
-	"fmt"
-	"time"
-	"runtime"
+	"errors"
 	"github.com/mrmorphic/hwio"
 	"github.com/stretchr/goweb"
 	"github.com/stretchr/goweb/context"
-	"bitbucket.org/ww/goraptor"
+	"log"
+	"net"
+	"net/http"
+	"runtime"
+	"time"
 )
 
 /*
@@ -42,7 +41,80 @@ Pin 26: CE1N,GPIO7  cap:output,input,input_pullup,input_pulldown
 
 type Hardware struct {
 	InMotion, InSwitch3, InSwitch1, InSwitch2, OutLed, OutSpeaker, InDoorClosed, OutStrike hwio.Pin
-	LastOutLed, LastOutStrike int
+	LastOutLed, LastOutStrike                                                              string
+}
+
+func DigitalRead(p hwio.Pin) int {
+	v, err := hwio.DigitalRead(p)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func (h *Hardware) GetMotion() string {
+	if DigitalRead(h.InMotion) == 0 {
+		return "motion"
+	} else {
+		return "noMotion"
+	}
+}
+
+func (h *Hardware) GetDoor() string {
+	if DigitalRead(h.InDoorClosed) == 1 {
+		return "closed"
+	} else {
+		return "open"
+	}
+}
+
+func (h *Hardware) GetSwitch(which string) string {
+	var level int
+	switch which {
+	case "1":
+		level = DigitalRead(h.InSwitch1)
+	case "2":
+		level = DigitalRead(h.InSwitch2)
+	case "3":
+		level = DigitalRead(h.InSwitch3)
+	}
+	if level == 0 {
+		return "closed"
+	} else {
+		return "open"
+	}
+}
+
+func (h *Hardware) GetLed() string {
+	return h.LastOutLed
+}
+
+func (h *Hardware) GetStrike() string {
+	return h.LastOutStrike
+}
+
+func (h *Hardware) SetLed(state string) {
+	switch state {
+	case "on":
+		hwio.DigitalWrite(h.OutLed, 1)
+	case "off":
+		hwio.DigitalWrite(h.OutLed, 0)
+	default:
+		panic(errors.New("unknown state"))
+	}
+	h.LastOutLed = state
+}
+
+func (h *Hardware) SetStrike(state string) {
+	switch state {
+	case "unlocked":
+		hwio.DigitalWrite(h.OutStrike, 1)
+	case "locked":
+		hwio.DigitalWrite(h.OutStrike, 0)
+	default:
+		panic(errors.New("unknown state"))
+	}
+	h.LastOutStrike = state
 }
 
 // hwio.GetPin with a panic instead of an error return
@@ -54,35 +126,45 @@ func GetPin(id string) hwio.Pin {
 	return p
 }
 
-func DigitalRead(p hwio.Pin) int {
-	v, err := hwio.DigitalRead(p)
-	if err != nil {
+func SetupIo() Hardware {
+	//	return Hardware{}
+	pins := Hardware{
+		InMotion:     GetPin("GPIO2"), // pi rev2 calls it GPIO2
+		InSwitch3:    GetPin("GPIO3"), // pi rev2 calls it GPIO3
+		InSwitch1:    GetPin("GPIO4"),
+		InSwitch2:    GetPin("GPIO17"),
+		OutLed:       GetPin("GPIO27"), // pi rev2 calls it GPIO27
+		OutSpeaker:   GetPin("GPIO22"),
+		InDoorClosed: GetPin("GPIO10"),
+		OutStrike:    GetPin("GPIO9"),
+	}
+
+	if err := hwio.PinMode(pins.InMotion, hwio.INPUT_PULLUP); err != nil {
 		panic(err)
 	}
-	return v
-}
-
-func SetupIo() Hardware {
-//	return Hardware{}
-	pins := Hardware{
-		InMotion:		GetPin("GPIO2"), // pi rev2 calls it GPIO2
-		InSwitch3:		GetPin("GPIO3"), // pi rev2 calls it GPIO3
-		InSwitch1:		GetPin("GPIO4"),
-		InSwitch2:		GetPin("GPIO17"),
-		OutLed:			GetPin("GPIO27"), // pi rev2 calls it GPIO27
-		OutSpeaker:		GetPin("GPIO22"),
-		InDoorClosed:	GetPin("GPIO10"),
-		OutStrike:      GetPin("GPIO9"),
+	if err := hwio.PinMode(pins.InSwitch1, hwio.INPUT_PULLUP); err != nil {
+		panic(err)
 	}
-	
-	if err := hwio.PinMode(pins.InMotion,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch1,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch2,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InSwitch3,	  hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.InDoorClosed, hwio.INPUT_PULLUP); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutLed,       hwio.OUTPUT); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutSpeaker,	  hwio.OUTPUT); err != nil { panic(err) }
-	if err := hwio.PinMode(pins.OutStrike,	  hwio.OUTPUT); err != nil { panic(err) }
+	if err := hwio.PinMode(pins.InSwitch2, hwio.INPUT_PULLUP); err != nil {
+		panic(err)
+	}
+	if err := hwio.PinMode(pins.InSwitch3, hwio.INPUT_PULLUP); err != nil {
+		panic(err)
+	}
+	if err := hwio.PinMode(pins.InDoorClosed, hwio.INPUT_PULLDOWN); err != nil {
+		panic(err)
+	}
+	if err := hwio.PinMode(pins.OutLed, hwio.OUTPUT); err != nil {
+		panic(err)
+	}
+	if err := hwio.PinMode(pins.OutSpeaker, hwio.OUTPUT); err != nil {
+		panic(err)
+	}
+	if err := hwio.PinMode(pins.OutStrike, hwio.OUTPUT); err != nil {
+		panic(err)
+	}
+	pins.SetLed("off")
+	pins.SetStrike("locked")
 	return pins
 }
 
@@ -95,15 +177,15 @@ func serializeGowebResponse(
 
 	str, err := serializer.Serialize(statements, "")
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 	c.HttpResponseWriter().Header().Set("Content-Type",
 		goraptor.SerializerSyntax[syntaxName].MimeType)
 	return goweb.Respond.With(c, 200, []byte(str))
 }
 
-func namespace(ns string) (func(string) *goraptor.Uri) {
-	return func (path string) *goraptor.Uri {
+func namespace(ns string) func(string) *goraptor.Uri {
+	return func(path string) *goraptor.Uri {
 		var u goraptor.Uri = goraptor.Uri(ns + path)
 		return &u
 	}
@@ -127,26 +209,6 @@ func nowLiteral() *goraptor.Literal {
 	return literal(string(rfc3999Time[:]), XS("dateTime"))
 }
 
-func twoState(
-	graph *goraptor.Uri,
-	subject *goraptor.Uri,
-	test interface{},
-	trueVal interface{}, trueObject *goraptor.Uri,
-	falseVal interface{}, falseObject *goraptor.Uri,
-) *goraptor.Statement {
-	ROOM := namespace("http://projects.bigasterisk.com/room/")
-	var motionState goraptor.Term
-	if test == trueVal {
-		motionState = trueObject
-	} else if test == falseVal {
-		motionState = falseObject
-	} else {
-		motionState = literal(fmt.Sprintf("%v", test), nil)
-	}
-	return &(goraptor.Statement{
-		subject, ROOM("state"), motionState, graph})
-}
-
 func main() {
 	pins := SetupIo()
 
@@ -156,17 +218,17 @@ func main() {
 	// any way that we can determine, though I'm not sure
 	// what that will mean on rpi
 	goweb.MapStaticFile("/", "index.html")
-	
+
 	goweb.Map("GET", "/status", func(c context.Context) error {
 		jsonEncode := json.NewEncoder(c.HttpResponseWriter())
-		jsonEncode.Encode(map[string]int{
-			"motion": DigitalRead(pins.InMotion),
-			"switch1": DigitalRead(pins.InSwitch1),
-			"switch2": DigitalRead(pins.InSwitch2),
-			"switch3": DigitalRead(pins.InSwitch3),
-			"doorClosed": DigitalRead(pins.InDoorClosed),
-			"led": pins.LastOutLed,
-			"strike": pins.LastOutStrike,
+		jsonEncode.Encode(map[string]interface{}{
+			"motion":     pins.GetMotion(),
+			"switch1":    pins.GetSwitch("1"),
+			"switch2":    pins.GetSwitch("2"),
+			"switch3":    pins.GetSwitch("3"),
+			"doorClosed": pins.GetDoor(),
+			"led":        pins.LastOutLed,
+			"strike":     pins.LastOutStrike,
 		})
 		return nil
 	})
@@ -177,7 +239,7 @@ func main() {
 
 		statements := make(chan *goraptor.Statement, 100)
 
-		graph := ROOM("laundrySensors")
+		graph := ROOM("laundryDoor")
 
 		_, thisFile, _, _ := runtime.Caller(0)
 		statements <- &(goraptor.Statement{
@@ -185,33 +247,18 @@ func main() {
 		statements <- &(goraptor.Statement{
 			graph, DC("modified"), nowLiteral(), graph})
 
-		statements <- twoState(graph, ROOM("laundryDoorMotion"),
-			DigitalRead(pins.InMotion),
-			1, ROOM("motion"),
-			0, ROOM("noMotion"))
-
-		statements <- twoState(graph, ROOM("laundryDoorOpen"),
-			DigitalRead(pins.InDoorClosed),
-			1, ROOM("closed"),
-			0, ROOM("open"))
-
-		for i, p := range map[string]hwio.Pin{
-			"1": pins.InSwitch1,
-			"2": pins.InSwitch2,
-			"3": pins.InSwitch3} {
-			statements <- twoState(
-				graph, ROOM("laundryDoorSwitch" + i),
-				DigitalRead(p),
-				1, ROOM("closed"),
-				0, ROOM("open"))
+		for subj, state := range map[*goraptor.Uri]*goraptor.Uri{
+			ROOM("laundryDoorMotion"):  ROOM(pins.GetMotion()),
+			ROOM("laundryDoorOpen"):    ROOM(pins.GetDoor()),
+			ROOM("laundryDoorSwitch1"): ROOM(pins.GetSwitch("1")),
+			ROOM("laundryDoorSwitch2"): ROOM(pins.GetSwitch("2")),
+			ROOM("laundryDoorSwitch3"): ROOM(pins.GetSwitch("3")),
+			ROOM("laundryDoorLed"):     ROOM(pins.GetLed()),
+			ROOM("laundryDoorStrike"):  ROOM(pins.GetStrike()),
+		} {
+			statements <- &(goraptor.Statement{subj, ROOM("state"), state, graph})
 		}
 
-		statements <- twoState(graph, ROOM("laundryDoorLed"),
-			pins.LastOutLed, 1, ROOM("on"), 0, ROOM("off"))
-		
-		statements <- twoState(graph, ROOM("laundryDoorStrike"),
-			pins.LastOutLed, 1, ROOM("unlocked"), 0, ROOM("locked"))
-		
 		close(statements)
 		// type should be chosen with accept header. trig is
 		// causing segfaults.
@@ -223,43 +270,21 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		
-		var level int
-		if string(body) == "on" {
-			level = 1
-		} else if string(body) == "off" {
-			level = 0
-		} else {
-			return goweb.Respond.With(c, http.StatusBadRequest,
-				[]byte("body must be 'on' or 'off'"))
-		}
 
-		hwio.DigitalWrite(pins.OutLed, level)
-		pins.LastOutLed = level
+		pins.SetLed(string(body))
 		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
-	setStrike := func (level int) {
-		hwio.DigitalWrite(pins.OutStrike, level)
-		pins.LastOutStrike = level
-	}
-	
 	goweb.Map("PUT", "/strike", func(c context.Context) error {
 		body, err := c.RequestBody()
 		if err != nil {
 			panic(err)
 		}
 
-		level, err := strconv.Atoi(string(body[:]))
-		if err != nil {
-			return goweb.Respond.With(c, http.StatusBadRequest,
-				[]byte("body must be '0' or '1'"))
-		}
-
-		setStrike(level)
+		pins.SetStrike(string(body))
 		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
-	
+
 	goweb.Map(
 		"PUT", "/strike/temporaryUnlock",
 		func(c context.Context) error {
@@ -277,11 +302,11 @@ func main() {
 			// This is not correctly reentrant. There should be a
 			// stack of temporary effects that unpop correctly,
 			// and status should show you any running effects.
-			setStrike(1)
+			pins.SetStrike("unlocked")
 			go func() {
 				time.Sleep(time.Duration(req.Seconds *
 					float64(time.Second)))
-				setStrike(0)
+				pins.SetStrike("locked")
 			}()
 			return goweb.Respond.WithStatusText(
 				c, http.StatusAccepted)
@@ -292,14 +317,13 @@ func main() {
 		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
-
 	address := ":8081"
-	
+
 	s := &http.Server{
-		Addr:           address,
-		Handler:        goweb.DefaultHttpHandler(),
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
+		Addr:         address,
+		Handler:      goweb.DefaultHttpHandler(),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 
 	log.Printf("Listening on port %s", address)
