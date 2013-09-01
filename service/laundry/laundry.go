@@ -119,14 +119,12 @@ func main() {
 		} else if string(body) == "off" {
 			level = 0
 		} else {
-			http.Error(c.HttpResponseWriter(), "body must be 'on' or 'off'", http.StatusBadRequest)
-			return nil
+			return goweb.Respond.With(c, http.StatusBadRequest, "body must be 'on' or 'off'")
 		}
 
 		hwio.DigitalWrite(pins.OutLed, level)
 		pins.LastOutLed = level
-		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
-		return nil
+		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
 	setStrike := func (level int) {
@@ -142,13 +140,11 @@ func main() {
 
 		level, err2 := strconv.Atoi(string(body[:]))
 		if err2 != nil {
-			http.Error(c.HttpResponseWriter(), "body must be '0' or '1'", http.StatusBadRequest)
-			return nil
+			return goweb.Respond.With(c, http.StatusBadRequest, "body must be '0' or '1'")
 		}
 
 		setStrike(level)
-		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
-		return nil
+		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 	
 	goweb.Map("PUT", "/strike/temporaryUnlock", func(c context.Context) error {
@@ -170,14 +166,12 @@ func main() {
 			time.Sleep(time.Duration(req.Seconds * float64(time.Second)))
 			setStrike(0)
 		}()
-		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
-		return nil
+		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
 	goweb.Map("PUT", "/speaker/beep", func(c context.Context) error {
 		// queue a beep
-		http.Error(c.HttpResponseWriter(), "", http.StatusAccepted)
-		return nil
+		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
 
