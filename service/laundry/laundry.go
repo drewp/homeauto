@@ -233,6 +233,18 @@ func main() {
 		return nil
 	})
 
+	goweb.Map("GET", "/trig", func(c context.Context) error {
+		DC := namespace("http://purl.org/dc/terms/")
+		ROOM := namespace("http://projects.bigasterisk.com/room/")
+		statements := make(chan *goraptor.Statement, 100)
+		graph := ROOM("laundryDoor")
+		statements <- &(goraptor.Statement{
+			graph, DC("modified"), nowLiteral(), graph})
+		
+		close(statements)
+		return serializeGowebResponse(c, "trig", statements)
+	})
+		
 	goweb.Map("GET", "/graph", func(c context.Context) error {
 		DC := namespace("http://purl.org/dc/terms/")
 		ROOM := namespace("http://projects.bigasterisk.com/room/")
