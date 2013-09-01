@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"fmt"
 	"time"
+	"runtime"
 	"github.com/mrmorphic/hwio"
 	"github.com/stretchr/goweb"
 	"github.com/stretchr/goweb/context"
@@ -38,7 +40,7 @@ Pin 24: CE0N,GPIO8  cap:output,input,input_pullup,input_pulldown
 Pin 26: CE1N,GPIO7  cap:output,input,input_pullup,input_pulldown
 */
 
-type Pins struct {
+type Hardware struct {
 	InMotion, InSwitch3, InSwitch1, InSwitch2, OutLed, OutSpeaker, InDoorClosed, OutStrike hwio.Pin
 	LastOutLed, LastOutStrike int
 }
@@ -60,8 +62,9 @@ func DigitalRead(p hwio.Pin) int {
 	return v
 }
 
-func SetupIo() Pins {
-	pins := Pins{
+func SetupIo() Hardware {
+//	return Hardware{}
+	pins := Hardware{
 		InMotion:		GetPin("GPIO2"), // pi rev2 calls it GPIO2
 		InSwitch3:		GetPin("GPIO3"), // pi rev2 calls it GPIO3
 		InSwitch1:		GetPin("GPIO4"),
@@ -83,7 +86,6 @@ func SetupIo() Pins {
 	return pins
 }
 
-
 func serializeGowebResponse(
 	c context.Context,
 	syntaxName string,
@@ -100,8 +102,52 @@ func serializeGowebResponse(
 	return goweb.Respond.With(c, 200, []byte(str))
 }
 
+func namespace(ns string) (func(string) *goraptor.Uri) {
+	return func (path string) *goraptor.Uri {
+		var u goraptor.Uri = goraptor.Uri(ns + path)
+		return &u
+	}
+}
+
+func literal(v string, datatype *goraptor.Uri) (ret *goraptor.Literal) {
+	ret = new(goraptor.Literal)
+	ret.Value = v
+	if datatype != nil {
+		ret.Datatype = string(*datatype)
+	}
+	return
+}
+
+func nowLiteral() *goraptor.Literal {
+	XS := namespace("http://www.w3.org/2001/XMLSchema#")
+	rfc3999Time, err := time.Now().MarshalJSON()
+	if err != nil {
+		panic(err)
+	}
+	return literal(string(rfc3999Time[:]), XS("dateTime"))
+}
+
+func twoState(
+	graph *goraptor.Uri,
+	subject *goraptor.Uri,
+	test interface{},
+	trueVal interface{}, trueObject *goraptor.Uri,
+	falseVal interface{}, falseObject *goraptor.Uri,
+) *goraptor.Statement {
+	ROOM := namespace("http://projects.bigasterisk.com/room/")
+	var motionState goraptor.Term
+	if test == trueVal {
+		motionState = trueObject
+	} else if test == falseVal {
+		motionState = falseObject
+	} else {
+		motionState = literal(fmt.Sprintf("%v", test), nil)
+	}
+	return &(goraptor.Statement{
+		subject, ROOM("state"), motionState, graph})
+}
+
 func main() {
-	log.Printf("%v", goraptor.SerializerSyntax)
 	pins := SetupIo()
 
 	goweb.MapStatic("/static", "static")
@@ -126,17 +172,46 @@ func main() {
 	})
 
 	goweb.Map("GET", "/graph", func(c context.Context) error {
-		u1 := goraptor.Uri("http://example.com/s")
+		DC := namespace("http://purl.org/dc/terms/")
+		ROOM := namespace("http://projects.bigasterisk.com/room/")
 
-		statements := make(chan *goraptor.Statement, 1)
+		statements := make(chan *goraptor.Statement, 100)
 
-		st := goraptor.Statement{
-			Subject: &u1,
-			Predicate: &u1,
-			Object: &u1,
-			Graph: &u1,
+		graph := ROOM("laundrySensors")
+
+		_, thisFile, _, _ := runtime.Caller(0)
+		statements <- &(goraptor.Statement{
+			graph, DC("creator"), literal(thisFile, nil), graph})
+		statements <- &(goraptor.Statement{
+			graph, DC("modified"), nowLiteral(), graph})
+
+		statements <- twoState(graph, ROOM("laundryDoorMotion"),
+			DigitalRead(pins.InMotion),
+			1, ROOM("motion"),
+			0, ROOM("noMotion"))
+
+		statements <- twoState(graph, ROOM("laundryDoorOpen"),
+			DigitalRead(pins.InDoorClosed),
+			1, ROOM("closed"),
+			0, ROOM("open"))
+
+		for i, p := range map[string]hwio.Pin{
+			"1": pins.InSwitch1,
+			"2": pins.InSwitch2,
+			"3": pins.InSwitch3} {
+			statements <- twoState(
+				graph, ROOM("laundryDoorSwitch" + i),
+				DigitalRead(p),
+				1, ROOM("closed"),
+				0, ROOM("open"))
 		}
-		statements <- &st
+
+		statements <- twoState(graph, ROOM("laundryDoorLed"),
+			pins.LastOutLed, 1, ROOM("on"), 0, ROOM("off"))
+		
+		statements <- twoState(graph, ROOM("laundryDoorStrike"),
+			pins.LastOutLed, 1, ROOM("unlocked"), 0, ROOM("locked"))
+		
 		close(statements)
 		// type should be chosen with accept header. trig is
 		// causing segfaults.
@@ -155,7 +230,8 @@ func main() {
 		} else if string(body) == "off" {
 			level = 0
 		} else {
-			return goweb.Respond.With(c, http.StatusBadRequest, []byte("body must be 'on' or 'off'"))
+			return goweb.Respond.With(c, http.StatusBadRequest,
+				[]byte("body must be 'on' or 'off'"))
 		}
 
 		hwio.DigitalWrite(pins.OutLed, level)
@@ -176,34 +252,40 @@ func main() {
 
 		level, err := strconv.Atoi(string(body[:]))
 		if err != nil {
-			return goweb.Respond.With(c, http.StatusBadRequest, []byte("body must be '0' or '1'"))
+			return goweb.Respond.With(c, http.StatusBadRequest,
+				[]byte("body must be '0' or '1'"))
 		}
 
 		setStrike(level)
 		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 	
-	goweb.Map("PUT", "/strike/temporaryUnlock", func(c context.Context) error {
-		type TemporaryUnlockRequest struct {
-			Seconds float64
-		}
+	goweb.Map(
+		"PUT", "/strike/temporaryUnlock",
+		func(c context.Context) error {
+			type TemporaryUnlockRequest struct {
+				Seconds float64
+			}
 
-		var req TemporaryUnlockRequest
-		err := json.NewDecoder(c.HttpRequest().Body).Decode(&req)
-		if err != nil {
-			panic(err)
-		}
+			var req TemporaryUnlockRequest
+			err := json.NewDecoder(c.HttpRequest().Body).
+				Decode(&req)
+			if err != nil {
+				panic(err)
+			}
 
-		// This is not correctly reentrant. There should be a
-		// stack of temporary effects that unpop correctly,
-		// and status should show you any running effects.
-		setStrike(1)
-		go func() {
-			time.Sleep(time.Duration(req.Seconds * float64(time.Second)))
-			setStrike(0)
-		}()
-		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
-	})
+			// This is not correctly reentrant. There should be a
+			// stack of temporary effects that unpop correctly,
+			// and status should show you any running effects.
+			setStrike(1)
+			go func() {
+				time.Sleep(time.Duration(req.Seconds *
+					float64(time.Second)))
+				setStrike(0)
+			}()
+			return goweb.Respond.WithStatusText(
+				c, http.StatusAccepted)
+		})
 
 	goweb.Map("PUT", "/speaker/beep", func(c context.Context) error {
 		// queue a beep
