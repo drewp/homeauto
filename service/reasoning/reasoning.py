@@ -22,8 +22,8 @@ from twisted.python.filepath import FilePath
 import time, traceback, sys, json, logging
 from rdflib.Graph import Graph, ConjunctiveGraph
 from rdflib import Namespace, URIRef, Literal, RDF, StringInputSource
-import restkit
 from FuXi.Rete.RuleStore import N3RuleStore
+from cyclone.httpclient import fetch
 import cyclone.web, cyclone.websocket
 from inference import addTrig, infer
 from graphop import graphEqual
@@ -71,6 +71,8 @@ class InputGraph(object):
         log.debug("read file graphs")
         for fp in FilePath("input").walk():
             if fp.isdir():
+                continue
+            if fp.splitext()[1] != '.n3':
                 continue
             log.debug("read %s", fp)
             # todo: if this fails, leave the report in the graph
@@ -219,22 +221,30 @@ class Reasoning(object):
         inferenceTime = time.time() - t1
 
         out.add((ROOM['reasoner'], ROOM['inferenceTime'],
-                           Literal(inferenceTime)))
+                 Literal(inferenceTime)))
         return out
 
     def _postToMagma(self, inputGraph):
-        try:
-            inputGraphNt = inputGraph.serialize(format="nt")
-            inferredNt = self.inferred.serialize(format="nt")
-            body = json.dumps({"input": inputGraphNt,
-                               "inferred": inferredNt})
-            restkit.Resource("http://bang:8014/").post(
-                "reasoningChange", payload=body,
-                headers={"content-type" : "application/json"})
-        except Exception, e:
-            traceback.print_exc()
+
+        inputGraphNt = inputGraph.serialize(format="nt")
+        inferredNt = self.inferred.serialize(format="nt")
+        body = json.dumps({"input": inputGraphNt,
+                           "inferred": inferredNt})
+        def err(e):
             log.error("while sending changes to magma:")
             log.error(e)
+
+        fetch("http://bang:8014/reasoningChange",
+              method="POST",
+              timeout=2,
+              payload=body,
+              headers={"content-type" : ["application/json"]}).addErrback(err)
+
+    def _put(self, url, payload):
+        def err(e):
+            outlog.warn("put %s falied", url)
+        outlog.info("PUT %s payload=%r", url, payload)
+        fetch(url, method="PUT", payload=payload, timeout=2).addErrback(err)
 
     def putResults(self, inferred):
         """
@@ -261,8 +271,8 @@ class Reasoning(object):
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
 
-            if dev == DEV.theaterDoorLock: # ew
-                restkit.request(url=url+"/mode", method="PUT", body="output")
+            if url and dev == DEV.theaterDoorLock: # ew
+                self._put(url+"/mode", payload="output")
 
             inferredObjects = list(inferred.objects(dev, pred))
             if len(inferredObjects) == 0:
@@ -306,7 +316,7 @@ class Reasoning(object):
         value = deviceGraph.value(dev, ROOM.zeroValue)
         if value is not None:
             outlog.info("put zero (%r) to %s", value, putUrl)
-            restkit.request(url=putUrl, method="PUT", body=value)
+            self._put(putUrl, payload=value)
             # this should be written back into the inferred graph
             # for feedback
 
@@ -314,7 +324,7 @@ class Reasoning(object):
         value = deviceGraph.value(obj, ROOM.putValue)
         if value is not None:
             outlog.info("put %s to %s", value, putUrl)
-            restkit.request(url=putUrl, method="PUT", body=value)
+            self._put(putUrl, payload=value)
         else:
             outlog.warn("%s %s %s has no :putValue" %
                      (dev, pred, obj))
@@ -326,10 +336,7 @@ class Reasoning(object):
             return
         url = deviceGraph.value(DEV.frontDoorLcdBrightness, ROOM.putUrl)
         outlog.info("put lcd %s brightness %s", url, brt)
-        def failed(err):
-            outlog.error("lcd brightness: %s", err)
-        getPage(str(url) + "?brightness=%s" % str(brt),
-                method="PUT").addErrback(failed)
+        self._put(str(url) + "?brightness=%s" % str(brt))
 
         msg = "open %s motion %s" % (
             inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
