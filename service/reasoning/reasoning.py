@@ -30,8 +30,9 @@ from graphop import graphEqual
 
 sys.path.append("../../lib")
 from logsetup import log
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 outlog = logging.getLogger('output')
+outlog.setLevel(logging.DEBUG)
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
