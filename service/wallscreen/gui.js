@@ -12,7 +12,8 @@ $(function () {
         isToday: function (ev) {
             var today = moment().format("YYYY-MM-DD");
             return ev.date == today;
-        }
+        },
+        mapPersonData: ko.observable(),
     };
     reloadData = function() {
         $.getJSON("content", function (data) {
@@ -22,6 +23,22 @@ $(function () {
     }
     setInterval(reloadData, 30*60*1000);
     reloadData();
+
+    reloadMap = function () {
+        $.getJSON("content/map", function (data) {
+          var personData = [];
+          data.pts.forEach(function (pt) {
+            // this is in another config but not yet in the graph
+            var initial = pt.who.split("#")[1].substr(0, 1).toUpperCase();
+            pt.initial = initial;
+            pt.topFrac = initial == 'K' ? 0 : .5;
+            personData.push(pt);
+          });
+          model.mapPersonData(personData);
+        });
+    };
+    setInterval(reloadMap, 2*60*1000);
+    reloadMap();
 
     function onMessage(d) {
         if (d.tempF) {

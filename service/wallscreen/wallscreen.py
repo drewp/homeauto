@@ -9,14 +9,18 @@ from dateutil.parser import parse
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.httpclient, cyclone.websocket
-from rdflib import Graph, URIRef, Namespace, Literal, RDF
+from rdflib import Graph, ConjunctiveGraph, URIRef, Namespace, Literal, RDF
 
 sys.path.append("../../lib")
 from logsetup import log
 from cycloneerr import PrettyErrorHandler
 
+sys.path.append("../reasoning")
+from rdflibtrig import addTrig
+
 CV = Namespace("http://bigasterisk.com/checkvist/v1#")
 EV = Namespace("http://bigasterisk.com/event#")
+MAP = Namespace("http://bigasterisk.com/map#")
 
 class Content(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -72,6 +76,21 @@ class Content(PrettyErrorHandler, cyclone.web.RequestHandler):
 
         self.write(json.dumps({'tasks':out, 'events' : events}))
 
+class ContentMap(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self):
+        g = ConjunctiveGraph()
+        addTrig(g, "http://bang:9099/graph")
+        maxMeters = 65000
+        pts = []
+        print "loaded", len(g)
+        for s,p,o in g.triples((None, MAP['distanceToHomeM'], None)):
+            pts.append(dict(who=s,
+                            frac=float(o) / maxMeters,
+                            distanceToHomeM=o,
+                            displayMilesDistance="%.1f miles" %
+                            (float(o) * 0.000621371)))
+        self.write(json.dumps({'pts': pts}))
+        
 @inlineCallbacks
 def pushThermostat():
     f = json.loads((yield cyclone.httpclient.fetch("http://bang:10001/requestedTemperature")).body)
@@ -105,6 +124,7 @@ if __name__ == '__main__':
     port = 9102
     reactor.listenTCP(port, cyclone.web.Application(handlers=[
         (r'/content', Content),
+        (r'/content/map', ContentMap),
         (r'/live', Live),
         (r'/refreshTemperature', RefreshTemperature),
         (r'/(.*)', cyclone.web.StaticFileHandler,

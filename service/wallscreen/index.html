@@ -69,7 +69,7 @@
 
 	#events {
 	    width: 70%;
-	    height: 33%;
+	    height: 25%;
 	    overflow: hidden;
 	} 
 	#events > ul > li {
@@ -113,6 +113,13 @@
 	    background: #432;
 	    color: white;
 	}
+#map {
+height: 8%;
+width: 70%;
+overflow: hidden;
+background: #111;
+position: relative;
+}
 
 #thermostat {
 position: absolute;
@@ -126,6 +133,16 @@ top: 640px;
     top: 100px;
 }
 
+#map span.person {
+  position: absolute;
+  display: inline-block;
+  border-radius: 10px;
+  border: 1px solid gray;
+  background: rgba(21, 26, 21, 0.55);
+  width: 1em;
+  height: 1em;
+  text-align: center;
+}
 	/* ]]> */
       </style>
 
@@ -161,6 +178,12 @@ top: 640px;
 	    </ul>
 	  </li>
 	</ul>
+      </div>
+      <div id="map">
+        <span class="place">&#8962;</span>
+        <!-- ko foreach: mapPersonData -->
+        <span class="person" data-bind="text: initial, style: {left: (frac*100+'%'), top: (topFrac*100+'%')}"></span>
+        <!-- /ko -->
       </div>
       <div id="thermostat">
         Thermostat at <span style="color: #FAB1FA;" data-bind="text: requestedF"></span>. Use knob to adjust.
