@@ -6,6 +6,9 @@ ipython==0.13.1
 isodate==0.4.9
 pyOpenSSL==0.13
 python-dateutil==2.1
-rdflib==3.2.3
+rdflib==4.0.1
 six==1.2.0
 zope.interface==4.0.3
+
+# from reasoning addTrig
+restkit==4.2.2
