@@ -30,7 +30,7 @@ from graphop import graphEqual
 
 sys.path.append("../../lib")
 from logsetup import log
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 outlog = logging.getLogger('output')
 outlog.setLevel(logging.DEBUG)
 
@@ -238,14 +238,14 @@ class Reasoning(object):
         fetch("http://bang:8014/reasoningChange",
               method="POST",
               timeout=2,
-              payload=body,
+              postdata=body,
               headers={"content-type" : ["application/json"]}).addErrback(err)
 
     def _put(self, url, payload):
         def err(e):
-            outlog.warn("put %s falied", url)
+            outlog.warn("put %s failed", url)
         outlog.info("PUT %s payload=%r", url, payload)
-        fetch(url, method="PUT", payload=payload, timeout=2).addErrback(err)
+        fetch(url, method="PUT", postdata=payload, timeout=2).addErrback(err)
 
     def putResults(self, inferred):
         """
@@ -317,7 +317,7 @@ class Reasoning(object):
         value = deviceGraph.value(dev, ROOM.zeroValue)
         if value is not None:
             outlog.info("put zero (%r) to %s", value, putUrl)
-            self._put(putUrl, payload=value)
+            self._put(putUrl, payload=str(value))
             # this should be written back into the inferred graph
             # for feedback
 
@@ -325,7 +325,7 @@ class Reasoning(object):
         value = deviceGraph.value(obj, ROOM.putValue)
         if value is not None:
             outlog.info("put %s to %s", value, putUrl)
-            self._put(putUrl, payload=value)
+            self._put(putUrl, payload=str(value))
         else:
             outlog.warn("%s %s %s has no :putValue" %
                      (dev, pred, obj))
@@ -337,7 +337,7 @@ class Reasoning(object):
             return
         url = deviceGraph.value(DEV.frontDoorLcdBrightness, ROOM.putUrl)
         outlog.info("put lcd %s brightness %s", url, brt)
-        self._put(str(url) + "?brightness=%s" % str(brt))
+        self._put(str(url) + "?brightness=%s" % str(brt), payload='')
 
         msg = "open %s motion %s" % (
             inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
