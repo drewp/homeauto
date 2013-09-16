@@ -1,0 +1,98 @@
+<html>
+  <head>
+  </head>
+  <body>
+    theater motion sensor history:
+    <div id="chart_div" style="width: 900px; height: 250px;"></div>
+max age: <input type="range" name="maxAge" min="10" max="300" value="180">
+    <div id="status"></div>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+    <script type="text/javascript">
+      google.load("visualization", "1", {packages:["corechart"]});
+
+var latestData = null;
+var chart = null;
+
+      function loop() {
+          getNewPoints();
+          setTimeout(function () { webkitRequestAnimationFrame(loop); }, 1200);
+      }
+      google.setOnLoadCallback(function () {
+          chart = new google.visualization.LineChart(document.getElementById('chart_div'))
+          loop();
+      });
+
+      function getValue(subj, pred, trig) {
+          var groups = trig.match('<'+subj+'> <'+pred+'> "(.*?)"');
+          if (groups == null) {
+            return null;
+          }
+          return groups[1];
+      }
+
+      function getNewPoints() {
+          $("#status").text("get graph...");
+          $.ajax({
+              url: "graph",
+              success: function(data) {
+                  $("#status").text("");
+                  var pointsJson = getValue(
+                      "http://projects.bigasterisk.com/device/theaterDoorOutsideMotion",
+                      "http://projects.bigasterisk.com/room/history",
+                      data);
+                  var realPoints = [];
+                  if (pointsJson != null) {
+                    realPoints = JSON.parse(pointsJson);
+                  }
+                  var steppedPoints = new google.visualization.DataTable();
+                  steppedPoints.addColumn('number', 't');
+                  steppedPoints.addColumn('number', 'value');
+
+                  var prev = null;
+                  realPoints.forEach(function(r) {
+                      if (prev) {
+                          steppedPoints.addRows([[r[0], prev[1]]]);
+                      }
+                      steppedPoints.addRows([[r[0], r[1]]]);
+                      prev = r;
+                  });
+                  latestData = steppedPoints;
+                  redraw();
+              }
+          });
+      }
+      $("input[name=maxAge]").change(redraw);
+
+      function redraw() {
+          // https://developers.google.com/chart/interactive/docs/gallery/linechart#Configuration_Options
+          var options = {
+                      title: 'theaterDoorOutsideMotion',
+                      legend: {
+                          position: "none",
+                      },
+                      lineWidth: .5,
+                      hAxis: {
+                          title: "seconds ago",
+                          viewWindow: {
+                              min: -$("input[name=maxAge]").val(),
+                              max: 0
+                          },
+                          gridlines: { count: -1 }
+                      },
+                      vAxis: {
+                          baseline: -999,
+                          title: "motion sensed",
+                          viewWindow: {
+                              min: -.5,
+                              max: 1.5,
+                          }
+                      }
+                  };
+                  
+                  chart.draw(latestData, options);
+          }
+
+    </script>
+  </body>
+</html>
