@@ -26,7 +26,10 @@ def parseTrig(trig):
         
 def addTrig(graph, url):
     t1 = time.time()
-    trig = restkit.request(url).body_string()
+    response = restkit.request(url)
+    if response.status_int != 200:
+        raise ValueError("status %s from %s" % (response.status, url))
+    trig = response.body_string()
     fetchTime = time.time() - t1
     graph.addN(parseTrig(trig))
     return fetchTime

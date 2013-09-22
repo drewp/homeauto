@@ -28,7 +28,7 @@
 
 {
   :auth :near :home .
-  dev:theaterDoorOutsideMotion :state :motion.
+  dev:theaterDoorOutsideMotion :state :sustainedMotion .
   dev:theaterDoorOpen :state :closed .
   env: :localHour :awakeTime .
 } => { dev:theaterDoorLock :state :unlocked } .
