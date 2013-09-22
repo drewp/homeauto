@@ -171,7 +171,7 @@ class Background(object):
                                     raise ValueError(
                                         "don't even have the first hub")
                     resetModules(['gspca_zc3xx'])
-                    supervisorRestart(['webcam_9053'])
+                    #supervisorRestart(['webcam_9053'])
                 else:
                     log.debug("usb devices look ok")
 
