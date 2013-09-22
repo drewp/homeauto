@@ -69,7 +69,7 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.settings.arduino.ping()
         
         self.set_header("Content-Type", "application/xhtml+xml")
-        self.write(open("index.html").read())
+        self.write(open("index.xhtml").read())
 
 class SpeakerChoice(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self):
@@ -77,6 +77,10 @@ class SpeakerChoice(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.write(ret)
 
 class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def get(self, which):
+        self.set_header("Content-Type", "text/plain")
+        self.write(hexFromRgb(self.settings.brites[int(which)]))
+        
     def put(self, which):
         which = int(which)
         brites = self.settings.brites
@@ -166,7 +170,7 @@ if __name__ == '__main__':
 
     ard = ArduinoBedroom(port=config['arduinoPort'])
 
-    period = 1/config['pollFrequency']
+    period = 1 / config['pollFrequency']
     p = Poller(config, ard, period)
     task.LoopingCall(p.poll).start(period)
 
