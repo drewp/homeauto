@@ -117,6 +117,7 @@ class InputGraph(object):
                 URIRef("http://projects.bigasterisk.com/room/usingPower"),
                 URIRef("http://projects.bigasterisk.com/room/idleTimeMinutes"),
                 URIRef("http://projects.bigasterisk.com/room/idleTimeMs"),
+                ROOM.history,
                 ])):
             log.debug("  remote graph changed")
             self.onChange(self)

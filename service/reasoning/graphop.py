@@ -30,12 +30,12 @@ def graphEqual(a, b, ignorePredicates=[]):
     if log.getEffectiveLevel() <= logging.INFO:
         lost = stmtsA - stmtsB
         if lost:
-            log.info("lost statements:")
+            log.info("graph A only:")
             for s in lost:
                 log.info("  %s", s)
         new = stmtsB - stmtsA
         if new:
-            log.info("new statements:")
+            log.info("graph B only:")
             for s in new:
                 log.info("  %s", s)
     return False
