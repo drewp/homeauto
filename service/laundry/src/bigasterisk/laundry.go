@@ -14,31 +14,6 @@ import (
 	"time"
 )
 
-/*
-hwio.DebugPinMap() wrote this:
-
-Pin 1: 3.3V,  cap:
-Pin 2: 5V,  cap:
-Pin 3: SDA,GPIO0  cap:output,input,input_pullup,input_pulldown
-Pin 5: SCL,GPIO1  cap:output,input,input_pullup,input_pulldown
-Pin 6: GROUND,  cap:
-Pin 7: GPIO4  cap:output,input,input_pullup,input_pulldown
-Pin 8: TXD,GPIO14  cap:output,input,input_pullup,input_pulldown
-Pin 10: RXD,GPIO15  cap:output,input,input_pullup,input_pulldown
-Pin 11: GPIO17  cap:output,input,input_pullup,input_pulldown
-Pin 12: GPIO18  cap:output,input,input_pullup,input_pulldown
-Pin 13: GPIO21  cap:output,input,input_pullup,input_pulldown
-Pin 15: GPIO22  cap:output,input,input_pullup,input_pulldown
-Pin 16: GPIO23  cap:output,input,input_pullup,input_pulldown
-Pin 18: GPIO24  cap:output,input,input_pullup,input_pulldown
-Pin 19: MOSI,GPIO10  cap:output,input,input_pullup,input_pulldown
-Pin 21: MISO,GPIO9  cap:output,input,input_pullup,input_pulldown
-Pin 22: GPIO25  cap:output,input,input_pullup,input_pulldown
-Pin 23: SCLK,GPIO11  cap:output,input,input_pullup,input_pulldown
-Pin 24: CE0N,GPIO8  cap:output,input,input_pullup,input_pulldown
-Pin 26: CE1N,GPIO7  cap:output,input,input_pullup,input_pulldown
-*/
-
 type Hardware struct {
 	InMotion, InSwitch3, InSwitch1, InSwitch2, OutLed, OutSpeaker, InDoorClosed, OutStrike hwio.Pin
 	LastOutLed, LastOutStrike                                                              string
@@ -126,8 +101,33 @@ func GetPin(id string) hwio.Pin {
 	return p
 }
 
+/*
+hwio.DebugPinMap() wrote this:
+
+Pin 1: 3.3V,  cap:
+Pin 2: 5V,  cap:
+Pin 3: SDA,GPIO0 (rev2 -> GPIO2) cap:output,input,input_pullup,input_pulldown
+Pin 5: SCL,GPIO1 (rev2 -> GPIO3) cap:output,input,input_pullup,input_pulldown
+Pin 6: GROUND,  cap:
+Pin 7: GPIO4  cap:output,input,input_pullup,input_pulldown
+Pin 8: TXD,GPIO14  cap:output,input,input_pullup,input_pulldown
+Pin 10: RXD,GPIO15  cap:output,input,input_pullup,input_pulldown
+Pin 11: GPIO17  cap:output,input,input_pullup,input_pulldown
+Pin 12: GPIO18  cap:output,input,input_pullup,input_pulldown
+Pin 13: GPIO21 (rev2 -> GPIO27) cap:output,input,input_pullup,input_pulldown
+Pin 15: GPIO22  cap:output,input,input_pullup,input_pulldown
+Pin 16: GPIO23  cap:output,input,input_pullup,input_pulldown
+Pin 18: GPIO24  cap:output,input,input_pullup,input_pulldown
+Pin 19: MOSI,GPIO10  cap:output,input,input_pullup,input_pulldown
+Pin 21: MISO,GPIO9  cap:output,input,input_pullup,input_pulldown
+Pin 22: GPIO25  cap:output,input,input_pullup,input_pulldown
+Pin 23: SCLK,GPIO11  cap:output,input,input_pullup,input_pulldown
+Pin 24: CE0N,GPIO8  cap:output,input,input_pullup,input_pulldown
+Pin 26: CE1N,GPIO7  cap:output,input,input_pullup,input_pulldown
+*/
+
 func SetupIo() Hardware {
-	//	return Hardware{}
+	//return Hardware{}
 	pins := Hardware{
 		InMotion:     GetPin("GPIO2"), // pi rev2 calls it GPIO2
 		InSwitch3:    GetPin("GPIO3"), // pi rev2 calls it GPIO3
@@ -172,13 +172,30 @@ func serializeGowebResponse(
 	c context.Context,
 	syntaxName string,
 	statements chan *goraptor.Statement) error {
-	serializer := goraptor.NewSerializer(syntaxName)
-	defer serializer.Free()
+	var str string
+	if syntaxName == "trig" {
+		// real trig mode is crashing
+		
+		serializer := goraptor.NewSerializer("ntriples")
+		defer serializer.Free()
+		ntriples, err := serializer.Serialize(statements, "")
+		if err != nil {
+			panic(err)
+		}
+		log.Printf("got %d bytes of ntriples", len(ntriples))
+		str = "<http://projects.bigasterisk.com/room/laundryDoor> { " + ntriples + "}"
+		log.Printf("str now %d bytes", len(str))
+	} else {
+		serializer := goraptor.NewSerializer(syntaxName)
+		defer serializer.Free()
 
-	str, err := serializer.Serialize(statements, "")
-	if err != nil {
-		panic(err)
+		var err error
+		str, err = serializer.Serialize(statements, "")
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	c.HttpResponseWriter().Header().Set("Content-Type",
 		goraptor.SerializerSyntax[syntaxName].MimeType)
 	return goweb.Respond.With(c, 200, []byte(str))
@@ -234,15 +251,16 @@ func main() {
 	})
 
 	goweb.Map("GET", "/trig", func(c context.Context) error {
-		DC := namespace("http://purl.org/dc/terms/")
-		ROOM := namespace("http://projects.bigasterisk.com/room/")
 		statements := make(chan *goraptor.Statement, 100)
-		graph := ROOM("laundryDoor")
-		statements <- &(goraptor.Statement{
-			graph, DC("modified"), nowLiteral(), graph})
-		
 		close(statements)
-		return serializeGowebResponse(c, "trig", statements)
+		serializer := goraptor.NewSerializer("trig")
+		defer serializer.Free()
+
+		str, err := serializer.Serialize(statements, "")
+		if err != nil {
+			panic(err)
+		}
+		return goweb.Respond.With(c, 200, []byte(str))
 	})
 		
 	goweb.Map("GET", "/graph", func(c context.Context) error {
@@ -272,8 +290,6 @@ func main() {
 		}
 
 		close(statements)
-		// type should be chosen with accept header. trig is
-		// causing segfaults.
 		return serializeGowebResponse(c, "nquads", statements)
 	})
 
@@ -329,6 +345,8 @@ func main() {
 		return goweb.Respond.WithStatusText(c, http.StatusAccepted)
 	})
 
+	// start input posting loop. add nquads to reasoning2
+	
 	address := ":8081"
 
 	s := &http.Server{
