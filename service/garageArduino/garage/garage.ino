@@ -1,3 +1,5 @@
+#include <VirtualWire.h>
+
 /*
 board is Arduino UNO with '328
  */
@@ -73,7 +75,18 @@ void setup()   {
   pinMode(7, OUTPUT); // bathroom shiftbrite data
   pinMode(8, OUTPUT); // bathroom shiftbrite clk
   pinMode(9, OUTPUT); // bathroom shiftbrite latch
-
+  
+  vw_set_ptt_pin(11); // waste, but VW will be writing to this
+  vw_set_tx_pin(10); // bathroom new virtualwire out
+  
+  // Bits per sec. Match this in bathroom_recv. 
+  // The reason to have this anywhere high is to 
+  // make a color change block the sending arduino 
+  // for less time. 
+  // 2000bps -> 120ms PUT requests
+  // 8000bps -> 30ms PUT requests, but lots of message errors
+  vw_setup(2000); 
+  
   for (int i=0; i < 1; i++) {
     setCurrent(127, 127, 127);
   }
@@ -153,8 +166,22 @@ void loop()
       }
       latch();
       Serial.print("{\"ok\":1}\n");
-
-    }   
+    } else if (cmd == 0x07) { // send virtualwire
+       // arg is the number of bytes in the message to send
+      uint8_t msg[99];
+      for (int i=0; i<arg; i++) {
+        while (Serial.available() == 0) NULL;
+        msg[i] = Serial.read();
+      }
+      if (!vw_send(msg, arg)) {
+        Serial.print("{\"err\":\"message too long for virtualwire\"}");
+        return;
+      }
+      vw_wait_tx();
+      Serial.print("{\"sent\":");
+      Serial.print(arg);
+      Serial.print("}\n");
+    } 
   }
 }
 

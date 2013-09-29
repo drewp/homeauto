@@ -66,6 +66,7 @@ class ArduinoGarage(object):
     def setVideoSelect(self, chan):
         """set video select bits from 0..3"""
         self.ser.write("\x60\x05"+chr(chan))
+
         return self.ser.readJson()['videoSelect']
 
     def shiftbrite(self, colors):
@@ -82,6 +83,19 @@ class ArduinoGarage(object):
         self.ser.write("\x60\x06" + chr(len(out)) + out)
         msg = self.ser.readJson()
         assert msg == {"ok":1}, msg
+
+    def virtualwire(self, colors):
+        """
+        send this sequence of (r,g,b) 8-bit triples
+        """
+        numLeds = 4
+        # vw receiver wants data for all leds every time
+        colors = (list(colors) + [(0,0,0)] * numLeds)[:numLeds]
+        msg = "".join("%s%s%s" % (chr(r), chr(g), chr(b)) for r,g,b in colors)
+        self.ser.write("\x60\x07" + chr(len(msg)) + msg)
+        msg = self.ser.readJson()
+        assert msg == {"sent": 12}, msg
+        
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -176,7 +190,8 @@ class Brite(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self, chan):
         s = self.settings
         s.colors[int(chan)] = rgbFromHex(self.request.body)
-        s.arduino.shiftbrite(s.colors)
+        #s.arduino.shiftbrite(s.colors)
+        s.arduino.virtualwire([(r//4, g//4, b//4) for r,g,b in s.colors])
     post = put
 
 class Application(cyclone.web.Application):
@@ -192,7 +207,7 @@ class Application(cyclone.web.Application):
             (r'/videoSelect', VideoSelect), 
             (r"/brite/(\d+)", Brite),
         ]
-        colors = [(0,0,0)] * 1 # stored 10-bit
+        colors = [(0,0,0)] * 4 # stored 10-bit for legacy (or future!) reasons
         settings = {"arduino" : ard, "poller" : poller, "colors" : colors}
         cyclone.web.Application.__init__(self, handlers, **settings)
 
