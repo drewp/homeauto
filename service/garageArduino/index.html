@@ -10,6 +10,9 @@
 .val {
 font-weight: bold;
 } 
+.colorpicker {
+  display: inline-block;
+}
 /* ]]> */
     </style>
   </head>
@@ -29,12 +32,16 @@ font-weight: bold;
 
     <p><button type="submit" id="refresh">refresh</button></p>
 
-    <p>Bathroom shiftbrite</p>
+    <p>Bathroom LEDs</p>
+    <div><input id="lockColor" type="checkbox"/> Send first color to all LEDs</div>
     <div class="colorpicker" id="p0"></div>
+    <div class="colorpicker" id="p1"></div>
+    <div class="colorpicker" id="p2"></div>
+    <div class="colorpicker" id="p3"></div>
 
-    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"/>
-    <script type="text/javascript" src="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.js"></script>
-    <link rel="stylesheet" href="http://bigasterisk.com/bathroomLight/static/farbtastic/farbtastic.css" type="text/css" />
+    <script type="text/javascript" src="//bigasterisk.com/lib/jquery-2.0.3.min.js"/>
+    <script type="text/javascript" src="//bigasterisk.com/lib/farbtastic-1.2/farbtastic.js"></script>
+    <link rel="stylesheet" href="//bigasterisk.com/lib/farbtastic-1.2/farbtastic.css" type="text/css" />
 
     <script type="text/javascript">
      // <![CDATA[
@@ -76,14 +83,43 @@ font-weight: bold;
 	refresh();
 	$("#refresh").click(refresh);
 
+        var inProgress = false;
+        var pending = {}; // url : data
+        function sendColor(url, newColor) {
+                inProgress = 1;
+                $.ajax({
+                    type: "put", url: url,
+                    contentType: "text/plain", data: newColor,
+                    success: function () {
+                      inProgress = false;
+                      $.each(pending, function (u, n) {
+                        delete pending[u];
+                        sendColor(u, n);
+                      });
+                    }
+                });
+        } 
+        function copyColor(newColor) {
+                   $.farbtastic("#p1").setColor(newColor);
+                   $.farbtastic("#p2").setColor(newColor);
+                   $.farbtastic("#p3").setColor(newColor);
+        }
+        $("#lockColor").click(function () { copyColor($.farbtastic("#p0").color); });
         $.each([
             ["#p0", "brite/0"],
+            ["#p1", "brite/1"],
+            ["#p2", "brite/2"],
+            ["#p3", "brite/3"],
         ], function (i, row) {
             var picker = $.farbtastic(row[0], function (newColor) {
-                $.ajax({
-                    type: "put", url: row[1],
-                    contentType: "text/plain", data: newColor
-                });
+                if (row[1] == "brite/0" && $("#lockColor")[0].checked) {
+                   copyColor(newColor);
+                }
+                if (inProgress) {
+                  pending[row[1]] = newColor;
+                  return;
+                }
+                sendColor(row[1], newColor);
             });
             $.get(row[1], picker.setColor);
         });
