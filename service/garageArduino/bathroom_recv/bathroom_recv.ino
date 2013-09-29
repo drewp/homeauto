@@ -40,18 +40,24 @@ void wakeUpPattern() {
 }
 
 void blinkFailedMessageError() {
-  SET(0,0,0,255);
+  digitalWrite(1, 1);
   delay(100);
-  SET(0,0,0,0);
+  digitalWrite(1, 0);
 }
 
 void blinkShortBufferError() {
-  SET(0,0,255,0);
+  digitalWrite(1, 1);
   delay(100);
-  SET(0,0,0,0);
+  digitalWrite(1, 0);
+  delay(50);
+  digitalWrite(1, 1);
+  delay(100);
+  digitalWrite(1, 0);
 }
 
 void setup() {
+  pinMode(1, OUTPUT); // for errors
+  
   vw_set_rx_pin(2);
   vw_setup(2000);	 // Bits per sec
 
