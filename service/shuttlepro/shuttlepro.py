@@ -370,7 +370,7 @@ if __name__ == '__main__':
         if 'key' in what:
             g.add((SHUTTLEPRO['button%s' % what['key']['button']],
                    ROOM['state'],
-                   ROOM['pres'] if what['key']['press'] else ROOM['release']))
+                   ROOM['press'] if what['key']['press'] else ROOM['release']))
         elif 'shuttle' in what:
             # this will send lots of repeats. It's really not a one-shot at all.
             g.add((SHUTTLEPRO['shuttle'], ROOM['position'],
