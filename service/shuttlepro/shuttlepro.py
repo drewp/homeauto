@@ -26,12 +26,14 @@ Handler for Griffin PowerMate, Contour ShuttlePro & ShuttleXpress USB knobs
 modified by drewp@bigasterisk.com
 """
 
-import os, time
+import os, time, logging
 import sys
 import struct
 import exceptions
 import threading
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger()
 
 def hexint(mask):
   """
@@ -355,24 +357,36 @@ class _contour_remapper(object):
 import restkit
 reasoning = restkit.Resource("http://bang:9071/", timeout=1)
 
-from rdflib import Namespace, Graph
+from rdflib import Namespace, Graph, Literal
 SHUTTLEPRO = Namespace("http://projects.bigasterisk.com/room/livingRoom/shuttlepro/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 if __name__ == '__main__':
     import restkit
-    reasoning = restkit.Resource("http://plus:9071/")
+    reasoning = restkit.Resource("http://bang:9071/", timeout=1)
     def ev(what):
         print 'ev', what
-        if 'key' in what and what['press']:
-            g = Graph()
-            g.add((SHUTTLEPRO, ROOM['press'],
-                   SHUTTLEPRO['b' + what['key']['button']]))
+        g = Graph()
+        if 'key' in what:
+            g.add((SHUTTLEPRO['button%s' % what['key']['button']],
+                   ROOM['state'],
+                   ROOM['pres'] if what['key']['press'] else ROOM['release']))
+        elif 'shuttle' in what:
+            # this will send lots of repeats. It's really not a one-shot at all.
+            g.add((SHUTTLEPRO['shuttle'], ROOM['position'],
+                   Literal(what['shuttle'])))
+        elif 'dial' in what:
+            g.add((SHUTTLEPRO['dial'], ROOM['change'],
+                   ROOM['clockwise'] if what['dial'] == 1 else
+                   ROOM['counterclockwise']))
+        try:
             reasoning.post(
               "oneShot",
-              payload=g.serialize(format='text/n3'),
+              payload=g.serialize(format='nt'),
               headers={'Content-Type': 'text/n3'}
             ).body_string()
+        except restkit.errors.RequestTimeout, e:
+          log.error(e)
 
     p = powermate("/dev/input/by-id/usb-Contour_Design_ShuttlePRO-event-if00", ev)
     while True:
