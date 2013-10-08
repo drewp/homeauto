@@ -355,17 +355,25 @@ class _contour_remapper(object):
 import restkit
 reasoning = restkit.Resource("http://bang:9071/", timeout=1)
 
-from rdflib import Namespace
+from rdflib import Namespace, Graph
 SHUTTLEPRO = Namespace("http://projects.bigasterisk.com/room/livingRoom/shuttlepro/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 if __name__ == '__main__':
-    import restkit, urllib
-    mpd = restkit.Resource("http://slash:9009/")
+    import restkit
+    reasoning = restkit.Resource("http://plus:9071/")
     def ev(what):
         print 'ev', what
         if 'key' in what and what['press']:
-            print mpd.post("addAndPlay/%s" % what['key']['button']).body_string()
+            g = Graph()
+            g.add((SHUTTLEPRO, ROOM['press'],
+                   SHUTTLEPRO['b' + what['key']['button']]))
+            reasoning.post(
+              "oneShot",
+              payload=g.serialize(format='text/n3'),
+              headers={'Content-Type': 'text/n3'}
+            ).body_string()
+
     p = powermate("/dev/input/by-id/usb-Contour_Design_ShuttlePRO-event-if00", ev)
     while True:
         p.read_next()
