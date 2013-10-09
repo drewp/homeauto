@@ -19,7 +19,7 @@ with PSHB, that their graph has changed.
 from twisted.internet import reactor, task
 from twisted.web.client import getPage
 from twisted.python.filepath import FilePath
-import time, traceback, sys, json, logging
+import time, traceback, sys, json, logging, urllib
 from rdflib.Graph import Graph, ConjunctiveGraph
 from rdflib import Namespace, URIRef, Literal, RDF, StringInputSource
 from FuXi.Rete.RuleStore import N3RuleStore
@@ -244,8 +244,8 @@ class Reasoning(object):
 
     def _put(self, url, payload):
         def err(e):
-            outlog.warn("put %s failed", url)
-        outlog.info("PUT %s payload=%r", url, payload)
+            outlog.warn("    put %s failed", url)
+        outlog.info("    PUT %s payload=%r", url, payload)
         fetch(url, method="PUT", postdata=payload, timeout=2).addErrback(err)
 
     def putResults(self, inferred):
@@ -290,29 +290,66 @@ class Reasoning(object):
 
 
     def oneShotPostActions(self, deviceGraph, inferred):
+        """
+        Inferred graph may contain some one-shot statements. We'll send
+        statement objects to anyone on web sockets, and also generate
+        POST requests as described in the graph.
+
+        one-shot statement ?s ?p ?o
+        with this in the graph:
+          ?osp a :OneShotPost
+          ?osp :subject ?s
+          ?osp :predicate ?p
+        this will cause a post to ?o 
+        """
         # nothing in this actually makes them one-shot yet. they'll
         # just fire as often as we get in here, which is not desirable
-        for s, p in [
-                (URIRef('http://bigasterisk.com/host/star/slideshow'), ROOM.postAction),
-                (URIRef('http://bigasterisk.com/host/star/sound'), ROOM.postAction),
-                (URIRef('http://bigasterisk.com/host/slash/sound'), ROOM.postAction),
-            ]:
-            log.info("find inferred objs %r %r" % (s, p))
+        log.info("oneShotPostActions")
+        def err(e):
+            outlog.warn("post %s failed", postTarget)
+        for osp in deviceGraph.subjects(RDF.type, ROOM['OneShotPost']):
+            s = deviceGraph.value(osp, ROOM['subject'])
+            p = deviceGraph.value(osp, ROOM['predicate'])
+            if s is None or p is None:
+                continue
             for postTarget in inferred.objects(s, p):
                 log.info("post target %r", postTarget)
+                # this packet ought to have 'oneShot' in it somewhere
                 sendToLiveClients({"s":s, "p":p, "o":postTarget})
-                if s in [URIRef('http://bigasterisk.com/host/star/sound'),
-                         URIRef('http://bigasterisk.com/host/slash/sound'),
-                         URIRef('http://bigasterisk.com/host/star/slideshow'),
-                        ]:
-                    try:
-                        response = restkit.request(url=postTarget, method="POST", body="")
-                    except Exception, e:
-                        log.warn("post to %s failed: %s" % (postTarget, e))
-                    else:
-                        log.info("post to %s got status %s" %
-                                 (postTarget, response.status))
 
+                outlog.info("    POST %s", postTarget)
+                fetch(postTarget, method="POST", timeout=2).addErrback(err)
+        self.postMpdCommands(inferred)
+        
+    def postMpdCommands(self, inferred):
+        """special case to be eliminated. mpd play urls are made of an
+        mpd service and a song/album/playlist uri to be played.
+        Ideally the graph rules would assemble these like
+        http://{mpd}/addAndPlay?uri={toPlay} or maybe toPlay as the payload
+        which would be fairly general but still allow toPlay uris to
+        be matched with any player."""
+        def post(postTarget):
+            outlog.info("special mpd POST %s", postTarget)
+            def err(e):
+                outlog.warn("post %s failed", postTarget)
+            fetch(postTarget, method="POST", timeout=2).addErrback(err)
+        root = "http://bigasterisk.com/music/slash/mpd/"
+        rootSkippingAuth = "http://slash:9009/"
+        slashMpd = URIRef("http://bigasterisk.com/host/slash/mpd")
+        for song in inferred.objects(slashMpd, ROOM['startMusic']):
+            outlog.info("mpd statement: %r" % song)
+            assert song.startswith('http://bigasterisk.com/music/')
+            post(rootSkippingAuth + "addAndPlay" + urllib.quote(song[len("http://bigasterisk.com/music"):]))
+            
+        for state in inferred.objects(slashMpd, ROOM['playState']):
+            if state == ROOM['pause']:
+                post(rootSkippingAuth + "mpd/pause")
+        for vol in inferred.objects(slashMpd, ROOM['audioState']):
+            if vol == ROOM['volumeStepUp']:
+                post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
+            if vol == ROOM['volumeStepDown']:
+                post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
+            
     def putZero(self, deviceGraph, dev, pred, putUrl):
         # zerovalue should be a function of pred as well.
         value = deviceGraph.value(dev, ROOM.zeroValue)
@@ -399,6 +436,9 @@ class OneShot(cyclone.web.RequestHandler):
         everything appears to be a 'change'.
         """
         g = parseRdf(self.request.body, self.request.headers['content-type'])
+        if not len(g):
+            log.warn("incoming oneshot graph had no statements: %r", self.request.body)
+            return
         self.settings.reasoning.inputGraph.addOneShot(g)
 
 # for reuse

@@ -18,3 +18,9 @@
 
 # also, http://bang:9072/bang/processStatus
 
+
+[ a :OneShotPost; :subject <http://bigasterisk.com/host/star/slideshow>; :predicate :postAction ] .
+[ a :OneShotPost; :subject <http://bigasterisk.com/host/star/sound>; :predicate :postAction ] .
+[ a :OneShotPost; :subject <http://bigasterisk.com/host/slash/sound>; :predicate :postAction ] .
+
+[ a :OneShotPost; :subject <http://bigasterisk.com/host/slash/mpd>; :predicate :postAction ] .

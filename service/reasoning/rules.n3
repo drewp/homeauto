@@ -1,3 +1,5 @@
+# rules only! statements in this file will not be considered in the graph
+
 @prefix : <http://projects.bigasterisk.com/room/>.
 @prefix bigast: <http://bigasterisk.com/>.
 @prefix dev: <http://projects.bigasterisk.com/device/>.
@@ -58,8 +60,16 @@
 
 { <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
 {
-  <http://bigasterisk.com/host/star/sound> :postAction <http://star:9049/sound?filename=/my/music/ubuntuone/Daft+Punk/Discovery/Harder+Better+Faster+Stronger.mp3> .
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://bigasterisk.com/host/star/slideshow/toggleFeeder> .
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/beep1> .
 } .
+
+
+# sound wasn't responding; waiting for other button fixes
+# { <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
+# {
+#   <http://bigasterisk.com/host/star/sound> :postAction <http://star:9049/sound?filename=/my/music/ubuntuone/Daft+Punk/Discovery/Harder+Better+Faster+Stronger.mp3> .
+# } .
 
 { <http://projects.bigasterisk.com/room/livingRoom/shuttlepro/dial> :change :up . } => {
   <http://bigasterisk.com/host/slash/sound> :postAction <http://slash:9049/volume?offset=.05&max=.6> .
@@ -83,3 +93,12 @@
   # the plan here is that as soon as we can show that I'm not at my
   # desk (cell phone wifi, asleep, etc), power the screen off
 } .
+
+@prefix shuttle: <http://bigasterisk.com/room/livingRoom/shuttlepro/> .
+@prefix mpd: <http://bigasterisk.com/host/slash/mpd> .
+
+{ ?button :state :press . ?button :playsMusic ?song } => { mpd: :startMusic ?song } .
+# the rest of this modeling is still a mess. Handled completely by special case in reasoning.py
+{ shuttle:button12 :state :press         } => { mpd: :playState :pause } .
+{ shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
+{ shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .

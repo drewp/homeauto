@@ -24,9 +24,9 @@ def parseTrig(trig):
         yield stmt + (ctx,)
 
         
-def addTrig(graph, url):
+def addTrig(graph, url, timeout=2):
     t1 = time.time()
-    response = restkit.request(url)
+    response = restkit.request(url, timeout=timeout)
     if response.status_int != 200:
         raise ValueError("status %s from %s" % (response.status, url))
     trig = response.body_string()
