@@ -8,10 +8,11 @@ s, p, o = sys.argv[1:]
 
 prefixes = {
 'room' : 'http://projects.bigasterisk.com/room/',
+'shuttle': 'http://bigasterisk.com/room/livingRoom/shuttlepro/',
     }
 
 def expand(term):
-    if ':' not in term:
+    if ':' not in term or term.startswith(('<', '"', "'")):
         return term
     left, right = term.split(':', 1)
     if left in prefixes:
