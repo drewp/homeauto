@@ -358,12 +358,15 @@ import restkit
 reasoning = restkit.Resource("http://bang:9071/", timeout=1)
 
 from rdflib import Namespace, Graph, Literal
-SHUTTLEPRO = Namespace("http://projects.bigasterisk.com/room/livingRoom/shuttlepro/")
+SHUTTLEPRO = Namespace("http://bigasterisk.com/room/livingRoom/shuttlepro/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 if __name__ == '__main__':
     import restkit
     reasoning = restkit.Resource("http://bang:9071/", timeout=1)
+
+    # this should serve a graph of the current state as well, not just all oneshots
+    
     def ev(what):
         print 'ev', what
         g = Graph()
@@ -380,10 +383,11 @@ if __name__ == '__main__':
                    ROOM['clockwise'] if what['dial'] == 1 else
                    ROOM['counterclockwise']))
         try:
+            nt = g.serialize(format='nt')
             reasoning.post(
               "oneShot",
-              payload=g.serialize(format='nt'),
-              headers={'Content-Type': 'text/n3'}
+              payload=nt,
+              headers={'Content-Type': 'text/n3'},
             ).body_string()
         except restkit.errors.RequestTimeout, e:
           log.error(e)
