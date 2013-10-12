@@ -2,8 +2,15 @@
   board: 'Digispark (Tiny Core)'
   programmer: 'Digispark'
   
-  pin 0 is the output to the LEDs
-  pin 2 is the input from garage arduino
+  pin 0 DI from radio
+  pin 1 DO to radio (and green status led)
+  pin 2 SCK to radio
+  pin 3 output to LED string
+  pin 4 input from garage arduino
+  pin 5 output to garage arduino
+    
+  (attiny85 pin 5 is MOSI, pin 6 is MISO, 7 might be clock)  
+  
 */
 #include <VirtualWire.h>
 
@@ -16,7 +23,7 @@
 //   NEO_GRB     Pixels are wired for GRB bitstream
 //   NEO_KHZ400  400 KHz bitstream (e.g. FLORA pixels)
 //   NEO_KHZ800  800 KHz bitstream (e.g. High Density LED strip)
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, 0, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, 3, NEO_GRB + NEO_KHZ800);
 
 #define SET(i, r, g, b) strip.setPixelColor(i, strip.Color(r, g, b)); strip.show();
 
@@ -58,7 +65,7 @@ void blinkShortBufferError() {
 void setup() {
   pinMode(1, OUTPUT); // for errors
   
-  vw_set_rx_pin(2);
+  vw_set_rx_pin(4);
   vw_setup(2000);	 // Bits per sec
 
   vw_rx_start();       // Start the receiver PLL running
