@@ -85,12 +85,10 @@ if __name__ == '__main__':
     port = 9103
     poller = Poller()
     reactor.listenTCP(port, cyclone.web.Application(handlers=[
-        (r'/()', Index, {"path" : ".", # security hole- serves this dir too
-          "default_filename" : "index.html"}),
+        (r'/()', Index, {"path" : ".", "default_filename" : "index.html"}),
         (r'/graph', GraphResource),
-        (r'/(.*)', cyclone.web.StaticFileHandler,
-         {"path" : ".", # security hole- serves this dir too
-          "default_filename" : "index.html"}),
+        # serves this source code too
+        (r'/(.*)', cyclone.web.StaticFileHandler, {"path" : "."}) 
         ], poller=poller))
     log.info("serving on %s" % port)
     reactor.run()
