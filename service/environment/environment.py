@@ -41,6 +41,8 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
         
         self.set_header('Content-type', 'application/x-trig')
         self.write(g.asTrig())
+
+from rdfdoc import Doc
         
 class Application(cyclone.web.Application):
     def __init__(self):
@@ -48,6 +50,7 @@ class Application(cyclone.web.Application):
             (r"/()", cyclone.web.StaticFileHandler,
              {"path": ".", "default_filename": "index.html"}),
             (r'/graph', GraphHandler),
+            (r'/doc', Doc), # to be shared
         ]
         cyclone.web.Application.__init__(self, handlers)
 
