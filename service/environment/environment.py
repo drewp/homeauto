@@ -18,16 +18,16 @@ from twilight import isWithinTwilight
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
-class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
-    def get(self):
-        self.write('this is envgraph: <a href="graph">rdf</a>')
-        
 class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         g = StateGraph(ROOM.environment)
         now = datetime.datetime.now(tzlocal())
 
         g.add((DEV.environment, ROOM.localHour, Literal(now.hour)))
+        g.add((DEV.environment, ROOM.localTimeToMinute,
+               Literal(now.strftime("%H:%M"))))
+        g.add((DEV.environment, ROOM.localTimeToSecond,
+               Literal(now.strftime("%H:%M:%S"))))
 
         for offset in range(-12, 7):
             d = now.date() + datetime.timedelta(days=offset)
@@ -36,7 +36,8 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
                        Literal(offset)))
 
         g.add((DEV.calendar, ROOM.twilight,
-               ROOM['withinTwilight'] if isWithinTwilight(now) else ROOM['daytime']))
+               ROOM['withinTwilight'] if isWithinTwilight(now) else
+               ROOM['daytime']))
         
         self.set_header('Content-type', 'application/x-trig')
         self.write(g.asTrig())
@@ -44,7 +45,8 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
 class Application(cyclone.web.Application):
     def __init__(self):
         handlers = [
-            (r"/", Index),
+            (r"/()", cyclone.web.StaticFileHandler,
+             {"path": ".", "default_filename": "index.html"}),
             (r'/graph', GraphHandler),
         ]
         cyclone.web.Application.__init__(self, handlers)
