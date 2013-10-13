@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html
+   xmlns:dcterms="http://purl.org/dc/terms/"
+   xmlns:dev="http://projects.bigasterisk.com/device/"
+   xmlns:xs="http://www.w3.org/2001/XMLSchema#"
+   xmlns="http://projects.bigasterisk.com/room/"
+   >
+  <head>
+    <style>
+      .subject { margin-left: 20px; border-top: 1px solid gray; }
+      .predicate { margin-left: 20px; }
+      .object { margin-left: 20px; }
+      
+      .subject > .node { border: 2px solid rgb(68, 141, 68); }
+      .literalType { vertical-align: super; font-size: 80%; }
+      .literal { display: inline-block; border: 1px solid gray; background: white; }
+      .resource { display: inline-block; background: lightblue; border-radius: 6px; padding: 1px 6px; margin: 2px; }
+      
+    </style>
+    
+    <script type="text/html" id="node">
+      <!-- ko if: typeof($data) == 'string' -->
+      <span class="node resource" data-bind="html: $root.createCurie($data)"></span> <span data-bind="html: $root.docLink($data)"></span>
+      <!-- /ko -->
+      <!-- ko if: typeof($data) != 'string' -->
+         <!-- ko if: type == 'literal' -->
+           <span class="literal" data-bind="text: value"></span>
+           <span class="literalType" data-bind="html: $root.createCurie($data['datatype'] || '')"></span>
+         <!-- /ko -->
+         <!-- ko if: type == 'uri' -->
+           <span class="resource" data-bind="html: $root.createCurie(value)"></span> <span data-bind="html: $root.docLink($data)"></span>
+         <!-- /ko -->
+         <!-- ko if: type == 'bnode' -->
+           <span class="resource bnode" data-bind="text: value"></span>
+         <!-- /ko -->
+      <!-- /ko -->
+    </script>
+    
+  </head>
+  <body>
+    <h1>env</h1>
+
+    <section>
+      <h2>
+        Current statements (<a href="graph">/graph</a>)
+        <button data-bind="click: refresh">Refresh</button>
+      </h2>
+      <div>
+        These statements are all in the
+        <span data-bind="html: $root.createCurie(graphUri())"></span> graph.
+      </div>
+      <div data-bind="foreach: {data: Object.keys($root.graph()), as: 'subj'}">
+        <div class="subject">subj: <!-- ko template: 'node' --><!-- /ko -->
+          <div data-bind="foreach: {data: Object.keys($root.graph()[subj]), as: 'pred'}">
+            <div class="predicate">pred: <!-- ko template: 'node' --><!-- /ko -->
+              <div data-bind="foreach: {data: $root.graph()[$parent][pred], as: 'obj'}">
+                <div class="object">obj:
+                  <!-- ko template: 'node' --><!-- /ko -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script src="//bigasterisk.com/lib/underscore-1.5.2.min.js"></script>
+    <script src="//bigasterisk.com/lib/jquery-2.0.3.min.js"></script>
+    <script src="//bigasterisk.com/lib/knockout-2.3.0.js"></script>
+
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.uri.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.datatype.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.rdf.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.xmlns.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.curie.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.rdf.json.js"></script>
+    <script src="//bigasterisk.com/lib/rdfquery/r195/jquery.rdf.turtle.js"></script>
+
+    <script>
+      $(function () {
+          var model = {
+            graph: ko.observable({}),
+            graphUri: ko.observable()
+          };
+          var tryCurie = function(uri) {
+            try {
+              return $('html').createCurie(uri);
+            } catch(e) {
+              return uri;
+            }
+          };
+          model.createCurie = function (uri) {
+            var short = tryCurie(uri);
+            return '<a href="' + _.escape(uri)  + '">' + _.escape(short) + '</a>';
+          };
+          model.docLink = function(uri) {
+            var result = ko.observable("...");
+            setTimeout(function() { result('hey'); }, 1000);
+            return result;
+          };
+
+          model.refresh = function() {
+          $.ajax({
+            url: "graph",
+            success: function (data) {
+              var m = data.match(/<(.*?)> \{([^]*)\}/)
+              model.graphUri(m[1]);
+              var ntriplesBody = m[2];
+
+              var rdf = $.rdf().load(ntriplesBody);
+              model.graph(rdf.databank.dump());
+            }
+          });
+        };
+        model.refresh();
+          ko.applyBindings(model);
+
+      });
+      </script>
+  </body>
+</html>
