@@ -49,7 +49,7 @@
       </h2>
       <div>
         These statements are all in the
-        <span data-bind="html: $root.createCurie(graphUri())"></span> graph.
+        <span data-bind="html: $root.createCurie(graphUri())">...</span> graph.
       </div>
       <div data-bind="foreach: {data: Object.keys($root.graph()), as: 'subj'}">
         <div class="subject">subj: <!-- ko template: 'node' --><!-- /ko -->
