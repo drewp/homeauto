@@ -1,0 +1,18 @@
+
+GET /
+  info
+
+PUT /led/0 <- '#ff0000'
+
+PUT /led <- '#ff0000' sets all
+
+GET /led/0 -> '#ff0000'
+GET /led -> ['#ff0000', '#ff0000']  json
+
+POST /image <- png; -> Location: /image/1
+PUT /image/1 <- new png
+GET /image/1 -> png
+PUT /animationMode  <- {mode: 'continuous', image: '/image/1', pxPerSec: 30}
+PUT /animationMode  <- {mode: 'none'}
+GET /animationMode -> last input json
+
