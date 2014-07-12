@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  vertical-align: top;
+  overflow-x: hidden;
+  white-space: nowrap;
+  cursor: ew-resize;
+}
+:host(:focus) {
+  outline: 0;
+}
+
+:host::shadow > #blocker {
+  position: absolute;
+  /*background: rgba(0,255,0,0.3);*/
+}
