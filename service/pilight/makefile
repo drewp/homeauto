@@ -1,4 +1,5 @@
 GOPATH=$(shell pwd)
+export GOPATH
 build:
 	go build pilight.go
 
