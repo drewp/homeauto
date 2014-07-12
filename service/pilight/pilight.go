@@ -9,6 +9,9 @@ import "image/color"
 import "color/hex"
 import "strconv"
 import "time"
+import "net/textproto"
+import "bufio"
+import "errors"
 
 const ledCount = 3
 
@@ -57,6 +60,23 @@ func (b *Board) UpdateLeds() error {
 		bytes[i*3+2] = uint8(b)
 	}
 	return b.Write(0, bytes)
+}
+
+func (b *Board) ReadDht() (string, error) {
+	for try := 0; try < 5; try++ {
+		err := b.Write(0x2, make([]byte, 0))
+		if err != nil {
+			continue
+		}
+
+		reader := textproto.NewReader(bufio.NewReader(b.ser))
+		json, err := reader.ReadLine()
+		if err != nil {
+			continue
+		}
+		return json, nil
+	}
+	return "", errors.New("failed after all retries")
 }
 
 func getBodyStringColor(req *http.Request) (c color.Color, err error) {
@@ -112,6 +132,13 @@ func main() {
 		err = board.UpdateLeds()
 
 		return 200, "ok"
+	})
+	m.Get("/dht", func() (int, string) {
+		json, err := board.ReadDht()
+		if err != nil {
+			return 500, ""
+		}
+		return 200, json
 	})
 	log.Printf("serving")
 	m.Run()
