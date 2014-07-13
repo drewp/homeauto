@@ -12,7 +12,6 @@ src/github.com/go-martini/martini:
 
 setup:
 	ln -s . public
-	@echo also need static/polymer/ to be polymer 0.2.3
 
 build-to-pi: deps
 	GOBIN=bin-pi GOARCH=arm go install pilight.go
