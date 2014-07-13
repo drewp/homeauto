@@ -77,5 +77,35 @@
     <pilight-page></pilight-page>
 
 
+    <div>
+      DHT: <span id="dht"></span>
+      <div id="temperature" style="background: #cff"></div>
+      <div id="humidity" style="background: #fef"></div>
+    </div>
+    <script>
+    $(function() {
+        function update() {
+            $.getJSON("dht", function(result) {
+                result['tempF'] = 1.8 * result['temperature'] + 32;
+                result['time'] = new Date().toLocaleString();
+                $("#dht").text(JSON.stringify(result));
+                $("#temperature")
+                    .text(result['tempF'] + " deg F")
+                    .css('width', result['temperature'] * 10);
+                $("#humidity")
+                    .text(result['humidity'] + " humidity")
+                    .css('width', result['humidity'] * 10);
+            });
+        }
+
+        function loop() {
+            update();
+            setTimeout(function() {
+                requestAnimationFrame(loop);
+            }, 2000);
+        }
+        loop();
+    });
+    </script>
   </body>
 </html>
