@@ -5,20 +5,21 @@
     <meta charset="utf-8" />
     <script src="//bigasterisk.com/lib/jquery-2.0.3.js"></script>
     <script src="//bigasterisk.com/lib/platform/0.2.3/platform.js"></script>
-    <link rel="import" href="static/input-rgb/input-rgb.html">
+    <script src="//bigasterisk.com/lib/polymer/0.2.3/polymer.js"></script>
+    <link rel="import" href="static/big-picker.html">
     <style>
-      input-rgb {
-       border: 1px solid gray;
-       width: 300px;
+      body {
+       background: #5c5c5c;
+       color: #E2E2E2;
      }
     </style>
   </head>
   <body>
 
     <polymer-element name="led-output" attributes="url color">
-    <!-- calls PUT <url> with color string as the body, but also
-         avoids sending many repeated calls to url while the first one
-         is still in progress -->
+      <!-- calls PUT <url> with color string as the body, but also
+      avoids sending many repeated calls to url while the first one
+      is still in progress -->
       <template>
         {{status}}
       </template>
@@ -65,23 +66,23 @@
       </script>
 
     </polymer-element>
-      
+
     <polymer-element name="pilight-page" noscript>
       <template>
         LED0 color:
-        <input-rgb editable="true" hex="{{c1}}"></input-rgb>
+        <big-picker editable="true" hex="{{c1}}"></big-picker>
         <led-output which="led" color="{{c1}}"></led-output>
       </template>
     </polymer-element>
 
     <pilight-page></pilight-page>
 
-
     <div>
       DHT: <span id="dht"></span>
       <div id="temperature" style="background: #cff"></div>
       <div id="humidity" style="background: #fef"></div>
     </div>
+
     <script>
     $(function() {
         function update() {
