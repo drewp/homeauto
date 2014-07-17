@@ -82,6 +82,9 @@
             var c = Color(e.target.templateInstance.model.c).setLightness(this.lightness);
             this.hex = c.toString();
         },
+        hexChanged: function() {
+            this.lightness = Color(this.hex).getLightness();
+        },
         lightnessChanged: function() {
             var c = Color(this.hex).setLightness(this.lightness);
             this.hex = c.toString();

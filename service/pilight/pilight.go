@@ -12,6 +12,7 @@ import "time"
 import "net/textproto"
 import "bufio"
 import "errors"
+import "encoding/json"
 
 const ledCount = 3
 
@@ -79,6 +80,36 @@ func (b *Board) ReadDht() (string, error) {
 	return "", errors.New("failed after all retries")
 }
 
+
+func (b *Board) ReadLeds() (colors []color.Color, err error) {
+	err = b.Write(0x3, make([]byte, 0))
+	if err != nil {
+		return
+	}
+	reader := textproto.NewReader(bufio.NewReader(b.ser))
+	line, err := reader.ReadLineBytes()
+	if err != nil {
+		return
+	}
+
+	type LedsMessage struct {
+		Leds []string
+	}
+	var ret LedsMessage
+	err = json.Unmarshal(line, &ret)
+	if err != nil {
+		return
+	}
+
+	colors = make([]color.Color, len(ret.Leds))
+	for i, c := range ret.Leds {
+		r, g, b := hex.HexToRGB(hex.Hex(c))
+		colors[i] = color.RGBA{r, g, b, 0}
+	}
+	
+	return colors, nil
+}
+
 func getBodyStringColor(req *http.Request) (c color.Color, err error) {
 	bytes := make([]byte, 1024)
 	n, err := req.Body.Read(bytes)
@@ -117,8 +148,27 @@ func main() {
 		
 		return 200, "ok"
 	})
-	m.Get("/led", func() string {
-		return "['#ff0000', '#ff0000']"
+	m.Get("/led", func() (int, string) {
+
+		colors, err := board.ReadLeds()
+		if err != nil {
+			return 500, ""
+		}
+		hexColors := make([]hex.Hex, len(colors))
+		for i, c := range colors {
+			// hex.HexModel.Convert(c) seems like the
+			// right call, but fails because it returns
+			// Color not string
+			r, g, b, _ := c.RGBA()
+			hexColors[i] = hex.RGBToHex(uint8(r), uint8(g), uint8(b))
+		}
+
+		// content-type json
+		j, err := json.Marshal(hexColors)
+		if err != nil {
+			return 500, ""
+		}
+		return 200, string(j)
 	})
 	m.Put("/led", func(req *http.Request) (int, string) {
 		color, err := getBodyStringColor(req)

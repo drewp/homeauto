@@ -17,9 +17,11 @@
   <body>
 
     <polymer-element name="led-output" attributes="url color">
-      <!-- calls PUT <url> with color string as the body, but also
-      avoids sending many repeated calls to url while the first one
-      is still in progress -->
+      <!--
+      First fetches the first led color and writes it on the color
+      attribute, then whenever color changes, calls PUT <url> with color
+      string as the body, but also avoids sending many repeated calls
+      to url while the first one is still in progress -->
       <template>
         {{status}}
       </template>
@@ -27,8 +29,34 @@
           created: function() {
               this.pending = {}; // url: data
               this.inflight = false;
+              this.enableWrites = false;
+
+              var retryFetch = function (triesLeft) {
+                  if (triesLeft < 1) {
+                      return;
+                  }
+                  $.ajax({
+                      type: "GET",
+                      url: "led",
+                      dataType: "json",
+                      success: function(result) {
+                          if (!result.length) {
+                              setTimeout(function() {
+                                  retryFetch(triesLeft - 1);
+                              }.bind(this), 100);
+                              return;
+                          }
+                          this.color = result[0];
+                          this.enableWrites = true;
+                      }.bind(this)
+                  });
+              }.bind(this);
+              retryFetch(5);
           },
           colorChanged: function() {
+              if (!this.enableWrites) {
+                  return;
+              }
               this.pending["led"] = this.color;
               this.sendMore();
           },
