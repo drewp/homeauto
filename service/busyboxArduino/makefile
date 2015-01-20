@@ -7,3 +7,8 @@ include /usr/share/arduino/Arduino.mk
 
 setup:
 	ln -sf LiquidCrystal_V1.2.1/LiquidCrystal/LiquidCrystal.cpp LiquidCrystal.cpp
+	ln -sf IRremote/IRremote.cpp IRremote.cpp
+	ln -sf IRremote/IRremote.h IRremote.h
+	ln -sf IRremote/IRremoteInt.h IRremoteInt.h
+
+
