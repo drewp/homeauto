@@ -1,3 +1,20 @@
+/*
+D0 <---------
+D1 lcd rw
+D2 <---------
+D3 ir out -----
+D4 lcd 4
+D5 lcd 5
+D6 lcd 6
+D7 lcd 7
+D8 lcd rs
+D9 lcd en
+D10 lcd backlight
+D11 tbd <------------ 
+D12 motion in <--------
+D13 debug led <--------
+
+ */
 #include <Arduino.h>
 #include <LiquidCrystal.h>
 #include "DFR_Key.h"
@@ -28,6 +45,7 @@ int lastUnsentKeydown = -1;
 uint16_t steps = 0;
 uint16_t stepDelayPerBrightnessFade = 2048;
 
+// uses pin 3
 IRsend irsend;
 
 void sendnec(byte addr, byte cmd) {
