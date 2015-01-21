@@ -20,6 +20,9 @@ D13 debug led <--------
 #include "DFR_Key.h"
 #include "IRremote.h"
 
+#define motionIn 12
+
+
 // see http://www.dfrobot.com/image/data/DFR0009/LCDKeypad%20Shield%20V1.0%20SCH.pdf
 #define I2C_ADDR      0x27 // I2C address of PCF8574A
 #define BACKLIGHT_PIN 10
@@ -34,8 +37,6 @@ D13 debug led <--------
 LiquidCrystal lcd(Rs_pin, Rw_pin, En_pin, D4_pin, D5_pin, D6_pin, D7_pin, BACKLIGHT_PIN, POSITIVE);
 DFR_Key keypad;
 
-#define debugLed 13
-
 byte backlightStandard = 0;
 byte backlightCurrent = 0;
 byte backlightKeypressBoost = 30;
@@ -49,95 +50,21 @@ uint16_t stepDelayPerBrightnessFade = 2048;
 IRsend irsend;
 
 void sendnec(byte addr, byte cmd) {
-  uint32_t w = 0x00ff0000;
-  w |= (cmd << 8) & 0xff00;
-  w |= (~cmd) & 0xff;
+  uint32_t w =
+    ((uint32_t(addr) << 24)    & 0xff000000) |
+    (((~uint32_t(addr)) << 16) & 0x00ff0000) |
+    ((uint32_t(cmd) << 8)      & 0x0000ff00) |
+    ((~uint32_t(cmd))          & 0x000000ff);
   irsend.sendNEC(w, 32);
- delay(100);
 }
 
 void setup(void) {
-  pinMode(debugLed, OUTPUT);
+  pinMode(motionIn, INPUT);
+  digitalWrite(motionIn, 1);
+  
   Serial.begin(115200);
   keypad.setRate(10);
   lcd.begin(16,2);
-
-
-  for (int i = 0; i < 1; i++) {
-    digitalWrite(debugLed,1);
-    /*
-44 key remote. command chart: http://blog.allgaiershops.com/2012/05/
-Up  Down Play Pwr
-0x3A 0xBA 0x82 0x02
-
-Red  Grn  Blu  Wht
-1A   9A   A2   22
-
-2A   AA   92   12
-
-0A   8A   B2   32
-
-38   B8   78   F8
-
-18   98   58   D8
-
-RUp  GUp  BUp  Quick
-28   A8   68   E8
-
-RDn  GDn  BDn  Slow
-08   88   48   C8
-
-DIY1 DIY2 DIY3 AUTO
-30   B0   70   F0
-
-DIY4 DIY5 DIY6 Flash
-10   90   50   D0
-
-JMP3 JMP7 Fade Fade7
-20   A0   60   E0
-      
-    irsend.sendNEC(0xff0002fd, 32);
-    irsend.sendNEC(0x00ff02fd, 32);
-    irsend.sendNEC(0x00ff40bf, 32);
-    irsend.sendNEC(0xff0040bf, 32);
-    */
-    delay(100);
-
-    // LED618 remote command byte (addr is ff)
-    // see https://github.com/alistairallan/RgbIrLed/blob/master/RgbIrLed.cpp#L44
-#define ON                0xE0
-#define OFF               0x60
-#define BRIGHTNESS_UP     0xA0
-#define BRIGHTNESS_DOWN   0x20
-#define FLASH             0xF0
-#define STROBE            0xE8
-#define FADE              0xD8
-#define SMOOTH            0xC8
- 
-#define RED               0x90
-#define GREEN             0x10
-#define BLUE              0x50
-#define WHITE             0xD0
- 
-#define ORANGE            0xB0
-#define YELLOW_DARK       0xA8
-#define YELLOW_MEDIUM     0x98
-#define YELLOW_LIGHT      0x88
- 
-#define GREEN_LIGHT       0x30
-#define GREEN_BLUE1       0x28
-#define GREEN_BLUE2       0x18
-#define GREEN_BLUE3       0x08
- 
-#define BLUE_RED          0x70
-#define PURPLE_DARK       0x68
-#define PURPLE_LIGHT      0x58
-#define PINK              0x48
-    sendnec(0xff, ON);
-    
-    digitalWrite(debugLed,0);
-    delay(100);
-  }
 }
 
 
@@ -182,6 +109,7 @@ void loop() {
     Serial.print(",\"slider2\":"); Serial.print(analogRead(2));
     Serial.print(",\"slider3\":"); Serial.print(analogRead(3));
     Serial.print(",\"slider4\":"); Serial.print(analogRead(4));
+    Serial.print(",\"motion\":"); Serial.print(digitalRead(motionIn));
     Serial.print("}\n");
   } else if (i == 1) { // write text
     while (Serial.available() < 3) NULL;
@@ -200,6 +128,10 @@ void loop() {
   } else if (i == 2) { // set backlight
     while (Serial.available() < 1) NULL;
     backlightStandard = Serial.read();
+  } else if (i == 3) { // IR NEC protocol
+    while (Serial.available() < 2) NULL;
+    byte addr = Serial.read();
+    sendnec(addr, Serial.read());
   } else {
     // unknown command
   }
