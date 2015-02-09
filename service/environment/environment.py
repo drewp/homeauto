@@ -28,6 +28,12 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
                Literal(now.strftime("%H:%M"))))
         g.add((DEV.environment, ROOM.localTimeToSecond,
                Literal(now.strftime("%H:%M:%S"))))
+        g.add((DEV.environment, ROOM.localDayOfWeek,
+               Literal(now.strftime("%A"))))
+        g.add((DEV.environment, ROOM.localMonthDay,
+               Literal(now.strftime("%B %e"))))
+        g.add((DEV.environment, ROOM.localDate,
+               Literal(now.strftime("%Y-%m-%d"))))
 
         for offset in range(-12, 7):
             d = now.date() + datetime.timedelta(days=offset)
@@ -38,9 +44,10 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
         g.add((DEV.calendar, ROOM.twilight,
                ROOM['withinTwilight'] if isWithinTwilight(now) else
                ROOM['daytime']))
-        
-        self.set_header('Content-type', 'application/x-trig')
-        self.write(g.asTrig())
+
+        ct, body = g.asAccepted(self.request.headers.get('accept'))
+        self.set_header('Content-type', ct)
+        self.write(body)
 
 from rdfdoc import Doc
         
