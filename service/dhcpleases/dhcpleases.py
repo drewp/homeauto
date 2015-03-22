@@ -10,12 +10,12 @@ import cyclone.web
 from twisted.internet import reactor
 from isc_dhcp_leases.iscdhcpleases import IscDhcpLeases
 
-
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 def timeLiteral(dt):
-    return Literal(dt.replace(tzinfo=tzlocal()).isoformat(), datatype=XSD.dateTime)
+    return Literal(dt.replace(tzinfo=tzlocal()).isoformat(),
+                   datatype=XSD.dateTime)
 
 class GraphHandler(cyclone.web.RequestHandler):
     def get(self):
