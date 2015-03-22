@@ -117,8 +117,8 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
         for dev in self.settings.poller.lastAddrs:
             if not dev.get('connected'):
                 continue
-            uri = URIRef("http://bigasterisk.com/wifiDevice/%s" % dev['mac'])
-            g.add((uri, ROOM['macAddress'], Literal(dev['mac'])))
+            uri = URIRef("http://bigasterisk.com/mac/%s" % dev['mac'].lower())
+            g.add((uri, ROOM['macAddress'], Literal(dev['mac'].lower())))
             
             g.add((uri, ROOM['connected'], aps))
             if 'clientHostname' in dev:
