@@ -9,6 +9,7 @@ Returns:
  activity stream, when we start saving history
 
 Todo: this should be the one polling and writing to mongo, not entrancemusic
+
 """
 from __future__ import division
 import sys, cyclone.web, json, traceback, time, pystache, datetime, logging
