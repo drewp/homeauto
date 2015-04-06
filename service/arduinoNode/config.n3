@@ -1,0 +1,19 @@
+@prefix :          <http://projects.bigasterisk.com/room/> .
+@prefix board0:    <http://bigasterisk.com/homeauto/board0> .
+@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+@prefix sensor:    <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc:  <http://bigasterisk.com/homeauto/houseLoc/> .
+
+board0: a :ArduinoBoard;
+  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
+  :boardTag "atmega328";
+  :hasPin board0pin:d3 .
+
+board0pin:d3 :pinNumber 3 .
+board0pin:d4 :pinNumber 4 .
+
+board0pin:d3 :connectedTo sensor:motion0 .
+sensor:motion0 a :MotionSensor;
+  :sees houseLoc:storage .
+  
+
