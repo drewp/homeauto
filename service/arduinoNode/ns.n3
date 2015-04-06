@@ -1,0 +1,11 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xs: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+
+@prefix :          <http://projects.bigasterisk.com/room/> .
+@prefix board0:    <http://bigasterisk.com/homeauto/board0> .
+@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+@prefix sensor:    <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc:  <http://bigasterisk.com/homeauto/houseLoc/> .
+  
+

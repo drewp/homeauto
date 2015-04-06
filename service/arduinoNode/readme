@@ -1,0 +1,67 @@
+node config file:
+
+  board:b0 :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0";
+    :boardTag "diecimila";
+    :connectedTo sensor:motion0 .
+    
+  sensor:motion0 a :MotionSensor;
+    :pin board0:pin3
+    :sees :downhallway .
+
+  output:out0 a :GeneralOutput ;
+    :pin board0:pin3; 
+    :controls :heater .
+
+  output:out1 a :ShiftBrite;
+    :shiftbriteL board0:pin5;
+    :shiftbriteD board0:pin11;
+    :shiftbriteC board0:pin12 .
+
+  output:out2 a :IrEmitter;
+    :pin board0:pin4
+    .
+    
+  output:out3 a :RgbStrip;
+    :ledCount 10
+    .
+
+  output:out4 a :OneWireBus;
+    :pin board0:pin5
+    :connectedTo sensor:temp0, sensor:temp1 .
+
+  sensor:temp0 a :TemperatureSensor;
+    :oneWireAddress "12:14:35:23";
+    :feels :downhallway;
+    :location house:wall31;
+    :height "80cm"
+    :pollPeriod "60sec"
+    .
+
+  sensor:ir1 a :PowerMeterMonitor;
+    :reads :housePower;
+    .
+    
+
+linux side host:
+  read config. we may have any number of arduinos.
+  serve the complete arduino code to run.
+  poll inputs.
+  serve outputs.
+  upon request, build arduino code and deploy it.
+
+emits this graph:
+    board:b0 a :connectedBoard;
+      :host :bang;
+      :lastSeen "-1sec" .
+    sensor:motion0
+      :sees :downhallway;
+      :motionState :noMotion;
+      :lastRead "16:30:00";
+      :lastMotion "16:02:00" .
+    sensor:theaterIrDetect
+      :sawCode "0e55cc" .
+    sensor:ir1 a :PowerMeterMonitor;
+      :currentWatts 462;
+      :lastPulseTime "16:09:00";
+      :kwhPerBlink 1.0;
+      
