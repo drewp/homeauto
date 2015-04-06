@@ -97,6 +97,18 @@ class Busybox(object):
 bb = Busybox()
 words = open('/usr/share/dict/words').readlines()
 
+while 1:
+    bb.sendIr('led_22_key', 'RED')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+    bb.sendIr('led_22_key', 'BLUE')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+    bb.sendIr('led_22_key', 'BRIGHTNESS_DOWN')
+
+
+
 class Poller(object):
     def __init__(self):
         self.lastWordTime = 0
@@ -128,9 +140,9 @@ class Poller(object):
                          ROOM['change'],
                          ROOM['down']))
         if self.last['motion']:
-            bb.sendIr('ON')
+            bb.sendIr('led_22_key', 'ON')
         else:
-            bb.sendIr('OFF')
+            bb.sendIr('led_22_key', 'OFF')
 
 
 @klein.route('/graph', methods=['GET'])
