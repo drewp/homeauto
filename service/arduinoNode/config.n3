@@ -1,10 +1,13 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix :          <http://projects.bigasterisk.com/room/> .
-@prefix board0:    <http://bigasterisk.com/homeauto/board0> .
-@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+@prefix ha:    <http://bigasterisk.com/homeauto/> .
 @prefix sensor:    <http://bigasterisk.com/homeauto/sensor/> .
 @prefix houseLoc:  <http://bigasterisk.com/homeauto/houseLoc/> .
 
-board0: a :ArduinoBoard;
+
+@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+
+ha:board0 a :ArduinoBoard;
   :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
   :boardTag "atmega328";
   :hasPin board0pin:d3 .
@@ -15,5 +18,55 @@ board0pin:d4 :pinNumber 4 .
 board0pin:d3 :connectedTo sensor:motion0 .
 sensor:motion0 a :MotionSensor;
   :sees houseLoc:storage .
+
+
+
+@prefix board1pin: <http://bigasterisk.com/homeauto/board1/pin/> .
+@prefix board1lcd: <http://bigasterisk.com/homeauto/board1/lcd/> .
+@prefix board1ow: <http://bigasterisk.com/homeauto/board1/oneWire/> .
+
+ha:board1 a :ArduinoBoard;
+  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A6004bUG-if00-port0";
+  :boardTag "atmega328";
+  rdfs:comment "chip has been replaced with a 328";
+  :hasPin
+    board1pin:d3,
+    board1pin:d5,
+    board1pin:d6,
+    board1pin:d7,
+    board1pin:d8,
+    board1pin:d9,
+    board1pin:d10,
+    board1pin:d11,
+    board1pin:d12 .
+
+board1pin:d3 :pinNumber 3 .
+board1pin:d10 :pinNumber 10 .
+board1pin:d11 :pinNumber 11 .
+board1pin:d12 :pinNumber 12 .
+
+board1pin:d10 :connectedTo board1lcd:backlight .
+board1lcd:backlight a :LedOutput .
+
+board1pin:d3 :connectedTo board1ow: .
+board1ow: a :OneWire;
+  :connectedTo board1ow:temperatureSensor .
+board1ow:temperatureSensor a :TemperatureSensor;
+  :position :office .
   
+board1pin:d9 :pinNumber 9; :connectedTo board1lcd:SID .
+board1pin:d8 :pinNumber 8; :connectedTo board1lcd:CLK .
+board1pin:d7 :pinNumber 7; :connectedTo board1lcd:A0 .
+board1pin:d6 :pinNumber 6; :connectedTo board1lcd:RST .
+board1pin:d5 :pinNumber 5; :connectedTo board1lcd:CS .
+
+board1lcd: a :ST7565Lcd;
+  :lcdSID board1lcd:SID;
+  :lcdCLK board1lcd:CLK;
+  :lcdA0 board1lcd:A0;
+  :lcdRST board1lcd:RST;
+  :lcdCS board1lcd:CS .
+  
+
+
 
