@@ -1,10 +1,14 @@
+"""
+depends on arduino-mk
+"""
 import shutil
 import tempfile
-import glob, sys, logging, subprocess
+import glob, sys, logging, subprocess, socket, os, hashlib, time
 import cyclone.web
 from rdflib import Graph, Namespace, URIRef, Literal, RDF
 from twisted.internet import reactor, task
 import devices
+import dotrender
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -16,16 +20,25 @@ from stategraph import StateGraph
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
 
+import rdflib.namespace
+old_split = rdflib.namespace.split_uri
+def new_split(uri):
+    try:
+        return old_split(uri)
+    except Exception:
+        return uri, ''
+rdflib.namespace.split_uri = new_split
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
+HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 class Config(object):
     def __init__(self):
         self.graph = Graph()
         log.info('read config')
-        self.graph.bind('', ROOM)
-        self.graph.bind('rdf', RDF)
         self.graph.parse('config.n3', format='n3')
+        self.graph.bind('', ROOM) # not working
+        self.graph.bind('rdf', RDF)
 
     def serialDevices(self):
         return dict([(row.dev, row.board) for row in self.graph.query(
@@ -33,7 +46,7 @@ class Config(object):
                  ?board :device ?dev;
                  a :ArduinoBoard .
                }""", initNs={'': ROOM})])
-
+        
 class Board(object):
     """an arduino connected to this computer"""
     baudrate = 115200
@@ -50,20 +63,16 @@ class Board(object):
         
         # The order of this list needs to be consistent between the
         # deployToArduino call and the poll call.
-        self._inputs = [devices.PingInput(graph, self.uri)]
-        for row in graph.query("""SELECT ?dev WHERE {
-                                    ?board :hasPin ?pin .
-                                    ?pin :connectedTo ?dev .
-                                  } ORDER BY ?dev""",
-                               initBindings=dict(board=self.uri),
-                               initNs={'': ROOM}):
-            self._inputs.append(devices.makeBoardInput(graph, row.dev))
+        self._devs = devices.makeDevices(graph, self.uri)
+        self._polledDevs = [d for d in self._devs if d.generatePollCode()]
         
         self._statementsFromInputs = {} # input uri: latest statements
-        
+
+        self.open()
 
     def open(self):
-        self.ser = LoggingSerial(port=self.dev, baudrate=self.baudrate, timeout=2)
+        self.ser = LoggingSerial(port=self.dev, baudrate=self.baudrate,
+                                 timeout=2)
         
     def startPolling(self):
         task.LoopingCall(self._poll).start(.5)
@@ -80,26 +89,46 @@ class Board(object):
             
     def _pollWork(self):
         self.ser.write("\x60\x00")
-        for i in self._inputs:
+        for i in self._polledDevs:
             self._statementsFromInputs[i.uri] = i.readFromPoll(self.ser.read)
         #plus statements about succeeding or erroring on the last poll
 
     def currentGraph(self):
         g = Graph()
+        
+        g.add((HOST[socket.gethostname()], ROOM['connectedTo'], self.uri))
+
         for si in self._statementsFromInputs.values():
             for s in si:
                 g.add(s)
         return g
             
     def generateArduinoCode(self):
-        generated = {'baudrate': self.baudrate, 'setups': '', 'polls': ''}
-        for attr in ['setups', 'polls']:
-            for i in self._inputs:
-                gen = (i.generateSetupCode() if attr == 'setups'
-                       else i.generatePollCode())
-                generated[attr] += '// for %s\n%s\n' % (i.uri, gen)
+        generated = {
+            'baudrate': self.baudrate,
+            'includes': '',
+            'global': '',
+            'setups': '',
+            'polls': ''
+        }
+        for attr in ['includes', 'global', 'setups', 'polls']:
+            for i in self._devs:
+                if attr == 'includes':
+                    gen = '\n'.join('#include "%s"\n' % inc
+                                    for inc in i.generateIncludes())
+                elif attr == 'global': gen = i.generateGlobalCode()
+                elif attr == 'setups': gen = i.generateSetupCode()
+                elif attr == 'polls': gen = i.generatePollCode()
+                else: raise NotImplementedError
+                    
+                if gen:
+                    generated[attr] += '// for %s\n%s\n' % (i.uri, gen)
 
         return '''
+%(includes)s
+
+%(global)s
+        
 void setup() {
     Serial.begin(%(baudrate)d);
     Serial.flush();
@@ -117,13 +146,50 @@ void loop() {
         cmd = Serial.read();
         if (cmd == 0x00) {
 %(polls)s;
+        } else if (cmd == 0x01) {
+          Serial.write("CODE_CHECKSUM");
         }
     }
 }
         ''' % generated
 
+
+    def codeChecksum(self, code):
+        # this is run on the code without CODE_CHECKSUM replaced yet
+        return hashlib.sha1(code).hexdigest()
+
+    def readBoardChecksum(self, length):
+        # this is likely right after reset, so it might take 2 seconds
+        for tries in range(6):
+            self.ser.write("\x60\x01")
+            try:
+                return self.ser.read(length)
+            except ValueError:
+                if tries == 5:
+                    raise
+            time.sleep(.5)
+        raise ValueError
+
+    def boardIsCurrent(self, currentChecksum):
+        try:
+            boardCksum = self.readBoardChecksum(len(currentChecksum))
+            if boardCksum == currentChecksum:
+                log.info("board has current code (%s)" % currentChecksum)
+                return True
+            else:
+                log.info("board responds with incorrect code version")
+        except Exception as e:
+            log.info("can't get code version from board: %r" % e)
+        return False
+        
     def deployToArduino(self):
         code = self.generateArduinoCode()
+        cksum = self.codeChecksum(code)
+        code = code.replace('CODE_CHECKSUM', cksum)
+
+        if self.boardIsCurrent(cksum):
+            return
+        
         try:
             if hasattr(self, 'ser'):
                 self.ser.close()
@@ -139,14 +205,17 @@ void loop() {
         with open(workDir + '/makefile', 'w') as makefile:
             makefile.write('''
 BOARD_TAG = %(tag)s
-USER_LIB_PATH := 
-ARDUINO_LIBS = 
+USER_LIB_PATH := %(libs)s
+ARDUINO_LIBS = %(arduinoLibs)s
 MONITOR_PORT = %(dev)s
 
 include /usr/share/arduino/Arduino.mk
             ''' % {
                 'dev': self.dev,
                 'tag': self.graph.value(self.uri, ROOM['boardTag']),
+                'libs': os.path.abspath('arduino-libraries'),
+                'arduinoLibs': ' '.join(sum((d.generateArduinoLibs()
+                                             for d in self._devs), [])),
                })
 
         with open(workDir + '/main.ino', 'w') as main:
@@ -177,46 +246,8 @@ class GraphPage(cyclone.web.RequestHandler):
 
 class Dot(cyclone.web.RequestHandler):
     def get(self):
-        nodes = {} # uri: nodeline
-        edges = []
-
-        serial = [0]
-        def addNode(node):
-            if node not in nodes or isinstance(node, Literal):
-                id = 'node%s' % serial[0]
-                if isinstance(node, URIRef):
-                    short = self.settings.config.graph.qname(node)
-                else:
-                    short = str(node)
-                nodes[node] = (
-                    id,
-                    '%s [ label="%s", shape = record, color = blue ];' % (
-                    id, short))
-                serial[0] += 1
-            else:
-                id = nodes[node][0]
-            return id
-        def addStmt(stmt):
-            ns = addNode(stmt[0])
-            no = addNode(stmt[2])
-            edges.append('%s -> %s [ label="%s" ];' % (ns, no, stmt[1]))
-        for b in self.settings.boards:
-            for stmt in b.currentGraph():
-                # color these differently from config ones
-                addStmt(stmt)
-        for stmt in self.settings.config.graph:
-            addStmt(stmt)
-
-        nodes = '\n'.join(line for _, line in nodes.values())
-        edges = '\n'.join(edges)
-        dot = '''
-        digraph {
-	rankdir = TB;
-	charset="utf-8";
-        %(nodes)s
-        %(edges)s
-        }
-        ''' % dict(nodes=nodes, edges=edges)
+        configGraph = self.settings.config.graph
+        dot = dotrender.render(configGraph, self.settings.boards)
         self.write(dot)
         
 class ArduinoCode(cyclone.web.RequestHandler):
@@ -247,11 +278,10 @@ def main():
         b = Board(dev, config.graph, board, onChange)
         boards.append(b)
 
-    #boards[0].deployToArduino()
+    boards[0].deployToArduino()
 
     log.info('open boards')
     for b in boards:
-        b.open()
         b.startPolling()
         
     from twisted.python import log as twlog
