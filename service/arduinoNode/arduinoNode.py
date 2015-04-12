@@ -1,14 +1,21 @@
 """
-depends on arduino-mk
+depends on packages:
+ arduino-mk
+ indent
 """
+from __future__ import division
+import glob, sys, logging, subprocess, socket, os, hashlib, time, tempfile
 import shutil
-import tempfile
-import glob, sys, logging, subprocess, socket, os, hashlib, time
+import serial
 import cyclone.web
 from rdflib import Graph, Namespace, URIRef, Literal, RDF
+from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
+
 import devices
 import dotrender
+import rdflib_patch
+rdflib_patch.fixQnameOfUriWithTrailingSlash()
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -20,17 +27,10 @@ from stategraph import StateGraph
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
 
-import rdflib.namespace
-old_split = rdflib.namespace.split_uri
-def new_split(uri):
-    try:
-        return old_split(uri)
-    except Exception:
-        return uri, ''
-rdflib.namespace.split_uri = new_split
-
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 HOST = Namespace('http://bigasterisk.com/ruler/host/')
+
+ACTION_BASE = 10 # higher than any of the fixed command numbers
 
 class Config(object):
     def __init__(self):
@@ -64,6 +64,8 @@ class Board(object):
         # The order of this list needs to be consistent between the
         # deployToArduino call and the poll call.
         self._devs = devices.makeDevices(graph, self.uri)
+        self._devCommandNum = dict((dev.uri, ACTION_BASE + devIndex)
+                                   for devIndex, dev in enumerate(self._devs))
         self._polledDevs = [d for d in self._devs if d.generatePollCode()]
         
         self._statementsFromInputs = {} # input uri: latest statements
@@ -84,14 +86,25 @@ class Board(object):
         """
         try:
             self._pollWork()
+        except serial.SerialException:
+            reactor.crash()
+            raise
         except Exception as e:
             log.warn("poll: %r" % e)
             
     def _pollWork(self):
+        t1 = time.time()
         self.ser.write("\x60\x00")
         for i in self._polledDevs:
             self._statementsFromInputs[i.uri] = i.readFromPoll(self.ser.read)
         #plus statements about succeeding or erroring on the last poll
+        byte = self.ser.read(1)
+        if byte != 'x':
+            raise ValueError("after poll, got %x instead of 'x'" % byte)
+        elapsed = time.time() - t1
+        if elapsed > 1.0:
+            log.warn('poll took %.1f seconds' % elapsed)
+        
 
     def currentGraph(self):
         g = Graph()
@@ -102,29 +115,67 @@ class Board(object):
             for s in si:
                 g.add(s)
         return g
-            
+
+    def outputStatements(self, stmts):
+        unused = set(stmts)
+        for dev in self._devs:
+            stmtsForDev = []
+            for pat in dev.outputPatterns():
+                if [term is None for term in pat] != [False, False, True]:
+                    raise NotImplementedError
+                for stmt in stmts:
+                    if stmt[:2] == pat[:2]:
+                        stmtsForDev.append(stmt)
+                        unused.discard(stmt)
+            if stmtsForDev:
+                log.info("output goes to action handler for %s" % dev.uri)
+                self.ser.write("\x60" + chr(self._devCommandNum[dev.uri]))
+                dev.sendOutput(stmtsForDev, self.ser.write, self.ser.read)
+                if self.ser.read(1) != 'k':
+                    raise ValueError(
+                        "%s sendOutput/generateActionCode didn't use "
+                        "matching output bytes" % dev.__class__)
+                log.info("success")
+        if unused:
+            log.warn("No devices cared about these statements:")
+            for s in unused:
+                log.warn(repr(s))
+        
     def generateArduinoCode(self):
         generated = {
             'baudrate': self.baudrate,
             'includes': '',
             'global': '',
             'setups': '',
-            'polls': ''
+            'polls': '',
+            'actions': '',            
         }
-        for attr in ['includes', 'global', 'setups', 'polls']:
-            for i in self._devs:
+        for attr in ['includes', 'global', 'setups', 'polls', 'actions']:
+            for dev in self._devs:
                 if attr == 'includes':
                     gen = '\n'.join('#include "%s"\n' % inc
-                                    for inc in i.generateIncludes())
-                elif attr == 'global': gen = i.generateGlobalCode()
-                elif attr == 'setups': gen = i.generateSetupCode()
-                elif attr == 'polls': gen = i.generatePollCode()
-                else: raise NotImplementedError
+                                    for inc in dev.generateIncludes())
+                elif attr == 'global': gen = dev.generateGlobalCode()
+                elif attr == 'setups': gen = dev.generateSetupCode()
+                elif attr == 'polls': gen = dev.generatePollCode()
+                elif attr == 'actions':
+                    code = dev.generateActionCode()
+                    if code:
+                        gen = '''else if (cmd == %(cmdNum)s) {
+                                   %(code)s
+                                   Serial.write('k');
+                                 }
+                              ''' % dict(cmdNum=self._devCommandNum[dev.uri],
+                                         code=code)
+                    else:
+                        gen = ''
+                else:
+                    raise NotImplementedError
                     
                 if gen:
-                    generated[attr] += '// for %s\n%s\n' % (i.uri, gen)
+                    generated[attr] += '// for %s\n%s\n' % (dev.uri, gen)
 
-        return '''
+        code = '''
 %(includes)s
 
 %(global)s
@@ -132,7 +183,7 @@ class Board(object):
 void setup() {
     Serial.begin(%(baudrate)d);
     Serial.flush();
-%(setups)s
+    %(setups)s
 }
         
 void loop() {
@@ -144,21 +195,34 @@ void loop() {
             return;
         }
         cmd = Serial.read();
-        if (cmd == 0x00) {
-%(polls)s;
-        } else if (cmd == 0x01) {
+        if (cmd == 0x00) { // poll
+          %(polls)s
+          Serial.write('x');
+        } else if (cmd == 0x01) { // get code checksum
           Serial.write("CODE_CHECKSUM");
         }
+        %(actions)s
     }
 }
         ''' % generated
+        try:
+            with tempfile.SpooledTemporaryFile() as codeFile:
+                codeFile.write(code)
+                codeFile.seek(0)
+                code = subprocess.check_output([
+                    'indent',
+                    '-linux',
+                    '-fc1', # ok to indent comments
+                    '-i4', # 4-space indent
+                    '-sob' # swallow blanks (not working)
+                ], stdin=codeFile)
+        except OSError as e:
+            log.warn("indent failed (%r)", e)
+        cksum = hashlib.sha1(code).hexdigest()
+        code = code.replace('CODE_CHECKSUM', cksum)
+        return code, cksum
 
-
-    def codeChecksum(self, code):
-        # this is run on the code without CODE_CHECKSUM replaced yet
-        return hashlib.sha1(code).hexdigest()
-
-    def readBoardChecksum(self, length):
+    def _readBoardChecksum(self, length):
         # this is likely right after reset, so it might take 2 seconds
         for tries in range(6):
             self.ser.write("\x60\x01")
@@ -170,9 +234,9 @@ void loop() {
             time.sleep(.5)
         raise ValueError
 
-    def boardIsCurrent(self, currentChecksum):
+    def _boardIsCurrent(self, currentChecksum):
         try:
-            boardCksum = self.readBoardChecksum(len(currentChecksum))
+            boardCksum = self._readBoardChecksum(len(currentChecksum))
             if boardCksum == currentChecksum:
                 log.info("board has current code (%s)" % currentChecksum)
                 return True
@@ -183,11 +247,9 @@ void loop() {
         return False
         
     def deployToArduino(self):
-        code = self.generateArduinoCode()
-        cksum = self.codeChecksum(code)
-        code = code.replace('CODE_CHECKSUM', cksum)
+        code, cksum = self.generateArduinoCode()
 
-        if self.boardIsCurrent(cksum):
+        if self._boardIsCurrent(cksum):
             return
         
         try:
@@ -200,7 +262,7 @@ void loop() {
                 shutil.rmtree(workDir)
         finally:
             self.open()
-            
+
     def _arduinoMake(self, workDir, code):
         with open(workDir + '/makefile', 'w') as makefile:
             makefile.write('''
@@ -255,8 +317,19 @@ class ArduinoCode(cyclone.web.RequestHandler):
         board = [b for b in self.settings.boards if
                  b.uri == URIRef(self.get_argument('board'))][0]
         self.set_header('Content-type', 'text/plain')
-        self.write(board.generateArduinoCode())
+        code, cksum = board.generateArduinoCode()
+        self.write(code)
+
+def rdfGraphBody(body, headers):
+    g = Graph()
+    g.parse(StringInputSource(body), format='nt')
+    return g
         
+class OutputPage(cyclone.web.RequestHandler):
+    def post(self):
+        stmts = list(rdfGraphBody(self.request.body, self.request.headers))
+        for b in self.settings.boards:
+            b.outputStatements(stmts)
         
 def currentSerialDevices():
     log.info('find connected boards')
@@ -291,6 +364,7 @@ def main():
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/", Index),
         (r"/graph", GraphPage),
+        (r'/output', OutputPage),
         (r'/arduinoCode', ArduinoCode),
         (r'/dot', Dot),
         ], config=config, boards=boards))

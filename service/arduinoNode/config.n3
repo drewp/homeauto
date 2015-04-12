@@ -46,7 +46,7 @@ board1pin:d11 :pinNumber 11 .
 board1pin:d12 :pinNumber 12 .
 
 board1pin:d10 :connectedTo board1lcd:backlight .
-board1lcd:backlight a :LedOutput .
+board1lcd:backlight a :LedOutput, :ActiveLowOutput .
 
 board1pin:d3 :connectedTo board1ow: .
 board1ow: a :OneWire;
@@ -55,14 +55,14 @@ board1ow:temperatureSensor a :TemperatureSensor;
   :position :office .
   
 board1pin:d9 :pinNumber 9; :connectedTo board1lcd:SID .
-board1pin:d8 :pinNumber 8; :connectedTo board1lcd:CLK .
+board1pin:d8 :pinNumber 8; :connectedTo board1lcd:SCLK .
 board1pin:d7 :pinNumber 7; :connectedTo board1lcd:A0 .
 board1pin:d6 :pinNumber 6; :connectedTo board1lcd:RST .
 board1pin:d5 :pinNumber 5; :connectedTo board1lcd:CS .
 
 board1lcd: a :ST7565Lcd;
   :lcdSID board1lcd:SID;
-  :lcdCLK board1lcd:CLK;
+  :lcdSCLK board1lcd:SCLK;
   :lcdA0 board1lcd:A0;
   :lcdRST board1lcd:RST;
   :lcdCS board1lcd:CS .
