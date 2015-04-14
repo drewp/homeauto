@@ -5,8 +5,6 @@
     <meta charset="utf-8" />
     <link rel="import" href="/lib/polymer/0.5.2/polymer/polymer.html">
     <link rel="import" href="/lib/polymer/0.5.2/core-ajax/core-ajax.html">
-    <link rel="import" href="/lib/polymer/0.5.2/paper-button/paper-button.html">
-    <link rel="import" href="/lib/polymer/0.5.2/core-resizable/core-resizable.html">
     <link rel="import" href="/room/ari/static/rdf-observe.html">
     <link rel="import" href="/room/ari/static/rdf-oneshot.html">
     <link rel="import" href="static/output-widgets.html">
@@ -69,45 +67,67 @@
               <template repeat="{{dev in board.devices}}">
                 <div class="device">
                   <h1>
-                    Device <linked-uri href="{{dev.uri}}"></linked-uri>
-                    (class {{dev.className}})
+                    {{dev.className}}
+                    <linked-uri href="{{dev.uri}}"></linked-uri>
                   </h1>
-                  <div>watching:</div>
-                  <ul>
-                    <template repeat="{{prefix in dev.watchPrefixes}}">
-                      <div>{{prefix[0]}}, {{prefix[1]}}, ?obj</div>
-                    </template>
-                  </ul>
 
-                  <div>send output:</div>
-                  <ul>
-                    <template repeat="{{out in dev.outputWidgets}}">
-                      <div>
-                        <output-widget-any desc="{{out}}"></output-widget-any>
-                      </div>
-                    </template>
-                  </ul>
+                  <template if="{{dev.watchPrefixes.length}}">
+                    <div>watching:</div>
+                    <ul>
+                      <template repeat="{{prefix in dev.watchPrefixes}}">
+
+                        <!-- 
+                        <rdf-observe
+                          graph="http://dash:9059/graph" xtodo="get host here"
+                          subject="{{prefix[0]}}"
+                          predicate="{{prefix[1]}}"
+                          out="{{out}}">
+                        </rdf-observe>
+                        
+                        <div>{{prefix[0]}}, {{prefix[1]}}, {{out['room:temperatureF']['@value']}}</div>
+                         -->
+                      </template>
+                    </ul>
+                  </template>
+
+                  <template if="{{dev.outputWidgets.length}}">
+                    <div>send output:</div>
+                    <ul>
+                      <template repeat="{{out in dev.outputWidgets}}">
+                        <div>
+                          <output-widget-any desc="{{out}}"></output-widget-any>
+                        </div>
+                      </template>
+                    </ul>
+                  </template>
                 </div>
               </template>
             </ul>
-              
           </div>
         </template>
       </template>
-
     </polymer-element>
     <arduinonode-boards></arduinonode-boards>
-
     
     <polymer-element name="data-dump" noscript>
       <template>
         <rdf-observe
-          graph="http://bang:9059/graph"
-          subject="sensor:motion0"
-          predicate="room:sees"
+          graph="http://dash:9059/graph"
+          subject="http://bigasterisk.com/homeauto/board1/oneWire/"
+          predicate="room:temperatureF"
           out="{{out}}">
         </rdf-observe>
-        <div>sees: {{out['room:sees']}}</div>
+        <div>sees: {{out['room:temperatureF']['@value']}}</div>
+
+
+        <rdf-observe
+          graph="http://dash:9059/graph"
+          subject="http://bigasterisk.com/homeauto/board1/oneWire/"
+          predicate="http://projects.bigasterisk.com/room/temperatureRetries"
+          out="{{out2}}">
+        </rdf-observe>
+        <div>sees2: {{out2['room:temperatureRetries']['@value']}}</div>
+        
       </template>
     </polymer-element>
     <!-- <data-dump></data-dump> -->

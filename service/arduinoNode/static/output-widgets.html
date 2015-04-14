@@ -3,7 +3,7 @@
 <polymer-element name="output-widget" attributes="subj pred">
   <template>
     <core-ajax id="output" url="../output" method="POST"></core-ajax>
-    {{subj}} set {{pred}} to
+    Set this device's {{pred}} to
   </template>
   <script>
    function ntriple(s, p, o) {
