@@ -1,0 +1,70 @@
+<link rel="import" href="/lib/polymer/0.5.2/core-ajax/core-ajax.html">
+
+<polymer-element name="output-widget" attributes="subj pred">
+  <template>
+    <core-ajax id="output" url="../output" method="POST"></core-ajax>
+    {{subj}} set {{pred}} to
+  </template>
+  <script>
+   function ntriple(s, p, o) {
+     // incomplete
+     o = o.replace('\n', '\\n');
+     return '<'+s+'> <'+p+'> "'+o+'".';
+   }
+   Polymer({
+     valueChanged: function() {
+       this.$.output.body = ntriple(this.subj, this.pred, this.value);
+       this.$.output.go();
+     }
+   });
+  </script>
+</polymer-element>
+
+<polymer-element name="output-slider" extends="output-widget"
+                 attributes="min max step"
+                 noscript>
+  <template>
+    <shadow></shadow>
+    <input type="range"
+           min="{{min}}" max="{{max}}" step="{{step}}"
+           value="{{value}}"> {{value}}
+  </template>
+</polymer-element>
+
+<polymer-element name="output-fixed-text" extends="output-widget"
+                 attributes="rows cols"
+                 noscript>
+  <template>
+    <textarea rows="{{rows}}" cols="{{cols}}" value="{{value}}"></textarea>
+  </template>
+</polymer-element>
+
+<polymer-element name="output-switch" extends="output-widget">
+  <template>
+    <shadow></shadow>
+    <input type="checkbox" checked="{{check}}"> {{value}}
+  </template>
+  <script>
+   Polymer({
+     check: false,
+     checkChanged: function() {
+       this.value = this.check ? "high" : "low";
+     }
+   });
+  </script>
+</polymer-element>
+
+<polymer-element name="output-widget-any" attributes="desc">
+  <template></template>
+  <script>
+   Polymer({
+     domReady: function() {
+       var elem = document.createElement(this.desc.element);
+       this.shadowRoot.appendChild(elem);
+       for (var k of Object.keys(this.desc)) {
+         elem.setAttribute(k, this.desc[k]);
+       }
+     }
+   });
+  </script>
+</polymer-element>
