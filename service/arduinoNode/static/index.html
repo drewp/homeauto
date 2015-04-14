@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+  <head>
+    <title>arduinoNode</title>
+    <meta charset="utf-8" />
+    <link rel="import" href="/lib/polymer/0.5.2/polymer/polymer.html">
+    <link rel="import" href="/lib/polymer/0.5.2/core-ajax/core-ajax.html">
+    <link rel="import" href="/lib/polymer/0.5.2/paper-button/paper-button.html">
+    <link rel="import" href="/lib/polymer/0.5.2/core-resizable/core-resizable.html">
+    <link rel="import" href="/room/ari/static/rdf-observe.html">
+    <link rel="import" href="/room/ari/static/rdf-oneshot.html">
+    <link rel="import" href="static/output-widgets.html">
+    
+    <style>
+     body {
+       font-family: monospace;
+     }
+    </style>
+  </head>
+  <body layout vertical fullbleed>
+    <script>
+     window.NS = {
+       dev: 'http://projects.bigasterisk.com/device/',
+       room: 'http://projects.bigasterisk.com/room/',
+       rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
+     };
+    </script>
+
+    <polymer-element name="linked-uri" noscript attributes="href">
+      <template>
+        <a href="{{href}}">{{href}}</a>
+      </template>
+    </polymer-element>
+    
+    <polymer-element name="arduinonode-boards" noscript>
+      <template>
+        <style>
+         h1 {
+           margin: 0;
+           font-size: 130%;
+         }
+         ul {
+           padding-left: 5px;
+         }
+         .board, .device {
+           border: 1px solid gray;
+           border-radius: 10px;
+           margin: 13px;
+           padding: 7px;
+           box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
+         }
+         .board {
+           background: rgb(244, 244, 244);
+         }
+         .device {
+           background: #fff;
+         }
+        </style>
+        <core-ajax
+          url="boards"
+          auto="true"
+          handleAs="json"
+          response="{{ret}}"></core-ajax>
+        <template repeat="{{board in ret.boards}}">
+          <div class="board">
+            <h1>Board <linked-uri href="{{board.uri}}"></linked-uri></h1>
+            <h2>Devices</h2>
+            <ul>
+              <template repeat="{{dev in board.devices}}">
+                <div class="device">
+                  <h1>
+                    Device <linked-uri href="{{dev.uri}}"></linked-uri>
+                    (class {{dev.className}})
+                  </h1>
+                  <div>watching:</div>
+                  <ul>
+                    <template repeat="{{prefix in dev.watchPrefixes}}">
+                      <div>{{prefix[0]}}, {{prefix[1]}}, ?obj</div>
+                    </template>
+                  </ul>
+
+                  <div>send output:</div>
+                  <ul>
+                    <template repeat="{{out in dev.outputWidgets}}">
+                      <div>
+                        <output-widget-any desc="{{out}}"></output-widget-any>
+                      </div>
+                    </template>
+                  </ul>
+                </div>
+              </template>
+            </ul>
+              
+          </div>
+        </template>
+      </template>
+
+    </polymer-element>
+    <arduinonode-boards></arduinonode-boards>
+
+    
+    <polymer-element name="data-dump" noscript>
+      <template>
+        <rdf-observe
+          graph="http://bang:9059/graph"
+          subject="sensor:motion0"
+          predicate="room:sees"
+          out="{{out}}">
+        </rdf-observe>
+        <div>sees: {{out['room:sees']}}</div>
+      </template>
+    </polymer-element>
+    <!-- <data-dump></data-dump> -->
+  </body>
+</html>

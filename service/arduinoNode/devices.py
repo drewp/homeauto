@@ -36,6 +36,16 @@ class DeviceType(object):
     def __init__(self, graph, uri, pinNumber):
         self.graph, self.uri = graph, uri
         self.pinNumber = pinNumber
+
+    def description(self):
+        return {
+            'uri': self.uri,
+            'className': self.__class__.__name__,
+            'pinNumber': self.pinNumber,
+            'outputPatterns': self.outputPatterns(),
+            'watchPrefixes': self.watchPrefixes(),
+            'outputWidgets': self.outputWidgets(),
+        }
         
     def readFromPoll(self, read):
         """
@@ -46,20 +56,37 @@ class DeviceType(object):
         """
         raise NotImplementedError('readFromPoll in %s' % self.__class__)
 
+    def watchPrefixes(self):
+        """
+        subj,pred pairs of the statements that might be returned from
+        readFromPoll, so the dashboard knows what it should
+        watch. This should be eliminated, as the dashboard should just
+        always watch the whole tree of statements starting self.uri
+        """
+        return []
+        
     def generateIncludes(self):
+        """filenames of .h files to #include"""
         return []
 
     def generateArduinoLibs(self):
+        """names of libraries for the ARDUINO_LIBS line in the makefile"""
         return []
         
     def generateGlobalCode(self):
+        """C code to emit in the global section"""
         return ''
         
     def generateSetupCode(self):
+        """C code to emit in setup()"""
         return ''
         
     def generatePollCode(self):
-        """if this returns nothing, we don't try to poll this device"""
+        """
+        C code to run a poll update. This should Serial.write its output
+        for readFromPoll to consume. If this returns nothing, we don't
+        try to poll this device.
+        """
         return ''
 
     def generateActionCode(self):
@@ -78,6 +105,13 @@ class DeviceType(object):
         """
         return []
 
+    def outputWidgets(self):
+        """
+        structs to make output widgets on the dashboard. ~1 of these per
+        handler you have in sendOutput
+        """
+        return []
+        
     def sendOutput(self, statements, write, read):
         """
         If we got statements that match this class's outputPatterns, this
@@ -103,10 +137,14 @@ class PingInput(DeviceType):
     
     def generatePollCode(self):
         return "Serial.write('k');"
+        
     def readFromPoll(self, read):
         if read(1) != 'k':
             raise ValueError('invalid ping response')
         return [(self.uri, ROOM['ping'], ROOM['ok'])]
+
+    def watchPrefixes(self):
+        return [(self.uri, ROOM['ping'])]
 
 @register
 class MotionSensorInput(DeviceType):
@@ -129,8 +167,15 @@ class MotionSensorInput(DeviceType):
         return [(self.uri, ROOM['sees'],
                  ROOM['motion'] if motion else ROOM['noMotion'])]
 
+    def watchPrefixes(self):
+        return [(self.uri, ROOM['sees'])]
+
 @register
 class OneWire(DeviceType):
+    """
+    A OW bus with temperature sensors (and maybe other devices, which
+    are also to be handled under this object)
+    """
     deviceType = ROOM['OneWire']
    
     def generateIncludes(self):
@@ -176,11 +221,19 @@ for (int i=0; i<NUM_TEMPERATURE_RETRIES; i++) {
     def readFromPoll(self, read):
         newTemp = readLine(read)
         retries = ord(read(1))
+        # uri will change; there could (likely) be multiple connected sensors
         return [
             (self.uri, ROOM['temperatureF'],
              Literal(newTemp, datatype=XSD['decimal'])),
             (self.uri, ROOM['temperatureRetries'], Literal(retries)),
             ]
+
+    def watchPrefixes(self):
+        # these uris will become dynamic! see note on watchPrefixes
+        # about eliminating it.
+        return [(self.uri, ROOM['temperatureF']),
+                (self.uri, ROOM['temperatureRetries']),
+                ]
 
 def byteFromFloat(f):
     return chr(int(min(255, max(0, f * 255))))
@@ -209,6 +262,46 @@ class LedOutput(DeviceType):
           while(Serial.available() < 1) NULL;
           analogWrite(%(pin)d, Serial.read());
         ''' % dict(pin=self.pinNumber)
+
+    def outputWidgets(self):
+        return [{
+            'element': 'output-slider',
+            'min': 0,
+            'max': 1,
+            'step': 1 / 255,
+            'subj': self.uri,
+            'pred': ROOM['brightness'],
+        }]
+
+@register
+class DigitalOutput(DeviceType):
+    deviceType = ROOM['DigitalOutput']
+    def generateSetupCode(self):
+        return 'pinMode(%(pin)d, OUTPUT); digitalWrite(%(pin)d, LOW);' % {
+            'pin': self.pinNumber,
+        }
+ 
+    def outputPatterns(self):
+        return [(self.uri, ROOM['level'], None)]
+
+    def sendOutput(self, statements, write, read):
+        assert len(statements) == 1
+        assert statements[0][:2] == (self.uri, ROOM['level'])
+        value = {"high": 1, "low": 0}[str(statements[0][2])]
+        write(chr(value))
+        
+    def generateActionCode(self):
+        return r'''
+          while(Serial.available() < 1) NULL;
+          digitalWrite(%(pin)d, Serial.read());
+        ''' % dict(pin=self.pinNumber)
+        
+    def outputWidgets(self):
+        return [{
+            'element': 'output-switch',
+            'subj': self.uri,
+            'pred': ROOM['level'],
+        }]
         
 @register
 class ST7576Lcd(DeviceType):
@@ -273,13 +366,25 @@ class ST7576Lcd(DeviceType):
         assert len(value) < 254, repr(value)
         write(chr(len(value)) + value)
 
+    def outputWidgets(self):
+        return [{
+                'element': 'output-fixed-text',
+                'cols': 21,
+                'rows': 8,
+                'subj': self.uri,
+                'pred': ROOM['text'],
+            }]
+        
     def generateActionCode(self):
         return '''
           while(Serial.available() < 1) NULL;
           byte bufSize = Serial.read();
-          for (byte i = 0; i < bufSize; i++) {
+          for (byte i = 0; i < bufSize; ++i) {
             while(Serial.available() < 1) NULL;
             newtxt[i] = Serial.read();
+          }
+          for (byte i = bufSize; i < sizeof(newtxt); ++i) {
+            newtxt[i] = 0;
           }
           glcd.clear();
           glcd.drawstring(0,0, newtxt); 

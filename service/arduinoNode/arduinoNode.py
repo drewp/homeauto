@@ -5,7 +5,7 @@ depends on packages:
 """
 from __future__ import division
 import glob, sys, logging, subprocess, socket, os, hashlib, time, tempfile
-import shutil
+import shutil, json
 import serial
 import cyclone.web
 from rdflib import Graph, Namespace, URIRef, Literal, RDF
@@ -72,6 +72,15 @@ class Board(object):
 
         self.open()
 
+    def description(self):
+        """for web page"""
+        return {
+            'uri': self.uri,
+            'dev': self.dev,
+            'baudrate': self.baudrate,
+            'devices': [d.description() for d in self._devs],
+            }
+        
     def open(self):
         self.ser = LoggingSerial(port=self.dev, baudrate=self.baudrate,
                                  timeout=2)
@@ -285,11 +294,6 @@ include /usr/share/arduino/Arduino.mk
 
         subprocess.check_call(['make', 'upload'], cwd=workDir)
         
-
-class Index(cyclone.web.RequestHandler):
-    def get(self):
-        self.set_header("Content-Type", "text/html")
-        self.write(open("index.html").read())
         
 class GraphPage(cyclone.web.RequestHandler):
     def get(self):
@@ -330,7 +334,15 @@ class OutputPage(cyclone.web.RequestHandler):
         stmts = list(rdfGraphBody(self.request.body, self.request.headers))
         for b in self.settings.boards:
             b.outputStatements(stmts)
+
+class Boards(cyclone.web.RequestHandler):
+    def get(self):
         
+        self.set_header('Content-type', 'application/json')
+        self.write(json.dumps({
+            'boards': [b.description() for b in self.settings.boards]
+        }, indent=2))
+            
 def currentSerialDevices():
     log.info('find connected boards')
     return glob.glob('/dev/serial/by-id/*')
@@ -362,7 +374,10 @@ def main():
 
     log.setLevel(logging.DEBUG)
     reactor.listenTCP(9059, cyclone.web.Application([
-        (r"/", Index),
+        (r"/()", cyclone.web.StaticFileHandler, {
+            "path": "static", "default_filename": "index.html"}),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
+        (r'/boards', Boards),
         (r"/graph", GraphPage),
         (r'/output', OutputPage),
         (r'/arduinoCode', ArduinoCode),
