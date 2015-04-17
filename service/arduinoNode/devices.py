@@ -253,7 +253,7 @@ class LedOutput(DeviceType):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['brightness'])
         value = float(statements[0][2])
-        if (self.uri, RDF.type, ROOM['ActiveLowOutput']):
+        if (self.uri, RDF.type, ROOM['ActiveLowOutput']) in self.graph:
             value = 1 - value
         write(byteFromFloat(value))
         
