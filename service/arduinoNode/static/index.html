@@ -24,9 +24,50 @@
      };
     </script>
 
+    <script>
+     PolymerExpressions.prototype.tojson = function(input) {
+       return JSON.stringify(input);
+     };
+
+     // not well defined for uri prefixes that are string prefixes of each other
+     PolymerExpressions.prototype.compactUri = function(uri) {
+       if (uri === undefined) {
+         return uri;
+       }
+       for (var short of Object.keys(window.NS)) {
+         var prefix = window.NS[short];
+         if (uri.indexOf(prefix) == 0) {
+           return short + ':' + uri.substr(prefix.length);
+         }
+       }
+       return uri;
+     };
+    </script>
+    
     <polymer-element name="linked-uri" noscript attributes="href">
       <template>
         <a href="{{href}}">{{href}}</a>
+      </template>
+    </polymer-element>
+
+    <!-- subj/pred are compact uris -->
+    <polymer-element name="watched-subgraph" noscript attributes="subj pred">
+      <template>
+        <style>
+         .read { font-weight: bold; }
+        </style>
+          
+        <rdf-observe
+          graph="http://dash:9059/graph" xtodo="get host here"
+          subject="{{subj}}"
+          predicate="{{pred}}"
+          out="{{out}}">
+        </rdf-observe>
+        
+        <div>{{subj}}, {{pred}},
+          <span class="read">{{out[pred]['@value']}}</span>
+        </div>
+        
       </template>
     </polymer-element>
     
@@ -75,17 +116,9 @@
                     <div>watching:</div>
                     <ul>
                       <template repeat="{{prefix in dev.watchPrefixes}}">
-
-                        <!-- 
-                        <rdf-observe
-                          graph="http://dash:9059/graph" xtodo="get host here"
-                          subject="{{prefix[0]}}"
-                          predicate="{{prefix[1]}}"
-                          out="{{out}}">
-                        </rdf-observe>
-                        
-                        <div>{{prefix[0]}}, {{prefix[1]}}, {{out['room:temperatureF']['@value']}}</div>
-                         -->
+                        <watched-subgraph
+                          subj="{{prefix[0] | compactUri}}"
+                          pred="{{prefix[1] | compactUri}}"></watched-subgraph>
                       </template>
                     </ul>
                   </template>
