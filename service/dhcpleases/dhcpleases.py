@@ -2,6 +2,7 @@
 statements about dhcp leases (and maybe live-host pings)
 """
 import sys
+import datetime
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph
 from rdflib import URIRef, Namespace, Literal, RDF, RDFS, XSD
@@ -19,10 +20,14 @@ def timeLiteral(dt):
 
 class GraphHandler(cyclone.web.RequestHandler):
     def get(self):
+        pruneExpired = bool(self.get_argument('pruneExpired', ''))
         g = StateGraph(ctx=DEV['dhcp'])
 
+        now = datetime.datetime.now()
         for mac, lease in IscDhcpLeases('/var/lib/dhcp/dhcpd.leases'
                                         ).get_current().items():
+            if pruneExpired and lease.end < now:
+                continue
             uri = URIRef("http://bigasterisk.com/dhcpLease/%s" % lease.ethernet)
             
             g.add((uri, RDF.type, ROOM['DhcpLease']))
@@ -36,10 +41,10 @@ class GraphHandler(cyclone.web.RequestHandler):
             g.add((mac, ROOM['macAddress'], Literal(lease.ethernet)))
             if lease.hostname:
                 g.add((mac, ROOM['dhcpHostname'], Literal(lease.hostname)))
-            
-        self.set_header('Content-type', 'application/x-trig')
-        self.write(g.asTrig())
 
+        self.set_header('Content-Type', 'application/x-trig')
+        self.write(g.asTrig())
+        
 if __name__ == '__main__':
     config = {
         'servePort' : 9073,
@@ -49,10 +54,14 @@ if __name__ == '__main__':
     #log.setLevel(10)
     #log.setLevel(logging.DEBUG)
 
-    reactor.listenTCP(config['servePort'],
-                      cyclone.web.Application(
-                          [
-                              (r'/graph', GraphHandler),
-                          ],
-                          ))
+    reactor.listenTCP(
+        config['servePort'],
+        cyclone.web.Application(
+            [
+                (r"/()", cyclone.web.StaticFileHandler,
+                 {"path": ".", "default_filename": "index.html"}),
+                
+                (r'/graph', GraphHandler),
+            ],
+        ))
     reactor.run()
