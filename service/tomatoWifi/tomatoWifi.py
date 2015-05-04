@@ -25,20 +25,11 @@ from rdflib import Namespace, Literal, URIRef
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph
 from wifi import Wifi
-from dhcpparse import addDhcpData
 
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
 from logsetup import log
 
-import rdflib
-from rdflib import plugin
-plugin.register(
-  "sparql", rdflib.query.Processor,
-  "rdfextras.sparql.processor", "Processor")
-plugin.register(
-  "sparql", rdflib.query.Result,
-  "rdfextras.sparql.query", "SPARQLQueryResult")
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
@@ -50,9 +41,28 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         age = time.time() - self.settings.poller.lastPollTime
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
+            
+        self.set_header("Content-Type", "text/html")
+        self.write(open("index.html").read())
 
-        self.write("this is wifiusage. needs index page that embeds the table")
+def whenConnected(mongo, macThatIsNowConnected):
+    lastArrive = None
+    for ev in mongo.find({'address': macThatIsNowConnected.upper()},
+                         sort=[('created', -1)],
+                         max_scan=100000):
+        if ev['action'] == 'arrive':
+            lastArrive = ev
+        if ev['action'] == 'leave':
+            break
+    if lastArrive is None:
+        raise ValueError("no past arrivals")
 
+    return lastArrive['created']
+
+def connectedAgoString(conn):
+    return web.utils.datestr(
+        conn.astimezone(tz.tzutc()).replace(tzinfo=None))
+    
 class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         def rowDict(row):
@@ -60,15 +70,14 @@ class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
             if 'name' not in row:
                 row['name'] = row.get('clientHostname', '-')
             if 'signal' not in row:
-                row['signal'] = 'yes' if row['connected'] else 'no'
+                row['signal'] = 'yes' if row.get('connected') else 'no'
 
             try:
-                conn = self.whenConnected(row['mac'])
-                row['connectedAgo'] = web.utils.datestr(
-                    conn.astimezone(tz.tzutc()).replace(tzinfo=None))
+                conn = whenConnected(self.settings.mongo, row.get('mac', '??'))
+                row['connectedAgo'] = connectedAgoString(conn)
             except ValueError:
-                pass
-            
+                row['connectedAgo'] = 'yes' if row.get('connected') else ''
+            row['router'] = row.get('ssid', '')
             return row
 
         self.set_header("Content-Type", "application/xhtml+xml")
@@ -78,21 +87,7 @@ class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
                 rows=sorted(map(rowDict, self.settings.poller.lastAddrs),
                             key=lambda a: (not a.get('connected'),
                                            a.get('name'))))))
-
-    def whenConnected(self, macThatIsNowConnected):
-        lastArrive = None
-        for ev in self.settings.mongo.find({'address': macThatIsNowConnected},
-                                           sort=[('created', -1)],
-                                           max_scan=100000):
-            if ev['action'] == 'arrive':
-                lastArrive = ev
-            if ev['action'] == 'leave':
-                break
-        if lastArrive is None:
-            raise ValueError("no past arrivals")
-        
-        return lastArrive['created']
-        
+       
 
 class Json(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -128,6 +123,14 @@ class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
                 g.add((uri, ROOM['deviceName'], Literal(dev['name'])))
             if 'signal' in dev:
                 g.add((uri, ROOM['signalStrength'], Literal(dev['signal'])))
+            try:
+                conn = whenConnected(self.settings.mongo, dev['mac'])
+            except ValueError:
+                pass
+            else:
+                g.add((uri, ROOM['connectedAgo'],
+                       Literal(connectedAgoString(conn))))
+                g.add((uri, ROOM['connected'], Literal(conn)))
 
         self.set_header('Content-type', 'application/x-trig')
         self.write(g.asTrig())
@@ -146,6 +149,12 @@ class Poller(object):
 
     @inlineCallbacks
     def poll(self):
+
+        connectedField = 'connected'
+        
+        # UVA mode:
+        addDhcpData = lambda *args: None
+        
         try:
             newAddrs = yield self.wifi.getPresentMacAddrs()
             addDhcpData(newAddrs)
@@ -170,17 +179,17 @@ class Poller(object):
             self.lastAddrs = newAddrs
             self.lastPollTime = time.time()
         except Exception, e:
-            log.error("poll error: %s\n%s", e, traceback.format_exc())
+            log.error("poll error: %r\n%s", e, traceback.format_exc())
 
     def computeActions(self, newWithSignal):
         actions = []
 
         def makeAction(addr, act):
             d = dict(sensor="wifi",
-                        address=addr.get('mac'),
-                        name=addr.get('name'),
-                        networkName=addr.get('clientHostname'),
-                        action=act)
+                     address=addr.get('mac').upper(), # mongo data is legacy uppercase
+                     name=addr.get('name'),
+                     networkName=addr.get('clientHostname'),
+                     action=act)
             if act == 'arrive' and 'ip' in addr:
                 # this won't cover the possible case that you get on
                 # wifi but don't have an ip yet. We'll record an
@@ -231,7 +240,7 @@ if __name__ == '__main__':
         'pollFrequency' : 1/5,
         }
     from twisted.python import log as twlog
-    #log.startLogging(sys.stdout)
+    #twlog.startLogging(sys.stdout)
     #log.setLevel(10)
     #log.setLevel(logging.DEBUG)
 
