@@ -8,7 +8,8 @@ def graphWithoutMetadata(g, ignorePredicates=[]):
     contexts in the graph and also any statements with the given
     predicates
     """
-    ctxs = map(URIRef, set(g.contexts())) # weird they turned to strings
+
+    ctxs = [ctx.identifier for ctx in g.contexts()]
 
     out = ConjunctiveGraph()
     for stmt in g.quads((None, None, None)):

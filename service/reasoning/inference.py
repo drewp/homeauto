@@ -2,9 +2,7 @@
 see ./reasoning for usage
 """
 
-import sys, re
-import restkit
-from rdflib import URIRef
+import sys
 try:
     from rdflib import StringInputSource
     from rdflib.Graph import Graph
@@ -17,7 +15,6 @@ from FuXi.Rete.Util import generateTokenSet
 from FuXi.Rete import ReteNetwork
 from rdflib import plugin
 from rdflib.store import Store
-
 from rdflibtrig import parseTrig, addTrig
 
 def infer(graph, rules):
