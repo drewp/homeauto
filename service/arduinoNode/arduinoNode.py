@@ -11,6 +11,7 @@ import cyclone.web
 from rdflib import Graph, Namespace, URIRef, Literal, RDF
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
+from docopt import docopt
 
 import devices
 import dotrender
@@ -328,13 +329,29 @@ def rdfGraphBody(body, headers):
     g = Graph()
     g.parse(StringInputSource(body), format='nt')
     return g
-        
+
 class OutputPage(cyclone.web.RequestHandler):
     def post(self):
+        # for old ui; use PUT instead
         stmts = list(rdfGraphBody(self.request.body, self.request.headers))
         for b in self.settings.boards:
             b.outputStatements(stmts)
+            
+    def put(self):
+        subj = URIRef(self.get_argument('s'))
+        pred = URIRef(self.get_argument('p'))
 
+        turtleLiteral = self.request.body
+        try:
+            obj = Literal(float(turtleLiteral))
+        except TypeError:
+            obj = Literal(turtleLiteral)
+
+        stmt = (subj, pred, obj)
+        for b in self.settings.boards:
+            b.outputStatements([stmt])
+        
+        
 class Boards(cyclone.web.RequestHandler):
     def get(self):
         
@@ -348,6 +365,18 @@ def currentSerialDevices():
     return glob.glob('/dev/serial/by-id/*')
 
 def main():
+    arg = docopt("""
+    Usage: reasoning.py [options]
+
+    -v   Verbose
+    """)
+    log.setLevel(logging.WARN)
+    if arg['-v']:
+        from twisted.python import log as twlog
+        twlog.startLogging(sys.stdout)
+
+        log.setLevel(logging.DEBUG)
+    
     config = Config()
     current = currentSerialDevices()
 
@@ -368,11 +397,7 @@ def main():
     log.info('open boards')
     for b in boards:
         b.startPolling()
-        
-    from twisted.python import log as twlog
-    twlog.startLogging(sys.stdout)
 
-    log.setLevel(logging.DEBUG)
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "static", "default_filename": "index.html"}),
