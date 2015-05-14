@@ -1,20 +1,21 @@
 @prefix : <http://projects.bigasterisk.com/room/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
-<http://bang:9069/graph> is :source of :reasoning; rdfs:label "arduino watchpins" .
+#<http://bang:9069/graph> is :source of :reasoning; rdfs:label "arduino watchpins" .
 <http://bang:9070/graph> is :source of :reasoning;  rdfs:label "wifi usage" .
 <http://bang:9075/graph> is :source of :reasoning;  rdfs:label "env" .
-<http://slash:9050/graph> is :source of :reasoning;  rdfs:label "garageArduino for front motion" .
-<http://dash:9095/graph> is :source of :reasoning;  rdfs:label "dash monitor" .
-<http://bang:9095/graph> is :source of :reasoning;  rdfs:label "bang monitor" .
-<http://star:9095/graph> is :source of :reasoning;  rdfs:label "star monitor" .
-<http://slash:9095/graph> is :source of :reasoning;  rdfs:label "slash monitor" .
+#<http://slash:9050/graph> is :source of :reasoning;  rdfs:label "garageArduino for front motion" .
+#<http://dash:9095/graph> is :source of :reasoning;  rdfs:label "dash monitor" .
+#<http://bang:9095/graph> is :source of :reasoning;  rdfs:label "bang monitor" .
+#<http://star:9095/graph> is :source of :reasoning;  rdfs:label "star monitor" .
+#<http://slash:9095/graph> is :source of :reasoning;  rdfs:label "slash monitor" .
 <http://bang:9099/graph> is :source of :reasoning;  rdfs:label "trails" .
 <http://dash:9107/graph> is :source of :reasoning;  rdfs:label "dash x idle" .
-<http://star:9107/graph> is :source of :reasoning;  rdfs:label "star x idle" .
-<http://slash:9107/graph> is :source of :reasoning;  rdfs:label "slash x idle" .
-<http://slash:9080/graph> is :source of :reasoning;  rdfs:label "frontDoorArduino" .
-<http://bang:9055/graph> is :source of :reasoning; rdfs:label "portupdate" .
+#<http://star:9107/graph> is :source of :reasoning;  rdfs:label "star x idle" .
+#<http://slash:9107/graph> is :source of :reasoning;  rdfs:label "slash x idle" .
+#<http://slash:9080/graph> is :source of :reasoning;  rdfs:label "frontDoorArduino" .
+#<http://bang:9055/graph> is :source of :reasoning; rdfs:label "portupdate" .
+<http://bang:9059/graph> is :source of :reasoning; rdfs:label "storage arduino" .
 
 # also, http://bang:9072/bang/processStatus
 
@@ -22,5 +23,6 @@
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/star/slideshow>; :predicate :postAction ] .
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/star/sound>; :predicate :postAction ] .
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/slash/sound>; :predicate :postAction ] .
+[ a :OneShotPost; :subject <http://bigasterisk.com/host/plus/sound>; :predicate :postAction ] .
 
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/slash/mpd>; :predicate :postAction ] .
