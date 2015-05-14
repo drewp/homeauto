@@ -1,8 +1,8 @@
-@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
-@prefix :          <http://projects.bigasterisk.com/room/> .
-@prefix ha:    <http://bigasterisk.com/homeauto/> .
-@prefix sensor:    <http://bigasterisk.com/homeauto/sensor/> .
-@prefix houseLoc:  <http://bigasterisk.com/homeauto/houseLoc/> .
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
 
 
 @prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
@@ -10,15 +10,27 @@
 ha:board0 a :ArduinoBoard;
   :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
   :boardTag "atmega328";
-  :hasPin board0pin:d3 .
+  :hasPin
+    board0pin:d3,
+    board0pin:d4,
+    board0pin:d5,
+    board0pin:d6 .
 
 board0pin:d3 :pinNumber 3 .
 board0pin:d4 :pinNumber 4 .
+board0pin:d5 :pinNumber 5 .
+board0pin:d6 :pinNumber 6 .
 
 board0pin:d3 :connectedTo sensor:motion0 .
 sensor:motion0 a :MotionSensor;
   :sees houseLoc:storage .
 
+board0pin:d5 :connectedTo :storageCeilingLedCross .
+:storageCeilingLedCross a :LedOutput .
+
+board0pin:d6 :connectedTo :storageCeilingLedLong .
+:storageCeilingLedLong a :LedOutput .
+  
 
 
 @prefix board1pin: <http://bigasterisk.com/homeauto/board1/pin/> .
