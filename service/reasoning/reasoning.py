@@ -417,7 +417,7 @@ class Index(cyclone.web.RequestHandler):
             self.finish("last poll was %s sec ago. last error: %s" %
                         (ago, self.settings.reasoning.lastError))
             return
-        self.set_header("Content-Type", "application/xhtml+xml")
+        self.set_header("Content-Type", "text/html")
         self.write(open('index.html').read())
 
 class ImmediateUpdate(cyclone.web.RequestHandler):

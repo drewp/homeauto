@@ -1,9 +1,9 @@
-<?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
-"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE html>
+<html>
   <head>
     <title>reasoning</title>
+    <link rel="import" href="https://bigasterisk.com/lib/polymer/0.5.2/core-splitter/core-splitter.html">
+    <link rel="import" href="https://bigasterisk.com/supdebug/bang/service-rows/main.html">
     <style type="text/css" media="all">
       /* <![CDATA[ */
 body {
@@ -23,22 +23,47 @@ pre div {
 .obj {
     background: #ccf
 }
+     .pane {
+position: relative;
+       display: flex;
+flex-direction: column;
+       }
+     .pane pre {
+       overflow: auto;
+       flex-grow: 1;
+       }
 /* ]]> */
     </style>
 
   </head>
-  <body>
+  <body layout vertical fit>
 
-    <h2>Input</h2>
-    <pre id="input"/>
+    <div style="flex: 0 0 auto">
+      <service-rows nameSubstrs="reasoning map"></service-rows>
+    </div>
+    
+    <div class="pane">
+      <h2>Input</h2>
+      <pre id="input"/>
+    </div>
 
-    <h2>Rules</h2>
-    <pre id="rules"/>
+    <core-splitter direction="up"></core-splitter> 
 
-    <h2>Output</h2>
-    <pre id="output"/>
+    <div  class="pane">
+      <h2>Rules</h2>
+      <pre id="rules"/>
+    </div>
 
-    <input id="auto" type="checkbox"/> <label for="auto">auto refresh</label>
+    <core-splitter direction="up"></core-splitter>
+
+    <div  class="pane">
+      <h2>Output</h2>
+      <pre id="output"/>
+    </div>
+
+    <div>
+      <input id="auto" type="checkbox"/> <label for="auto">auto refresh</label>
+    </div>
 
     <script src="//bigasterisk.com/lib/jquery-2.0.3.min.js"></script>
  <script type="text/javascript">
