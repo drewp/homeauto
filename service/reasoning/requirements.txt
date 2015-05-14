@@ -1,0 +1,5 @@
+cyclone==1.1
+ipdb==0.7
+docopt==0.6.2
+rdflib==4.2.0
+git+http://github.com/drewp/FuXi.git@22263b0751a29839013ce43646dd18302c7b9bb1#egg=FuXi
