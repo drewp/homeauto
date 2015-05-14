@@ -1,6 +1,7 @@
 from __future__ import division
 import itertools
 from rdflib import Namespace, RDF, URIRef, Literal
+import time
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
@@ -164,11 +165,28 @@ class MotionSensorInput(DeviceType):
         if b not in 'yn':
             raise ValueError('unexpected response %r' % b)
         motion = b == 'y'
-        return [(self.uri, ROOM['sees'],
-                 ROOM['motion'] if motion else ROOM['noMotion'])]
+                
+        return [
+            (self.uri, ROOM['sees'],
+             ROOM['motion'] if motion else ROOM['noMotion']),
+            self.recentMotionStatement(motion),
+        ]
 
+    def recentMotionStatement(self, motion):
+        if not hasattr(self, 'lastMotionTime'):
+            self.lastMotionTime = 0
+        now = time.time()
+        if motion:
+            self.lastMotionTime = now
+        recentMotion = now - self.lastMotionTime < 60 * 10
+        return (self.uri, ROOM['seesRecently'],
+                ROOM['motion'] if recentMotion else ROOM['noMotion'])        
+    
     def watchPrefixes(self):
-        return [(self.uri, ROOM['sees'])]
+        return [
+            (self.uri, ROOM['sees']),
+            (self.uri, ROOM['seesRecently']),
+        ]
 
 @register
 class OneWire(DeviceType):
