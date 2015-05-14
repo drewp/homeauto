@@ -64,6 +64,21 @@
   <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/beep1> .
 } .
 
+{ <http://projects.bigasterisk.com/room/barcodeScan> <http://projects.bigasterisk.com/room/read> <http://projects.bigasterisk.com/room/barcode/UPC-A/4984343881945> } =>
+{
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/troyandabed> .
+} .
+
+@prefix bed: <http://projects.bigasterisk.com/room/ariBed/> . 
+{ bed:button1 :change :down . } => {
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9055/starTrekLight/toggle> .
+  <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/highlight> .
+} .
+{ bed:button2 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/troyandabed> . } .
+{ bed:button3 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/beep1> . } .
+{ bed:button4 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/beep1> . } .
+{ bed:button5 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/jazztrumpet> . } .
+
 
 # sound wasn't responding; waiting for other button fixes
 # { <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
@@ -102,3 +117,13 @@
 { shuttle:button12 :state :press         } => { mpd: :playState :pause } .
 { shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
 { shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
+
+{ <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/noMotion> . } => {
+  :storageCeilingLedCross :brightness "0" .
+  :storageCeilingLedLong :brightness "0" .
+} .
+
+{ <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/motion> . } => {
+  :storageCeilingLedCross :brightness "1" .
+  :storageCeilingLedLong :brightness "1" .
+} .
