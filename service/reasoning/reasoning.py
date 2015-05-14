@@ -17,22 +17,24 @@ with PSHB, that their graph has changed.
 
 
 from twisted.internet import reactor, task
-from twisted.web.client import getPage
 from twisted.python.filepath import FilePath
 import time, traceback, sys, json, logging, urllib
-from rdflib.Graph import Graph, ConjunctiveGraph
-from rdflib import Namespace, URIRef, Literal, RDF, StringInputSource
-from FuXi.Rete.RuleStore import N3RuleStore
+from rdflib import Graph, ConjunctiveGraph
+from rdflib import Namespace, URIRef, Literal, RDF
+from rdflib.parser import StringInputSource
 from cyclone.httpclient import fetch
 import cyclone.web, cyclone.websocket
 from inference import addTrig, infer
 from graphop import graphEqual
+from docopt import docopt
+
+from FuXi.Rete.RuleStore import N3RuleStore
 
 sys.path.append("../../lib")
 from logsetup import log
-log.setLevel(logging.INFO)
+log.setLevel(logging.WARN)
 outlog = logging.getLogger('output')
-outlog.setLevel(logging.DEBUG)
+outlog.setLevel(logging.WARN)
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
@@ -132,7 +134,7 @@ class InputGraph(object):
         self._oneShotAdditionGraph = g
         self._combinedGraph = None
         try:
-            self.onChange(self, oneShot=True)
+            self.onChange(self, oneShot=True, oneShotGraph=g)
         finally:
             self._oneShotAdditionGraph = None
             self._combinedGraph = None
@@ -182,7 +184,7 @@ class Reasoning(object):
             log.error(traceback.format_exc())
             self.lastError = str(e)
 
-    def graphChanged(self, inputGraph, oneShot=False):
+    def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
         t1 = time.time()
         oldInferred = self.inferred
         try:
@@ -202,6 +204,13 @@ class Reasoning(object):
             self.inferred = self._makeInferred(g)
             self.inferred.add((ROOM['reasoner'], ROOM['ruleParseTime'],
                                Literal(ruleParseTime)))
+
+            if oneShot:
+                # unclear where this should go, but the oneshot'd
+                # statements should be just as usable as inferred
+                # ones.
+                for s in oneShotGraph:
+                    self.inferred.add(s)
 
             t2 = time.time()
             self.putResults(self.inferred)
@@ -227,7 +236,7 @@ class Reasoning(object):
         return out
 
     def _postToMagma(self, inputGraph):
-
+        return # not up right now
         inputGraphNt = inputGraph.serialize(format="nt")
         inferredNt = self.inferred.serialize(format="nt")
         body = json.dumps({"input": inputGraphNt,
@@ -267,9 +276,11 @@ class Reasoning(object):
             # the config of each putUrl should actually be in the
             # context of a dev and predicate pair, and then that would
             # be the source of this list
-            (DEV.theaterDoorLock, ROOM.state),
-            (URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
+            #(DEV.theaterDoorLock, ROOM.state),
+            #(URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
             (URIRef('http://bigasterisk.com/host/dash/monitor'), ROOM.powerState),
+            (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedLong'), ROOM.brightness),
+            (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedCross'), ROOM.brightness),               
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
 
@@ -280,13 +291,13 @@ class Reasoning(object):
             if len(inferredObjects) == 0:
                 self.putZero(deviceGraph, dev, pred, url)
             elif len(inferredObjects) == 1:
-                self.putInferred(deviceGraph, dev, pred, url, inferredObjects[0])
+                self.putInferred(deviceGraph, url, inferredObjects[0])
             elif len(inferredObjects) > 1:
                 log.info("conflict, ignoring: %s has %s of %s" %
                          (dev, pred, inferredObjects))
                 # write about it to the inferred graph?
 
-        self.frontDoorPuts(deviceGraph, inferred)
+        #self.frontDoorPuts(deviceGraph, inferred)
 
 
     def oneShotPostActions(self, deviceGraph, inferred):
@@ -333,22 +344,26 @@ class Reasoning(object):
             def err(e):
                 outlog.warn("post %s failed", postTarget)
             fetch(postTarget, method="POST", timeout=2).addErrback(err)
-        root = "http://bigasterisk.com/music/slash/mpd/"
-        rootSkippingAuth = "http://slash:9009/"
-        slashMpd = URIRef("http://bigasterisk.com/host/slash/mpd")
-        for song in inferred.objects(slashMpd, ROOM['startMusic']):
-            outlog.info("mpd statement: %r" % song)
-            assert song.startswith('http://bigasterisk.com/music/')
-            post(rootSkippingAuth + "addAndPlay" + urllib.quote(song[len("http://bigasterisk.com/music"):]))
-            
-        for state in inferred.objects(slashMpd, ROOM['playState']):
-            if state == ROOM['pause']:
-                post(rootSkippingAuth + "mpd/pause")
-        for vol in inferred.objects(slashMpd, ROOM['audioState']):
-            if vol == ROOM['volumeStepUp']:
-                post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
-            if vol == ROOM['volumeStepDown']:
-                post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
+
+        rootSkippingAuth = "http://brace:9009/"
+        for mpd in [URIRef("http://bigasterisk.com/host/brace/mpd")]:
+
+
+            for song in inferred.objects(mpd, ROOM['startMusic']):
+                outlog.info("mpd statement: %r" % song)
+                assert song.startswith('http://bigasterisk.com/music/')
+                post(rootSkippingAuth + "addAndPlay" + urllib.quote(song[len("http://bigasterisk.com/music"):]))
+
+            for state in inferred.objects(mpd, ROOM['playState']):
+                log.info('hello playstate %s', state)
+                if state == ROOM['pause']:
+                    log.info("mpd %s %s", mpd, state)
+                    post(rootSkippingAuth + "mpd/pause")
+            for vol in inferred.objects(mpd, ROOM['audioState']):
+                if vol == ROOM['volumeStepUp']:
+                    post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
+                if vol == ROOM['volumeStepDown']:
+                    post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
             
     def putZero(self, deviceGraph, dev, pred, putUrl):
         # zerovalue should be a function of pred as well.
@@ -359,14 +374,21 @@ class Reasoning(object):
             # this should be written back into the inferred graph
             # for feedback
 
-    def putInferred(self, deviceGraph, dev, pred, putUrl, obj):
+    def putInferred(self, deviceGraph, putUrl, obj):
+        """
+        HTTP PUT to putUrl, with a payload that's either obj's :putValue
+        or obj itself.
+        """
         value = deviceGraph.value(obj, ROOM.putValue)
         if value is not None:
             outlog.info("put %s to %s", value, putUrl)
             self._put(putUrl, payload=str(value))
+        elif isinstance(obj, Literal):
+            outlog.info("put %s to %s", obj, putUrl)
+            self._put(putUrl, payload=str(obj))
         else:
-            outlog.warn("%s %s %s has no :putValue" %
-                     (dev, pred, obj))
+            outlog.warn("don't know what payload to put for %s. obj=%r",
+                        putUrl, obj)
 
     def frontDoorPuts(self, deviceGraph, inferred):
         # todo: shouldn't have to be a special case
@@ -435,12 +457,18 @@ class OneShot(cyclone.web.RequestHandler):
         there are probably special cases regarding startup time when
         everything appears to be a 'change'.
         """
-        g = parseRdf(self.request.body, self.request.headers['content-type'])
-        if not len(g):
-            log.warn("incoming oneshot graph had no statements: %r", self.request.body)
-            return
-        self.settings.reasoning.inputGraph.addOneShot(g)
-
+        try:
+            g = parseRdf(self.request.body, self.request.headers['content-type'])
+            for s in g:
+                print "stmt", s
+            if not len(g):
+                log.warn("incoming oneshot graph had no statements: %r", self.request.body)
+                return
+            self.settings.reasoning.inputGraph.addOneShot(g)
+        except Exception as e:
+            log.error(e)
+            raise
+            
 # for reuse
 class GraphResource(cyclone.web.RequestHandler):
     def get(self, which):
@@ -522,9 +550,19 @@ class Application(cyclone.web.Application):
         cyclone.web.Application.__init__(self, handlers, reasoning=reasoning)
 
 if __name__ == '__main__':
+
+    arg = docopt("""
+    Usage: reasoning.py [options]
+
+    -v   Verbose
+    """)
+    
     r = Reasoning()
-    #import twisted.python.log
-    #twisted.python.log.startLogging(sys.stdout)
+    if arg['-v']:
+        import twisted.python.log
+        twisted.python.log.startLogging(sys.stdout)
+        log.setLevel(logging.DEBUG)
+        outlog.setLevel(logging.DEBUG)
 
     task.LoopingCall(r.poll).start(1.0)
     reactor.listenTCP(9071, Application(r))
