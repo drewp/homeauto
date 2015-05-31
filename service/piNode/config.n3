@@ -1,0 +1,43 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix board2pin: <http://bigasterisk.com/homeauto/board2/pin/> .
+@prefix board2ow: <http://bigasterisk.com/homeauto/board2/oneWire/> .
+
+ha:node2 a :PiBoard;
+  :hostname "sticker";
+  :hasPin
+    board2pin:GPIO2,
+    board2pin:GPIO3,
+    board2pin:GPIO4,
+    board2pin:GPIO17,
+    board2pin:GPIO27
+    .
+
+board2pin:GPIO2 :gpioNumber 2 .
+board2pin:GPIO3 :gpioNumber 3 .
+board2pin:GPIO4 :gpioNumber 4 .
+board2pin:GPIO17 :gpioNumber 17 .
+board2pin:GPIO27 :gpioNumber 27 .
+
+board2pin:GPIO17 :connectedTo sensor:motion1 .
+sensor:motion1 a :MotionSensor;
+  :sees houseLoc:bed .
+
+:bedLedStrip a :RgbStrip;
+  :redChannel board2pin:GPIO2;
+  :greenChannel board2pin:GPIO3;
+  :blueChannel board2pin:GPIO4 .
+    
+board2pin:GPIO27 :connectedTo :headboardWhite .
+:headboardWhite a :LedOutput .
+  
+#board2pin:b29 :connectedTo board2ow: .
+#board2ow: a :OneWire;
+#  :connectedTo board2ow:temperatureSensor .
+#board2ow:temperatureSensor a :TemperatureSensor;
+#  :position :bed .
+  
