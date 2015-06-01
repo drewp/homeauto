@@ -1,8 +1,15 @@
 from __future__ import division
-import pigpio
-import time
+
+import time, logging
 from rdflib import Namespace, RDF, URIRef, Literal
 
+try:
+    import pigpio
+except ImportError:
+    pigpio = None
+    
+
+log = logging.getLogger()
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 class DeviceType(object):
@@ -15,16 +22,16 @@ class DeviceType(object):
         but two sensors on the same onewire bus makes only one device
         (which yields more statements).
         """
-        for row in graph.query("""SELECT ?dev ?pinNumber WHERE {
+        for row in graph.query("""SELECT ?dev ?gpioNumber WHERE {
                                     ?board :hasPin ?pin .
-                                    ?pin :pinNumber ?pinNumber;
+                                    ?pin :gpioNumber ?gpioNumber;
                                          :connectedTo ?dev .
                                     ?dev a ?thisType .
                                   } ORDER BY ?dev""",
                                initBindings=dict(board=board,
                                                  thisType=cls.deviceType),
                                initNs={'': ROOM}):
-            yield cls(graph, row.dev, pi, int(row.pinNumber))
+            yield cls(graph, row.dev, pi, int(row.gpioNumber))
 
     def __init__(self, graph, uri, pi, pinNumber):
         self.graph, self.uri, self.pi = graph, uri, pi
@@ -34,7 +41,7 @@ class DeviceType(object):
         return {
             'uri': self.uri,
             'className': self.__class__.__name__,
-            'pinNumber': self.pinNumber,
+            'pinNumber': getattr(self, 'pinNumber', None),
             'outputPatterns': self.outputPatterns(),
             'watchPrefixes': self.watchPrefixes(),
             'outputWidgets': self.outputWidgets(),
@@ -113,6 +120,61 @@ class MotionSensorInput(DeviceType):
             (self.uri, ROOM['sees']),
             (self.uri, ROOM['seesRecently']),
         ]
+
+
+@register
+class RgbStrip(DeviceType):
+    deviceType = ROOM['RgbStrip']
+    
+    @classmethod
+    def findInstances(cls, graph, board, pi):
+        for row in graph.query("""SELECT DISTINCT ?dev ?r ?g ?b  WHERE {
+                                    ?board
+                                      :hasPin ?rpin;
+                                      :hasPin ?gpin;
+                                      :hasPin ?bpin .
+                                    ?dev a :RgbStrip;
+                                      :redChannel   ?rpin;
+                                      :greenChannel ?gpin;
+                                      :blueChannel  ?bpin .
+                                    ?rpin :gpioNumber ?r .
+                                    ?gpin :gpioNumber ?g .
+                                    ?bpin :gpioNumber ?b .
+                                  } ORDER BY ?dev""",
+                               initBindings=dict(board=board),
+                               initNs={'': ROOM}):
+            log.debug('found rgb %r', row)
+            yield cls(graph, row.dev, pi, row.r, row.g, row.b)
+
+    def __init__(self, graph, uri, pi, r, g, b):
+        self.graph, self.uri, self.pi = graph, uri, pi
+        self.rgb = map(int, [r, g, b])
+            
+    def setup(self):
+        for i in self.rgb:
+            self.pi.set_mode(i, pigpio.OUTPUT)
+            self.pi.set_PWM_frequency(i, 200)
+            self.pi.set_PWM_dutycycle(i, 0)
+
+    def outputPatterns(self):
+        return [(self.uri, ROOM['color'], None)]
+    
+    def sendOutput(self, statements):
+        assert len(statements) == 1
+        assert statements[0][:2] == (self.uri, ROOM['color'])
+
+        rrggbb = statements[0][2].lstrip('#')
+        rgb = [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
+
+        for (i, v) in zip(self.rgb, rgb):
+            self.pi.set_PWM_dutycycle(i, v)
+        
+    def outputWidgets(self):
+        return [{
+            'element': 'output-rgb',
+            'subj': self.uri,
+            'pred': ROOM['color'],
+        }]
 
 def makeDevices(graph, board, pi):
     out = []
