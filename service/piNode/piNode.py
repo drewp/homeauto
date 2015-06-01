@@ -1,16 +1,22 @@
 from __future__ import division
-import glob, sys, logging, subprocess, socket, os, hashlib, time, tempfile
-import shutil, json, socket
+import sys, logging, socket, json
 import cyclone.web
-from rdflib import Graph, Namespace, URIRef, Literal, RDF
-from rdflib.parser import StringInputSource
+from rdflib import Namespace, URIRef, Literal, Graph, RDF
 from twisted.internet import reactor, task
 from docopt import docopt
 logging.basicConfig(level=logging.DEBUG)
 sys.path.append("/my/site/magma")
+sys.path.append("../../../../site/magma")
+
 from stategraph import StateGraph
 sys.path.append('/home/pi/dim/PIGPIO')
-import pigpio
+try:
+    import pigpio
+except ImportError:
+    class pigpio(object):
+        @staticmethod
+        def pi():
+            return None
 
 import devices
 
@@ -20,6 +26,14 @@ ROOM = Namespace('http://projects.bigasterisk.com/room/')
 HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 hostname = socket.gethostname()
+
+class Config(object):
+    def __init__(self):
+        self.graph = Graph()
+        log.info('read config')
+        self.graph.parse('config.n3', format='n3')
+        self.graph.bind('', ROOM) # not working
+        self.graph.bind('rdf', RDF)
 
 class GraphPage(cyclone.web.RequestHandler):
     def get(self):
@@ -41,6 +55,7 @@ class Board(object):
         self.graph, self.uri = graph, uri
         self.pi = pigpio.pi()
         self._devs = devices.makeDevices(graph, self.uri, self.pi)
+        log.debug('found %s devices', len(self._devs))
         self._statementsFromInputs = {} # input device uri: latest statements
 
     def startPolling(self):
@@ -70,8 +85,26 @@ class Board(object):
             for s in unused:
                 log.warn(repr(s))
         
+    def currentGraph(self):
+        g = Graph()
+        
+        g.add((HOST[socket.gethostname()], ROOM['connectedTo'], self.uri))
+
+        for si in self._statementsFromInputs.values():
+            for s in si:
+                g.add(s)
+        return g
+
+    def description(self):
+        """for web page"""
+        return {
+            'uri': self.uri,
+            'devices': [d.description() for d in self._devs],
+            'graph': 'http://sticker:9059/graph', #todo
+            }
+        
+
 class OutputPage(cyclone.web.RequestHandler):
-   
     def put(self):
         subj = URIRef(self.get_argument('s'))
         pred = URIRef(self.get_argument('p'))
@@ -79,13 +112,19 @@ class OutputPage(cyclone.web.RequestHandler):
         turtleLiteral = self.request.body
         try:
             obj = Literal(float(turtleLiteral))
-        except TypeError:
+        except ValueError:
             obj = Literal(turtleLiteral)
 
         stmt = (subj, pred, obj)
         self.settings.board.outputStatements([stmt])
 
-
+class Boards(cyclone.web.RequestHandler):
+    def get(self):
+        self.set_header('Content-type', 'application/json')
+        self.write(json.dumps({
+            'boards': [self.settings.board.description()]
+        }, indent=2))
+        
 def main():
     arg = docopt("""
     Usage: piNode.py [options]
@@ -108,14 +147,16 @@ def main():
     thisBoard = URIRef('http://bigasterisk.com/homeauto/node2')
     
     board = Board(config.graph, thisBoard, onChange)
+    board.startPolling()
     
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
-            "path": "static", "default_filename": "index.html"}),
-        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
+            "path": "../arduinoNode/static", "default_filename": "index.html"}),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "../arduinoNode/static"}),
         (r"/graph", GraphPage),
         (r'/output', OutputPage),
-        (r'/dot', Dot),
+        (r'/boards', Boards),
+        #(r'/dot', Dot),
         ], config=config, board=board))
     reactor.run()
 
