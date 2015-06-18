@@ -2,6 +2,7 @@ from __future__ import division
 import sys, logging, socket, json
 import cyclone.web
 from rdflib import Namespace, URIRef, Literal, Graph, RDF
+from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
 from docopt import docopt
 logging.basicConfig(level=logging.DEBUG)
@@ -103,19 +104,28 @@ class Board(object):
             'graph': 'http://sticker:9059/graph', #todo
             }
         
+def rdfGraphBody(body, headers):
+    g = Graph()
+    g.parse(StringInputSource(body), format='nt')
+    return g
 
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
-        subj = URIRef(self.get_argument('s'))
-        pred = URIRef(self.get_argument('p'))
+        arg = self.request.arguments
+        if arg.get('s') and arg.get('p'):
+            subj = URIRef(arg['s'][-1])
+            pred = URIRef(arg['p'][-1])
+            turtleLiteral = self.request.body
+            try:
+                obj = Literal(float(turtleLiteral))
+            except ValueError:
+                obj = Literal(turtleLiteral)
+            stmt = (subj, pred, obj)
+        else:
+            g = rdfGraphBody(self.request.body, self.request.headers)
+            assert len(g) == 1, len(g)
+            stmt = g.triples((None, None, None)).next()
 
-        turtleLiteral = self.request.body
-        try:
-            obj = Literal(float(turtleLiteral))
-        except ValueError:
-            obj = Literal(turtleLiteral)
-
-        stmt = (subj, pred, obj)
         self.settings.board.outputStatements([stmt])
 
 class Boards(cyclone.web.RequestHandler):
@@ -157,7 +167,7 @@ def main():
         (r'/output', OutputPage),
         (r'/boards', Boards),
         #(r'/dot', Dot),
-        ], config=config, board=board))
+        ], config=config, board=board, debug=arg['-v']))
     reactor.run()
 
 main()
