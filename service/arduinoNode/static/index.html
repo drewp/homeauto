@@ -21,6 +21,7 @@
        dev: 'http://projects.bigasterisk.com/device/',
        room: 'http://projects.bigasterisk.com/room/',
        rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
+       sensor: 'http://bigasterisk.com/homeauto/sensor/'
      };
     </script>
 
@@ -46,29 +47,42 @@
     
     <polymer-element name="linked-uri" noscript attributes="href">
       <template>
-        <a href="{{href}}">{{href}}</a>
+        <a href="{{href}}">{{href | compactUri}}</a>
       </template>
     </polymer-element>
 
     <!-- subj/pred are compact uris -->
-    <polymer-element name="watched-subgraph" noscript attributes="subj pred">
+    <polymer-element name="watched-subgraph" attributes="graph subj pred">
       <template>
         <style>
          .read { font-weight: bold; }
         </style>
           
         <rdf-observe
-          graph="http://dash:9059/graph" xtodo="get host here"
+          graph="{{graph}}"
           subject="{{subj}}"
           predicate="{{pred}}"
           out="{{out}}">
         </rdf-observe>
         
-        <div>{{subj}}, {{pred}},
-          <span class="read">{{out[pred]['@value']}}</span>
+        <div>{{subj | compactUri}}, {{pred | compactUri}},
+          <span class="read">{{formattedOut}}</span>
         </div>
         
       </template>
+      <script>
+       Polymer({
+         outChanged: function() {
+           var obj = this.out[this.pred];
+           if (typeof(obj) == 'string') {
+             this.formattedOut = PolymerExpressions.prototype.compactUri(obj);
+           } else {
+             this.formattedOut = obj['@value'];
+           }
+         }
+       });
+      </script>
+        
     </polymer-element>
     
     <polymer-element name="arduinonode-boards" noscript>
@@ -117,6 +131,7 @@
                     <ul>
                       <template repeat="{{prefix in dev.watchPrefixes}}">
                         <watched-subgraph
+                          graph="{{board.graph}}"
                           subj="{{prefix[0] | compactUri}}"
                           pred="{{prefix[1] | compactUri}}"></watched-subgraph>
                       </template>

@@ -2,21 +2,35 @@
 
 <polymer-element name="output-widget" attributes="subj pred">
   <template>
-    <core-ajax id="output" url="../output" method="POST"></core-ajax>
-    Set this device's {{pred | compactUri}} to
+    <core-ajax id="output" url="../output" method="PUT"></core-ajax>
+    Set <a href="{{subj}}">{{subj | compactUri}}</a>'s {{pred | compactUri}} to
   </template>
   <script>
-   function ntriple(s, p, o) {
-     // incomplete
-     o = o.replace('\n', '\\n');
-     return '<'+s+'> <'+p+'> "'+o+'".';
-   }
    Polymer({
      valueChanged: function() {
-       this.$.output.body = ntriple(this.subj, this.pred, this.value);
+       //this.$.output.headers = {'content-type': ...}
+	// broken in polymer 0.5 this.$.output.params = {s: this.subj, p: this.pred};
+       this.$.output.url = "output?s="+encodeURIComponent(this.subj)+"&p="+encodeURIComponent(this.pred);
+       this.$.output.body = this.value;
        this.$.output.go();
      }
    });
+  </script>
+</polymer-element>
+
+<polymer-element name="output-rgb" extends="output-widget">
+  <template>
+    <color-picker id="pick" width="200" height="100" color="{{value}}"></color-picker>
+    color pick {{value}}
+  </template>
+  <script>
+    Polymer({
+      domReady: function() {
+        this.$.pick.addEventListener('colorselected', function(ev) {
+          this.value = ev.detail.hex;
+        }.bind(this));
+      }
+    });
   </script>
 </polymer-element>
 
