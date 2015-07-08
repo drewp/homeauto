@@ -69,7 +69,7 @@ class Board(object):
                                    for devIndex, dev in enumerate(self._devs))
         self._polledDevs = [d for d in self._devs if d.generatePollCode()]
         
-        self._statementsFromInputs = {} # input uri: latest statements
+        self._statementsFromInputs = {} # input device uri: latest statements
 
         self.open()
 
@@ -158,9 +158,11 @@ class Board(object):
             'global': '',
             'setups': '',
             'polls': '',
+            'idles': '',
             'actions': '',            
         }
-        for attr in ['includes', 'global', 'setups', 'polls', 'actions']:
+        for attr in ['includes', 'global', 'setups', 'polls', 'idles',
+                     'actions']:
             for dev in self._devs:
                 if attr == 'includes':
                     gen = '\n'.join('#include "%s"\n' % inc
@@ -168,6 +170,7 @@ class Board(object):
                 elif attr == 'global': gen = dev.generateGlobalCode()
                 elif attr == 'setups': gen = dev.generateSetupCode()
                 elif attr == 'polls': gen = dev.generatePollCode()
+                elif attr == 'idles': gen = dev.generateIdleCode()
                 elif attr == 'actions':
                     code = dev.generateActionCode()
                     if code:
@@ -189,15 +192,30 @@ class Board(object):
 %(includes)s
 
 %(global)s
-        
+byte frame=0;       
+unsigned long lastFrame=0; 
+
 void setup() {
     Serial.begin(%(baudrate)d);
     Serial.flush();
     %(setups)s
 }
         
+void idle() {
+    // this slowdown is to spend somewhat less time PWMing, to reduce
+    // leaking from on channels to off ones (my shift register has no
+    // latching)
+    if (micros() < lastFrame + 128) {
+      return;
+    }
+    lastFrame = micros();
+    frame++;
+    %(idles)s
+}
+
 void loop() {
     byte head, cmd;
+    idle();
     if (Serial.available() >= 2) {
         head = Serial.read();
         if (head != 0x60) {
@@ -344,7 +362,7 @@ class OutputPage(cyclone.web.RequestHandler):
         turtleLiteral = self.request.body
         try:
             obj = Literal(float(turtleLiteral))
-        except TypeError:
+        except ValueError:
             obj = Literal(turtleLiteral)
 
         stmt = (subj, pred, obj)
