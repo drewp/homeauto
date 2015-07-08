@@ -219,16 +219,23 @@ DeviceAddress tempSensorAddress;
 
 void initSensors() {
   sensors.begin();
+  sensors.setWaitForConversion(false);
   sensors.getAddress(tempSensorAddress, 0);
-  sensors.setResolution(tempSensorAddress, 12);
+  sensors.setResolution(tempSensorAddress, 9); // down from 12 to avoid flicker
 }
         ''' % dict(pinNumber=self.pinNumber)
-        
+    
+    def generateSetupCode(self):
+        return 'initSensors();'
+    
     def generatePollCode(self):
         return r'''
 for (int i=0; i<NUM_TEMPERATURE_RETRIES; i++) {
   sensors.requestTemperatures();
+  // not waiting for conversion at all is fine- the temps will update soon
+  //unsigned long until = millis() + 750; while(millis() < until) {idle();}
   float newTemp = sensors.getTempF(tempSensorAddress);
+    idle();
   if (i < NUM_TEMPERATURE_RETRIES-1 && 
       (newTemp < -100 || newTemp > 180)) {
     // too many errors that were fixed by restarting arduino. 
@@ -237,8 +244,11 @@ for (int i=0; i<NUM_TEMPERATURE_RETRIES; i++) {
     continue;
   }
   Serial.print(newTemp);
+idle();
   Serial.print('\n');
+idle();
   Serial.print((char)i);
+idle();
   break;
 }
         '''
