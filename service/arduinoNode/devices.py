@@ -75,11 +75,18 @@ class DeviceType(object):
         return []
         
     def generateGlobalCode(self):
-        """C code to emit in the global section"""
+        """C code to emit in the global section. 
+
+        Note that 'frame' (uint8) is available and increments each frame.
+        """
         return ''
         
     def generateSetupCode(self):
         """C code to emit in setup()"""
+        return ''
+        
+    def generateIdleCode(self):
+        """C code to emit in the serial-read loop"""
         return ''
         
     def generatePollCode(self):
