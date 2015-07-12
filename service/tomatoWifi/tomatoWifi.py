@@ -19,6 +19,7 @@ sys.path.append("/home/drewp/projects/photo/lib/python2.7/site-packages")
 from dateutil import tz
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
+import docopt
 
 from pymongo import Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef
@@ -235,22 +236,28 @@ class Poller(object):
 
 
 if __name__ == '__main__':
-    config = {
-        'servePort' : 9070,
-        'pollFrequency' : 1/5,
-        }
-    from twisted.python import log as twlog
-    #twlog.startLogging(sys.stdout)
-    #log.setLevel(10)
-    #log.setLevel(logging.DEBUG)
+    args = docopt.docopt('''
+Usage:
+  tomatoWifi [options]
+
+Options:
+  -v, --verbose  more logging
+  --port=<n>     serve on port [default: 9070]
+  --poll=<freq>  poll frequency [default: .2]
+''')
+    if args['--verbose']:
+        from twisted.python import log as twlog
+        twlog.startLogging(sys.stdout)
+        log.setLevel(10)
+        log.setLevel(logging.DEBUG)
 
     mongo = Connection('bang', 27017, tz_aware=True)['visitor']['visitor']
 
     wifi = Wifi()
     poller = Poller(wifi, mongo)
-    task.LoopingCall(poller.poll).start(1/config['pollFrequency'])
+    task.LoopingCall(poller.poll).start(1/float(args['--poll']))
 
-    reactor.listenTCP(config['servePort'],
+    reactor.listenTCP(int(args['--port']),
                       cyclone.web.Application(
                           [
                               (r"/", Index),
