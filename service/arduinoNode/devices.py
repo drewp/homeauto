@@ -272,7 +272,7 @@ idle();
 
 def byteFromFloat(f):
     return chr(int(min(255, max(0, f * 255))))
-        
+
 @register
 class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
@@ -337,7 +337,82 @@ class DigitalOutput(DeviceType):
             'subj': self.uri,
             'pred': ROOM['level'],
         }]
+
+@register
+class PwmBoard(DeviceType):
+    deviceType = ROOM['PwmBoard']
+    @classmethod
+    def findInstances(cls, graph, board):
+        for row in graph.query("""SELECT DISTINCT ?dev ?sda ?scl WHERE {
+          ?board :hasPin ?sdaPin .
+          ?board :hasPin ?sclPin .
+          ?sdaPin :pinNumber ?sda; :connectedTo ?sdaConn .
+          ?sclPin :pinNumber ?scl; :connectedTo ?sclConn .
+          ?dev a :PwmBoard;
+            :scl ?sclConn;
+            :sda ?sdaConn .
+        }""", initBindings=dict(board=board), initNs={'': ROOM}):
+            if (row.sda, row.scl) != (Literal('a4'), Literal('a5')):
+                raise NotImplementedError(row)
+            outs = {}
+            for out in graph.query("""SELECT DISTINCT ?area ?chan WHERE {
+               ?dev :output [:area ?area; :channel ?chan] .
+            }""", initBindings=dict(dev=row.dev), initNs={'': ROOM}):
+                outs[out.area] = out.chan.toPython()
+            yield cls(graph, row.dev, outs=outs)
         
+    def __init__(self, graph, dev, outs):
+        super(PwmBoard, self).__init__(graph, dev, pinNumber=None)
+        self.codeVals = {'pwm': 'pwm%s' % (hash(str(dev)) % 99999)}
+        self.outs = outs
+
+    def generateIncludes(self):
+        return ['Wire.h', 'Adafruit_PWMServoDriver.h']
+
+    def generateArduinoLibs(self):
+        return ['Wire', 'Adafruit-PWM-Servo-Driver-Library']
+        
+    def generateGlobalCode(self):
+        return r'''
+          Adafruit_PWMServoDriver %(pwm)s = Adafruit_PWMServoDriver(0x40);
+        ''' % self.codeVals
+    
+    def generateSetupCode(self):
+        return '''
+          %(pwm)s.begin();
+          %(pwm)s.setPWMFreq(1200);
+        ''' % self.codeVals
+        
+    def generateActionCode(self):
+        return r'''
+          while(Serial.available() < 3) NULL;
+          byte chan = Serial.read();
+          uint16_t level = uint16_t(Serial.read()) << 8;
+          level |= Serial.read();
+          %(pwm)s.setPWM(chan, 0, level);
+        ''' % self.codeVals
+
+    def outputPatterns(self):
+        return [(area, ROOM['brightness'], None) for area in self.outs]
+
+    def sendOutput(self, statements, write, read):
+        assert len(statements) == 1
+        assert statements[0][1] == ROOM['brightness'];
+        chan = self.outs[statements[0][0]]
+        value = float(statements[0][2])
+        v12 = int(min(4095, max(0, value * 4095)))
+        write(chr(chan) + chr(v12 >> 8) + chr(v12 & 0xff))
+            
+    def outputWidgets(self):
+        return [{
+            'element': 'output-slider',
+            'min': 0,
+            'max': 1,
+            'step': 1 / 255,
+            'subj': area,
+            'pred': ROOM['brightness'],
+        } for area in self.outs]
+
 @register
 class ST7576Lcd(DeviceType):
     deviceType = ROOM['ST7565Lcd']
