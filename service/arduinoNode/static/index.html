@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>arduinoNode</title>
+    <meta name=viewport content="width=device-width, initial-scale=1">
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
@@ -36,10 +37,12 @@
         <a href$="{{href}}">{{compactUri(href)}}</a>
       </template>
       <script>
-       Polymer({
-         is: 'linked-uri',
-         properties: { href: { notify: true } },
-         behaviors: [BigastUri]
+       HTMLImports.whenReady(function () {
+         Polymer({
+           is: 'linked-uri',
+           properties: { href: { notify: true } },
+           behaviors: [BigastUri]
+         });
        });
       </script>
     </dom-module>
@@ -59,23 +62,25 @@
 
       </template>
       <script>
-       Polymer({
-         is: 'watched-subgraph',
-         properties: {
-           graph: { notify: true },
-           out: { notify: true },
-           pred: { notify: true },
-           subj: { notify: true }
-         },
-         behaviors: [BigastUri],
-         formatted: function (out) {
-           var obj = out[this.compactUri(this.pred)];
-           if (typeof obj == 'string') {
-             return this.compactUri(obj);
-           } else {
-             return obj['@value'];
+       HTMLImports.whenReady(function () {
+         Polymer({
+           is: 'watched-subgraph',
+           properties: {
+             graph: { notify: true },
+             out: { notify: true },
+             pred: { notify: true },
+             subj: { notify: true }
+           },
+           behaviors: [BigastUri],
+           formatted: function (out) {
+             var obj = out[this.compactUri(this.pred)];
+             if (typeof obj == 'string') {
+               return this.compactUri(obj);
+             } else {
+               return obj['@value'];
+             }
            }
-         }
+         });
        });
       </script>
     </dom-module>
@@ -143,12 +148,14 @@
         </template>
       </template>
       <script>
-       Polymer({
-         is: 'arduinonode-boards',
-         behaviors: [BigastUri]
+       HTMLImports.whenReady(function () {
+         Polymer({
+           is: 'arduinonode-boards',
+           behaviors: [BigastUri]
+         });
        });
       </script>
     </dom-module>
-    <arduinonode-boards></arduinonode-boards>    
+    <arduinonode-boards></arduinonode-boards>
   </body>
 </html>
