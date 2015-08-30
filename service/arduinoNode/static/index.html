@@ -3,19 +3,25 @@
   <head>
     <title>arduinoNode</title>
     <meta charset="utf-8" />
-    <link rel="import" href="/lib/polymer/0.5.2/polymer/polymer.html">
-    <link rel="import" href="/lib/polymer/0.5.2/core-ajax/core-ajax.html">
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-flex-layout/iron-flex-layout.html">
     <link rel="import" href="/room/ari/static/rdf-observe.html">
     <link rel="import" href="/room/ari/static/rdf-oneshot.html">
+    <link rel="import" href="/room/ari/static/rdf-uri.html">
     <link rel="import" href="static/output-widgets.html">
-    
     <style>
      body {
        font-family: monospace;
+       display: flex;
+       flex-direction: column;
+       margin: 0;
+       height: 100vh;
      }
     </style>
   </head>
-  <body layout vertical fullbleed>
+  <body>
     <script>
      window.NS = {
        dev: 'http://projects.bigasterisk.com/device/',
@@ -25,123 +31,105 @@
      };
     </script>
 
-    <script>
-     PolymerExpressions.prototype.tojson = function(input) {
-       return JSON.stringify(input);
-     };
-
-     // not well defined for uri prefixes that are string prefixes of each other
-     PolymerExpressions.prototype.compactUri = function(uri) {
-       if (uri === undefined) {
-         return uri;
-       }
-       for (var short of Object.keys(window.NS)) {
-         var prefix = window.NS[short];
-         if (uri.indexOf(prefix) == 0) {
-           return short + ':' + uri.substr(prefix.length);
-         }
-       }
-       return uri;
-     };
-    </script>
-    
-    <polymer-element name="linked-uri" noscript attributes="href">
+    <dom-module id="linked-uri">
       <template>
-        <a href="{{href}}">{{href | compactUri}}</a>
-      </template>
-    </polymer-element>
-
-    <!-- subj/pred are compact uris -->
-    <polymer-element name="watched-subgraph" attributes="graph subj pred">
-      <template>
-        <style>
-         .read { font-weight: bold; }
-        </style>
-          
-        <rdf-observe
-          graph="{{graph}}"
-          subject="{{subj}}"
-          predicate="{{pred}}"
-          out="{{out}}">
-        </rdf-observe>
-        
-        <div>{{subj | compactUri}}, {{pred | compactUri}},
-          <span class="read">{{formattedOut}}</span>
-        </div>
-        
+        <a href$="{{href}}">{{compactUri(href)}}</a>
       </template>
       <script>
        Polymer({
-         outChanged: function() {
-           var obj = this.out[this.pred];
-           if (typeof(obj) == 'string') {
-             this.formattedOut = PolymerExpressions.prototype.compactUri(obj);
+         is: 'linked-uri',
+         properties: { href: { notify: true } },
+         behaviors: [BigastUri]
+       });
+      </script>
+    </dom-module>
+
+    <!-- subj/pred are compact uris -->
+    <dom-module id="watched-subgraph">
+      <style>
+       .read { font-weight: bold; }
+      </style>
+      <template>
+        <rdf-observe graph="{{graph}}" subject="{{subj}}" predicate="{{pred}}" out="{{out}}">
+        </rdf-observe>
+
+        <div><span>{{compactUri(subj)}}</span>, <span>{{compactUri(pred)}}</span>,
+          <span class="read">{{formatted(out)}}</span>
+        </div>
+
+      </template>
+      <script>
+       Polymer({
+         is: 'watched-subgraph',
+         properties: {
+           graph: { notify: true },
+           out: { notify: true },
+           pred: { notify: true },
+           subj: { notify: true }
+         },
+         behaviors: [BigastUri],
+         formatted: function (out) {
+           var obj = out[this.compactUri(this.pred)];
+           if (typeof obj == 'string') {
+             return this.compactUri(obj);
            } else {
-             this.formattedOut = obj['@value'];
+             return obj['@value'];
            }
          }
        });
       </script>
-        
-    </polymer-element>
-    
-    <polymer-element name="arduinonode-boards" noscript>
+    </dom-module>
+
+    <dom-module id="arduinonode-boards">
+      <style>
+       h1 {
+         margin: 0;
+         font-size: 130%;
+       }
+       ul {
+         padding-left: 5px;
+       }
+       .board, .device {
+         border: 1px solid gray;
+         border-radius: 10px;
+         margin: 13px;
+         padding: 7px;
+         box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
+       }
+       .board {
+         background: rgb(244, 244, 244);
+       }
+       .device {
+         background: #fff;
+       }
+      </style>
       <template>
-        <style>
-         h1 {
-           margin: 0;
-           font-size: 130%;
-         }
-         ul {
-           padding-left: 5px;
-         }
-         .board, .device {
-           border: 1px solid gray;
-           border-radius: 10px;
-           margin: 13px;
-           padding: 7px;
-           box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
-         }
-         .board {
-           background: rgb(244, 244, 244);
-         }
-         .device {
-           background: #fff;
-         }
-        </style>
-        <core-ajax
-          url="boards"
-          auto="true"
-          handleAs="json"
-          response="{{ret}}"></core-ajax>
-        <template repeat="{{board in ret.boards}}">
+        <iron-ajax url="boards" auto="true" handle-as="json"
+                   last-response="{{ret}}"></iron-ajax>
+        <template is="dom-repeat" items="{{ret.boards}}" as="board">
           <div class="board">
-            <h1>Board <linked-uri href="{{board.uri}}"></linked-uri></h1>
+            <h1>Board <linked-uri href$="{{board.uri}}"></linked-uri></h1>
             <h2>Devices</h2>
             <ul>
-              <template repeat="{{dev in board.devices}}">
+              <template is="dom-repeat" items="{{board.devices}}" as="dev">
                 <div class="device">
                   <h1>
-                    {{dev.className}}
-                    <linked-uri href="{{dev.uri}}"></linked-uri>
+                    <span>{{dev.className}}</span>
+                    <linked-uri href$="{{dev.uri}}"></linked-uri>
                   </h1>
-
-                  <template if="{{dev.watchPrefixes.length}}">
+                  <template is="dom-if" if="{{dev.watchPrefixes.length}}">
                     <div>watching:</div>
                     <ul>
-                      <template repeat="{{prefix in dev.watchPrefixes}}">
-                        <watched-subgraph
-                          graph="{{board.graph}}"
-                          subj="{{prefix[0] | compactUri}}"
-                          pred="{{prefix[1] | compactUri}}"></watched-subgraph>
+                      <template is="dom-repeat" items="{{dev.watchPrefixes}}" as="prefix">
+                        <watched-subgraph graph="{{board.graph}}" subj="{{prefix.0}}" pred="{{prefix.1}}"></watched-subgraph>
                       </template>
                     </ul>
                   </template>
 
-                  <template if="{{dev.outputWidgets.length}}">
+                  <template is="dom-if" if="{{dev.outputWidgets.length}}">
                     <div>send output:</div>
                     <ul>
-                      <template repeat="{{out in dev.outputWidgets}}">
+                      <template is="dom-repeat" items="{{dev.outputWidgets}}" as="out">
                         <div>
                           <output-widget-any desc="{{out}}"></output-widget-any>
                         </div>
@@ -154,30 +142,13 @@
           </div>
         </template>
       </template>
-    </polymer-element>
-    <arduinonode-boards></arduinonode-boards>
-    
-    <polymer-element name="data-dump" noscript>
-      <template>
-        <rdf-observe
-          graph="http://dash:9059/graph"
-          subject="http://bigasterisk.com/homeauto/board1/oneWire/"
-          predicate="room:temperatureF"
-          out="{{out}}">
-        </rdf-observe>
-        <div>sees: {{out['room:temperatureF']['@value']}}</div>
-
-
-        <rdf-observe
-          graph="http://dash:9059/graph"
-          subject="http://bigasterisk.com/homeauto/board1/oneWire/"
-          predicate="http://projects.bigasterisk.com/room/temperatureRetries"
-          out="{{out2}}">
-        </rdf-observe>
-        <div>sees2: {{out2['room:temperatureRetries']['@value']}}</div>
-        
-      </template>
-    </polymer-element>
-    <!-- <data-dump></data-dump> -->
+      <script>
+       Polymer({
+         is: 'arduinonode-boards',
+         behaviors: [BigastUri]
+       });
+      </script>
+    </dom-module>
+    <arduinonode-boards></arduinonode-boards>    
   </body>
 </html>

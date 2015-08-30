@@ -1,84 +1,136 @@
-<link rel="import" href="/lib/polymer/0.5.2/core-ajax/core-ajax.html">
+<link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
+<link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+<link rel="import" href="/lib/polymer/1.0.9/color-picker-element/dist/color-picker.html">
+<link rel="import" href="/room/ari/static/rdf-uri.html">
 
-<polymer-element name="output-widget" attributes="subj pred">
+<dom-module id="output-sender">
   <template>
-    <core-ajax id="output" url="../output" method="PUT"></core-ajax>
-    Set <a href="{{subj}}">{{subj | compactUri}}</a>'s {{pred | compactUri}} to
+    <iron-ajax id="output" url="../output" method="PUT"></iron-ajax>
+    Set <a href$="{{subj}}">{{compactUri(subj)}}</a>'s
+    <span>{{compactUri(pred)}}</span> to
   </template>
   <script>
    Polymer({
-     valueChanged: function() {
+     is: 'output-sender',
+     behaviors: [BigastUri],
+     properties: {
+       subj: { notify: true },
+       pred: { notify: true },
+       value: { observer: 'valueChanged' }
+     },
+     valueChanged: function () {
+       if (!this.subj || !this.pred) {
+         return;
+       }
        //this.$.output.headers = {'content-type': ...}
-	// broken in polymer 0.5 this.$.output.params = {s: this.subj, p: this.pred};
-       this.$.output.url = "output?s="+encodeURIComponent(this.subj)+"&p="+encodeURIComponent(this.pred);
+       this.$.output.params = {s: this.subj, p: this.pred};
        this.$.output.body = this.value;
-       this.$.output.go();
+       this.$.output.generateRequest();
      }
    });
   </script>
-</polymer-element>
+</dom-module>
 
-<polymer-element name="output-rgb" extends="output-widget">
+<dom-module id="output-rgb">
   <template>
+    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
     <color-picker id="pick" width="200" height="100" color="{{value}}"></color-picker>
-    color pick {{value}}
+    color pick <span>{{value}}</span>
+    <button on-click="black">Black</button>
+        <button on-click="white">White</button>
+  </template>
+  <script>
+   Polymer({
+     is: 'output-rgb',
+     properties: {
+       value: { notify: true },
+     },
+     ready: function () {
+       this.$.pick.addEventListener('colorselected', function (ev) {
+         this.value = ev.detail.hex;
+       }.bind(this));
+     },
+     black: function() {this.value = "#000000";},
+     white: function() {this.value = "#ffffff";}
+   });
+  </script>
+</dom-module>
+
+<dom-module id="output-slider">
+  <template>
+    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <input type="range" min="{{min}}" max="{{max}}" step="{{step}}" value="{{value::input}}"> <span>{{value}}</span>
   </template>
   <script>
     Polymer({
-      domReady: function() {
-        this.$.pick.addEventListener('colorselected', function(ev) {
-          this.value = ev.detail.hex;
-        }.bind(this));
-      }
+      is: 'output-slider',
+      properties: {
+        max: { notify: true },
+        min: { notify: true },
+        step: { notify: true }
+      },
     });
   </script>
-</polymer-element>
+</dom-module>
 
-<polymer-element name="output-slider" extends="output-widget"
-                 attributes="min max step"
-                 noscript>
+<!--
+    TODO(polyup): Inheriting from other custom elements is not yet supported.
+    See: https://www.polymer-project.org/1.0/docs/migration.html#inheritance
+ -->
+<dom-module id="output-fixed-text">
   <template>
-    <shadow></shadow>
-    <input type="range"
-           min="{{min}}" max="{{max}}" step="{{step}}"
-           value="{{value}}"> {{value}}
+    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <textarea rows="{{rows}}" cols="{{cols}}" value="{{value::input}}"></textarea>
   </template>
-</polymer-element>
+  <script>
+    Polymer({
+      is: 'output-fixed-text',
+      properties: {
+        cols: { notify: true },
+        rows: { notify: true }
+      },
+    });
+  </script>
+</dom-module>
 
-<polymer-element name="output-fixed-text" extends="output-widget"
-                 attributes="rows cols"
-                 noscript>
+<dom-module id="output-switch">
   <template>
-    <textarea rows="{{rows}}" cols="{{cols}}" value="{{value}}"></textarea>
-  </template>
-</polymer-element>
-
-<polymer-element name="output-switch" extends="output-widget">
-  <template>
-    <shadow></shadow>
-    <input type="checkbox" checked="{{check}}"> {{value}}
+    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <input type="checkbox" checked="{{check::change}}"> <span>{{value}}</span>
   </template>
   <script>
    Polymer({
-     check: false,
-     checkChanged: function() {
-       this.value = this.check ? "high" : "low";
-     }
+     is: 'output-switch',
+     properties: {
+       check: {
+         type: Boolean,
+         value: false,
+         observer: 'checkChanged'
+       },
+       value: { notify: true }
+     },
+     checkChanged: function () {
+       this.value = this.check ? 'high' : 'low';
+     },
    });
   </script>
-</polymer-element>
+</dom-module>
 
-<polymer-element name="output-widget-any" attributes="desc">
+<dom-module id="output-widget-any">
   <template></template>
   <script>
    Polymer({
-     domReady: function() {
+     is: 'output-widget-any',
+     properties: {
+       desc: { type: Object, notify: true }
+     },
+     ready: function () {
        var elem = document.createElement(this.desc.element);
-       this.shadowRoot.appendChild(elem);
+       this.appendChild(elem);
        for (var k of Object.keys(this.desc)) {
          elem.setAttribute(k, this.desc[k]);
        }
      }
    });
   </script>
-</polymer-element>
+</dom-module>
