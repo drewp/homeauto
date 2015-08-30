@@ -3,51 +3,14 @@
   <head>
     <title>dhcp leases</title>
     <meta charset="utf-8" />
-    <script src="/lib/polymer/0.8/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
     <script src="/lib/underscore-1.5.2.min.js"></script>
-    <script src="/lib/n3/0.4.2/n3-browser-drewp.js"></script>
-    <link rel="import" href="/lib/polymer/0.8/iron-ajax/iron-ajax.html">
+    <link rel="import" href="/rdf/n3+polymer/trig-store.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
   </head>
   <body>
-
-    <script>
-     Polymer({
-       is: "trig-store",
-       prefixes: {
-         room: 'http://projects.bigasterisk.com/room/',
-         rdfs: 'http://www.w3.org/2000/01/rdf-schema#'
-       },
-       properties: {
-         trigInput: {
-           type: String,
-           observer: 'trigInputChanged'
-         },
-         store: {
-           // set to a new store each time trig is updated
-           type: Object,
-           default: N3.Store(),
-           notify: true
-         }
-       },
-       trigInputChanged: function(trig, _old) {
-         var newStore = N3.Store();
-         newStore.addPrefixes(this.prefixes);
-         var parser = N3.Parser({format: 'TriG'});
-         parser.parse(trig, function(error, triple, prefixes) {
-           if (error !== null) {
-             console.log(error);
-             return;
-           } 
-           newStore.addTriple(triple);
-         }.bind(this));
-         console.log("filled store with", newStore.size, "triples");
-         this.store = newStore;
-
-       }
-     })
-    </script>
-
     <h1>Active dhcp leases</h1>
+    <p><a href="../wifi">go to wifi</a></p>
 
     <dom-module id="dhcp-table">
       <template>
@@ -58,41 +21,50 @@
         <trig-store id="ts" trig-input="{{ajaxResponse}}"></trig-store>
 
         <table>
-          <template is="x-repeat" items="{{devices}}">
-            <tr><td>{{item.dhcpHostname}}</td> <td>{{item.ip}}</td></tr>
+          <template is="dom-repeat" items="{{devices}}">
+            <tr>
+              <td>{{item.dhcpHostname}}</td>
+              <td>{{item.ip}}</td>
+              <td>{{item.mac}}</td>
+            </tr>
           </template>
         </table>
       </template>
     </dom-module>
     
     <script>
-     Polymer({
-       is: "dhcp-table",
-       ready: function() {
-         this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
-         this.devices = [];
-       },
-       storeChanged: function(ev) {
-         var store = ev.detail.value;
-         var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
-         var findOne = function(s, p, o) {
-           var rows = find(s, p, o);
-           return rows[0];
-         };
+     HTMLImports.whenReady(function () {
+       Polymer({
+         is: "dhcp-table",
+         ready: function() {
+           this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
+           this.devices = [];
+         },
+         storeChanged: function(ev) {
+           var store = ev.detail.value;
+           var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
+           var findOne = function(s, p, o) {
+             var rows = find(s, p, o);
+             return rows[0];
+           };
 
-         this.devices = [];
-         
-         find(null, "room:dhcpHostname", null).forEach(function(row) {
-           var out = {dhcpHostname: N3.Util.getLiteralValue(row.object)}
-           var lease = findOne(null, "room:ethernetAddress",
-                               row.subject).subject;
-           var ip = findOne(lease, "room:assignedIp", null).object;
-           out.ip = N3.Util.getLiteralValue(
-             findOne(ip, "rdfs:label", null).object);
-           this.devices.push(out);
-         }.bind(this));
-         this.devices = _.sortBy(this.devices, 'dhcpHostname');
-       }
+           this.devices = [];
+           
+           find(null, "room:dhcpHostname", null).forEach(function(row) {
+             var out = {dhcpHostname: N3.Util.getLiteralValue(row.object)}
+             var lease = findOne(null, "room:ethernetAddress",
+                                 row.subject).subject;
+             out.ip = N3.Util.getLiteralValue(
+               findOne(findOne(lease, "room:assignedIp", null).object,
+                       "rdfs:label", null).object);
+             out.mac = N3.Util.getLiteralValue(
+               findOne(findOne(lease, "room:ethernetAddress", null).object,
+                       "room:macAddress", null).object);
+             this.devices.push(out);
+           }.bind(this));
+           this.devices = _.sortBy(this.devices, 'dhcpHostname');
+         }
+       });
      });
     </script>
     <dhcp-table></dhcp-table>

@@ -3,14 +3,15 @@
   <head>
     <title>wifi</title>
     <meta charset="utf-8" />
-    <script src="/lib/polymer/0.8/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
     <script src="/lib/underscore-1.5.2.min.js"></script>
+    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
     <link rel="import" href="/rdf/n3+polymer/trig-store.html">
-    <link rel="import" href="/lib/polymer/0.8/iron-ajax/iron-ajax.html">
   </head>
   <body>
     <h1>Devices on wifi</h1>
-
+    <p><a href="../dhcpleases">go to dhcpleases</a></p>
     <dom-module id="wifi-table">
       <template>
         <iron-ajax auto url="graph"
@@ -24,7 +25,7 @@
             <th>MAC</th>
             <th>Connected</th>
           </tr>
-          <template is="x-repeat" items="{{devices}}">
+          <template is="dom-repeat" items="{{devices}}">
             <tr>
               <td>{{item.deviceName}}</td>
               <td>{{item.mac}}</td>
@@ -33,47 +34,49 @@
           </template>
         </table>
       </template>
-    </dom-module>
-    
-    <script>
-     Polymer({
-       is: "wifi-table",
-       ready: function() {
-         this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
-         this.devices = [];
-       },
-       storeChanged: function(ev) {
-         var store = ev.detail.value;
-         var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
-         var findOne = function(s, p, o) {
-           var rows = find(s, p, o);
-           return rows[0];
-         };
-
-         this.devices = [];
-         
-         find(null, "room:connected", "http://bigasterisk.com/wifiAccessPoints"
-              ).forEach(function(row) {
-           var out = {
-             mac: N3.Util.getLiteralValue(
-               findOne(row.subject, "room:macAddress", null).object),
-             connectedAgo: N3.Util.getLiteralValue(
-               findOne(row.subject, "room:connectedAgo", null).object)
-            
+      
+      <script>
+       HTMLImports.whenReady(function () {
+       Polymer({
+         is: "wifi-table",
+         ready: function() {
+           this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
+           this.devices = [];
+         },
+         storeChanged: function(ev) {
+           var store = ev.detail.value;
+           var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
+           var findOne = function(s, p, o) {
+             var rows = find(s, p, o);
+             return rows[0];
            };
-           try {
-             var dev = findOne(row.subject, "room:deviceName", null).object;
-             out.deviceName = N3.Util.getLiteralValue(dev);
-           } catch(e) {
 
-           }           
+           this.devices = [];
            
-           this.devices.push(out);
-         }.bind(this));
-         this.devices = _.sortBy(this.devices, 'deviceName');
-       }
-     });
-    </script>
+           find(null, "room:connected", "http://bigasterisk.com/wifiAccessPoints"
+                ).forEach(function(row) {
+             var out = {
+               mac: N3.Util.getLiteralValue(
+                 findOne(row.subject, "room:macAddress", null).object),
+               connectedAgo: N3.Util.getLiteralValue(
+                 findOne(row.subject, "room:connectedAgo", null).object)
+               
+             };
+             try {
+               var dev = findOne(row.subject, "room:deviceName", null).object;
+               out.deviceName = N3.Util.getLiteralValue(dev);
+             } catch(e) {
+
+             }           
+             
+             this.devices.push(out);
+           }.bind(this));
+           this.devices = _.sortBy(this.devices, 'deviceName');
+         }
+       });
+       });
+      </script>
+    </dom-module>
     <wifi-table></wifi-table>
   </body>
 </html>
