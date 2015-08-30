@@ -80,6 +80,7 @@ class Board(object):
             'dev': self.dev,
             'baudrate': self.baudrate,
             'devices': [d.description() for d in self._devs],
+            'graph': 'http://%s6:9059/graph' % socket.gethostname(), #todo
             }
         
     def open(self):
@@ -416,7 +417,8 @@ def main():
     for b in boards:
         b.startPolling()
 
-    reactor.listenTCP(9059, cyclone.web.Application([
+
+    app = cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "static", "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
@@ -425,7 +427,8 @@ def main():
         (r'/output', OutputPage),
         (r'/arduinoCode', ArduinoCode),
         (r'/dot', Dot),
-        ], config=config, boards=boards))
+        ], config=config, boards=boards)
+    reactor.listenTCP(9059, app, interface='::')
     reactor.run()
 
 main()
