@@ -6,6 +6,7 @@
 
 
 @prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+@prefix board0ow: <http://bigasterisk.com/homeauto/board0/oneWire/> .
 
 ha:board0 a :ArduinoBoard;
   :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
@@ -14,12 +15,14 @@ ha:board0 a :ArduinoBoard;
     board0pin:d3,
     board0pin:d4,
     board0pin:d5,
-    board0pin:d6 .
+    board0pin:d6,
+    board0pin:d7 .
 
 board0pin:d3 :pinNumber 3 .
 board0pin:d4 :pinNumber 4 .
 board0pin:d5 :pinNumber 5 .
 board0pin:d6 :pinNumber 6 .
+board0pin:d7 :pinNumber 7 .
 
 board0pin:d3 :connectedTo sensor:motion0 .
 sensor:motion0 a :MotionSensor;
@@ -78,7 +81,55 @@ board1lcd: a :ST7565Lcd;
   :lcdA0 board1lcd:A0;
   :lcdRST board1lcd:RST;
   :lcdCS board1lcd:CS .
-  
 
+@prefix shopPin: <http://bigasterisk.com/homeauto/boardShop/pin/> .
+@prefix shopBarcode: <http://bigasterisk.com/homeauto/boardShop/barcode/> .
+@prefix shopButtons: <http://bigasterisk.com/homeauto/boardShop/buttons/> .
+@prefix shopOw: <http://bigasterisk.com/homeauto/boardShop/oneWire/> .
+@prefix shopShift: <http://bigasterisk.com/homeauto/boardShop/shift/> .
+@prefix shopPwm: <http://bigasterisk.com/homeauto/boardShop/pwm/> .
+
+ha:boardShop a :ArduinoBoard;
+  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A4001hrf-if00-port0";
+  :boardTag "atmega168";
+  rdfs:comment "board is like diecimila with atmega168";
+  :hasPin
+    shopPin:d0, shopPin:d1, shopPin:d2, shopPin:d3, shopPin:d4, shopPin:d5, shopPin:d6, shopPin:d7, shopPin:d8, shopPin:d9, shopPin:d10, shopPin:d11, shopPin:d12, shopPin:d13, shopPin:a4, shopPin:a5 .
+
+shopPin:d0 :pinNumber 0 .
+shopPin:d1 :pinNumber 1 .
+shopPin:d2 :pinNumber 2; :connectedTo shopBarcode:Txblack .
+shopPin:d3 :pinNumber 3; :connectedTo shopBarcode:RxGreen .
+shopPin:d4 :pinNumber 4; :connectedTo shopOw: .
+shopPin:d5 :pinNumber 5; :connectedTo shopButtons:x .
+shopPin:d6 :pinNumber 6; :connectedTo shopButtons:x .
+shopPin:d7 :pinNumber 7; :connectedTo shopButtons:x .
+shopPin:d8 :pinNumber 8; :connectedTo shopButtons:rot .
+shopPin:d9 :pinNumber 9; :connectedTo shopButtons:rot .
+shopPin:d10 :pinNumber 10; :connectedTo shopShift:data .
+shopPin:d11 :pinNumber 11; :connectedTo shopShift:briteLatch .
+shopPin:d12 :pinNumber 12; :connectedTo shopShift:lightClock .
+shopPin:d13 :pinNumber 13; :connectedTo shopShift:briteClock .
+
+shopPin:a4 :pinNumber "a4"; :connectedTo shopPwm:sda .
+shopPin:a5 :pinNumber "a5"; :connectedTo shopPwm:scl .
+
+shopOw: a :OneWire;
+  :connectedTo shopOw:temperatureSensor .
+shopOw:temperatureSensor a :TemperatureSensor;
+  :position :workshop .
+
+shopPwm:roomLights a :PwmBoard;
+  :scl shopPwm:scl;
+  :sda shopPwm:sda;
+  :output
+    [:area shopPwm:sewingLight; :channel 0; :wattage 7],
+    [:area shopPwm:shopLight0;  :channel 1; :wattage 10],
+    [:area shopPwm:shopLight1;  :channel 2; :wattage 10],
+    [:area shopPwm:ariLight;    :channel 3; :wattage 10],
+    [:area shopPwm:shopLight2;  :channel 4; :wattage 10],
+    [:area shopPwm:shopLight3;  :channel 6; :wattage 8] .
+    
+# shiftbrite EI (arduino d12) still needs to be connected to +5
 
 
