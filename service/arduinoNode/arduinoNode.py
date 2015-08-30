@@ -187,7 +187,7 @@ class Board(object):
                     raise NotImplementedError
                     
                 if gen:
-                    generated[attr] += '// for %s\n%s\n' % (dev.uri, gen)
+                    generated[attr] += '// for %s\n%s\n' % (dev.uri, gen.strip())
 
         code = '''
 %(includes)s
@@ -206,7 +206,7 @@ void idle() {
     // this slowdown is to spend somewhat less time PWMing, to reduce
     // leaking from on channels to off ones (my shift register has no
     // latching)
-    if (micros() < lastFrame + 128) {
+    if (micros() < lastFrame + 80) {
       return;
     }
     lastFrame = micros();
