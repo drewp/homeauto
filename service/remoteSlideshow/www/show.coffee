@@ -1,5 +1,3 @@
-
-
 reconnectingWebSocket = (url, onMessage) ->
   connect = ->
     ws = new WebSocket(url)
@@ -22,6 +20,18 @@ reconnectingWebSocket = (url, onMessage) ->
   pong = 0
   connect()
 
+
+model =
+  imageIndex: ko.observable(-1)
+  feederCam: ko.observable(false)
+
+model.toggleFeederCam = ->
+    if model.feederCam()
+      $("#feeder").empty().hide()
+      model.feederCam(false)
+    else
+      $("#feeder").append($("<img>").attr("src", "http://bang.bigasterisk.com/ipcam1/videostream.cgi?rate=6")).show()
+      model.feederCam(true)
 
 images = [
   '../images/3387331383_d5c530cd9e_z.jpg',
@@ -46,15 +56,17 @@ images = [
   '../images/f8.jpg',
   '../images/f9.jpg',
 ]
-imageIndex = -1
 
-nextImage = ->
-  imageIndex = (imageIndex + 1) % images.length
-  $("#main").attr('src', images[imageIndex])
-nextImage()  
+model.nextImage = ->
+  model.imageIndex((model.imageIndex() + 1) % images.length)
+  $("#main").attr('src', images[model.imageIndex()])
+model.nextImage()  
 
 reconnectingWebSocket("ws://bang:9071/events", (msg) ->
   console.log("got", msg)
   if msg.o == "http://bigasterisk.com/host/star/slideshow/advance"
-    nextImage()
+    model.nextImage()
+  if msg.o == "http://bigasterisk.com/host/star/slideshow/toggleFeeder"
+    model.toggleFeederCam()
 )
+ko.applyBindings(model)
