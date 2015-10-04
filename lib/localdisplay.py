@@ -10,11 +10,13 @@ def setDisplayToLocalX():
     for pid in psutil.get_pid_list():
         try:
             proc = psutil.Process(pid)
-            if proc.exe not in ['/usr/bin/Xorg', '/usr/bin/X']:
+            if proc.exe not in ['/usr/bin/Xorg', '/usr/bin/X', '/usr/bin/X11/X']:
                 continue
         except (psutil.error.AccessDenied, psutil.error.NoSuchProcess):
             continue
-        display = proc.cmdline[1]
+        display = [arg for arg in proc.cmdline if not arg.startswith('-')][1]
+        if display == 'tcp': # ??
+            display = ":0.0"
         assert display.startswith(':'), display
         os.environ['DISPLAY'] = display
         break
