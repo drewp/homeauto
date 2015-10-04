@@ -6,11 +6,13 @@ receives POSTs about barcodes that are scanned, plays songs on mpd
 from __future__ import division
 
 import cyclone.web, cyclone.httpclient, sys, json, urllib
-from twisted.python import log
+from twisted.python import log as twlog
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
+from logsetup import log
+
 from pymongo import Connection
 mpdPaths = Connection("bang", 27017)['barcodePlayer']['mpdPaths']
 
@@ -36,7 +38,7 @@ class BarcodeScan(PrettyErrorHandler, cyclone.web.RequestHandler):
         post = "http://star:9009/addAndPlay/%s" % urllib.quote(song, safe='')
         result = (yield cyclone.httpclient.fetch(
             method="POST", url=post)).body
-        print result
+        log.info("post result: %r", result)
         self.write(result)
 
 
@@ -45,6 +47,6 @@ if __name__ == '__main__':
         (r'/', Index),
         (r'/barcodeScan', BarcodeScan),
         ], )
-    log.startLogging(sys.stdout)
+    twlog.startLogging(sys.stdout)
     reactor.listenTCP(9011, app)
     reactor.run()
