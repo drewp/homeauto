@@ -28,13 +28,21 @@ board0pin:d3 :connectedTo sensor:motion0 .
 sensor:motion0 a :MotionSensor;
   :sees houseLoc:storage .
 
+board0pin:d4 :connectedTo :heater .
+:heater a :DigitalOutput .
+
 board0pin:d5 :connectedTo :storageCeilingLedCross .
 :storageCeilingLedCross a :LedOutput .
 
 board0pin:d6 :connectedTo :storageCeilingLedLong .
 :storageCeilingLedLong a :LedOutput .
   
-
+board0pin:d7 :connectedTo board0ow: .
+board0ow: a :OneWire;
+  :connectedTo board0ow:temperatureSensor .
+board0ow:temperatureSensor a :TemperatureSensor;
+  :position :storage .
+  
 
 @prefix board1pin: <http://bigasterisk.com/homeauto/board1/pin/> .
 @prefix board1lcd: <http://bigasterisk.com/homeauto/board1/lcd/> .
@@ -132,4 +140,9 @@ shopPwm:roomLights a :PwmBoard;
     
 # shiftbrite EI (arduino d12) still needs to be connected to +5
 
+#barcode red: +5V
+#barcode white: gnd
+#SoftwareSerial barcode =  SoftwareSerial(/* rx pin, green */ 3, 
+#                                         /* tx pin, black */ 2,
+#                                         /* inverse */ true);
 
