@@ -49,8 +49,8 @@ if __name__ == '__main__':
     config = {
         'servePort' : 9073,
         }
-    #from twisted.python import log as twlog
-    #twlog.startLogging(sys.stdout)
+    from twisted.python import log as twlog
+    twlog.startLogging(sys.stdout)
     #log.setLevel(10)
     #log.setLevel(logging.DEBUG)
 
