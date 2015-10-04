@@ -140,11 +140,11 @@ class Activity(PrettyErrorHandler, cyclone.web.RequestHandler):
         a = ActivityStream()
         self.settings.mongo.ensure_index('t')
         remaining = {'downstairsDoorMotion':10, 'downstairsDoorOpen':10,
-                     'frontDoorMotion':10, 'frontDoor':50, 'bedroomMotion': 10}
+                     'frontDoorMotion':30, 'frontDoor':50, 'bedroomMotion': 10}
         recent = {}
         toAdd = []
         for row in list(self.settings.mongo.find(sort=[('t', -1)],
-                                                     limit=5000)):
+                                                     limit=10000)):
             try:
                 r = remaining[row['name']]
                 if r < 1:
