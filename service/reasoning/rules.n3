@@ -102,7 +102,7 @@
   # applied upstream.
  
   <http://bigasterisk.com/host/dash/xidle> :idleTimeMinutes ?idle .
-  ?idle math:lessThan 30 .
+  # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
 } => {
   :drew :at :desk .
   # the plan here is that as soon as we can show that I'm not at my
