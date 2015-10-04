@@ -6,7 +6,9 @@ from __future__ import division
 
 import sys,json
 from twisted.internet import reactor, task
-import cyclone.web, restkit
+from rdflib import Namespace
+import cyclone.web
+from cyclone.httpclient import fetch
 
 sys.path.append("/my/proj/pixel/shiftweb")
 from drvarduino import ShiftbriteArduino
@@ -18,6 +20,8 @@ from logsetup import log
 
 sys.path.append("/my/proj/ariremote")
 from oscserver import ArduinoWatcher
+ROOM = Namespace("http://projects.bigasterisk.com/room/")
+
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -74,7 +78,7 @@ def barcodeWatch(arduino, postBarcode):
         if not code:
             continue
         if not code.endswith('\x03'):
-            print "couldn't read %r" % code
+            log.warn("couldn't read %r", code)
             return
         codeType = {'A':'UPC-A',
                     'B':'JAN-8',
@@ -85,14 +89,18 @@ def barcodeWatch(arduino, postBarcode):
                     'K':'CODE128',
                     }[code[0]]
         code = code[1:-1]
-        try:
-            postBarcode.post(payload=json.dumps(
-                {'barcodeType':codeType, 'code':code}),
-                             headers={"content-type" :
-                                      "application/json"})
-        except Exception, e:
-            print "post err", e
-
+        body = "%s %s %s ." % (
+                           ROOM['barcodeScan'].n3(),
+                           ROOM['read'].n3(),
+                           ROOM['barcode/%s/%s' % (codeType, code)].n3())
+        body = body.encode('utf8')
+        print "body: %r" % body
+        fetch("http://bang:9071/oneShot",
+              method='POST',
+              timeout=1,
+              postdata=body,
+              headers={"content-type" : ["text/n3"]},
+        ).addErrback(log.error)
     
 class Graph(PrettyErrorHandler, cyclone.web.RequestHandler):    
     def get(self):
@@ -121,7 +129,7 @@ if __name__ == '__main__':
     aw = ArduinoWatcher(sb)
     task.LoopingCall(aw.poll).start(1.0/20)
 
-    postBarcode = restkit.Resource('http://star:9011/barcodeScan')
+    postBarcode = 'http://star:9011/barcodeScan'
     task.LoopingCall(barcodeWatch, sb, postBarcode).start(interval=.5)
     
     reactor.listenTCP(9014, cyclone.web.Application([
