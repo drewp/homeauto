@@ -131,6 +131,15 @@ def loadUvaData():
             clientHostname=clientHostname, connection=iface, ipaddr=ipaddr, dhcpExpires=expires))
     
     returnValue(sorted(byMac.values()))
+
+@inlineCallbacks
+def loadCiscoData():
+    config = json.load(open("/my/proj/homeauto/service/tomatoWifi/priv-uva.json"))
+    headers = {'Authorization': ['Basic %s' % config['userPass'].encode('base64').strip()]}
+    print headers
+    resp = yield fetch('http://10.2.0.2/', headers=headers)
+    print resp.body
+    returnValue([])
     
             
 def jsValue(js, variableName):
