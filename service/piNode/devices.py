@@ -177,6 +177,36 @@ class RgbStrip(DeviceType):
             'pred': ROOM['color'],
         }]
 
+
+@register
+class LedOutput(DeviceType):
+    deviceType = ROOM['LedOutput']
+                
+    def setup(self):
+        self.pi.set_mode(self.pinNumber, pigpio.OUTPUT)
+        self.pi.set_PWM_frequency(self.pinNumber, 200)
+        self.pi.set_PWM_dutycycle(self.pinNumber, 0)
+
+    def outputPatterns(self):
+        return [(self.uri, ROOM['brightness'], None)]
+    
+    def sendOutput(self, statements):
+        assert len(statements) == 1
+        assert statements[0][:2] == (self.uri, ROOM['brightness'])
+        v = int(float(statements[0][2]) * 255)
+        self.pi.set_PWM_dutycycle(self.pinNumber, v)
+        
+    def outputWidgets(self):
+        return [{
+            'element': 'output-slider',
+            'min': 0,
+            'max': 1,
+            'step': 1 / 255,
+            'subj': self.uri,
+            'pred': ROOM['brightness'],
+        }]
+
+        
 @register
 class OnboardTemperature(DeviceType):
     deviceType = ROOM['OnboardTemperature']
