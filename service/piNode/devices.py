@@ -11,6 +11,7 @@ except ImportError:
 
 log = logging.getLogger()
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
+XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
 
 class DeviceType(object):
     deviceType = None
