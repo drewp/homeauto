@@ -181,7 +181,7 @@ class OnboardTemperature(DeviceType):
     deviceType = ROOM['OnboardTemperature']
     @classmethod
     def findInstances(cls, graph, board, pi):
-        for row in graph.query('''SELECT DISTINCT ?dev WHERE {
+        for row in graph.query('''SELECT DISTINCT ?uri WHERE {
           ?board :onboardDevice ?uri . 
           ?uri a :OnboardTemperature .
         }'''):
