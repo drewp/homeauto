@@ -187,7 +187,7 @@ class OnboardTemperature(DeviceType):
         }'''):
             yield cls(graph, row.uri, pi, pinNumber=None)
     
-    def readFromPoll(self):
+    def poll(self):
         milliC = open('/sys/class/thermal/thermal_zone0/temp').read().strip()
         c = float(milliC) / 1000.
         f = c * 1.8 + 32
