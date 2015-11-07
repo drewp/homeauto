@@ -9,6 +9,7 @@
 
 ha:node2 a :PiBoard;
   :hostname "sticker";
+  :onboardDevice ha:bedroomPiTemp .
   :hasPin
     board2pin:GPIO2,
     board2pin:GPIO3,
@@ -16,6 +17,8 @@ ha:node2 a :PiBoard;
     board2pin:GPIO17,
     board2pin:GPIO27
     .
+
+ha:bedroomPiTemp a :OnboardTemperature .
 
 board2pin:GPIO2 :gpioNumber 2 .
 board2pin:GPIO3 :gpioNumber 3 .

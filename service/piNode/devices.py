@@ -176,6 +176,31 @@ class RgbStrip(DeviceType):
             'pred': ROOM['color'],
         }]
 
+@register
+class OnboardTemperature(DeviceType):
+    deviceType = ROOM['OnboardTemperature']
+    @classmethod
+    def findInstances(cls, graph, board, pi):
+        for row in graph.query('''SELECT DISTINCT ?dev WHERE {
+          ?board :onboardDevice ?uri . 
+          ?uri a :OnboardTemperature .
+        }'''):
+            yield cls(graph, row.uri, pi, pinNumber=None)
+    
+    def readFromPoll(self):
+        milliC = open('/sys/class/thermal/thermal_zone0/temp').read().strip()
+        c = float(milliC) / 1000.
+        f = c * 1.8 + 32
+        return [
+            (self.uri, ROOM['temperatureF'], Literal(f, datatype=XSD['decimal'])),
+            ]
+
+    def watchPrefixes(self):
+        # these uris will become dynamic! see note on watchPrefixes
+        # about eliminating it.
+        return [(self.uri, ROOM['temperatureF']),
+                ]
+        
 def makeDevices(graph, board, pi):
     out = []
     for dt in sorted(_knownTypes, key=lambda cls: cls.__name__):
