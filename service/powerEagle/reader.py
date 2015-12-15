@@ -5,7 +5,6 @@ sys.path.append("/my/proj/homeauto/lib")
 from logsetup import log
 sys.path.append("/my/proj/room")
 from carbondata import CarbonClient
-from twisted.internet.task import LoopingCall
 from twisted.internet.defer import inlineCallbacks
 from twisted.internet import reactor
 from cyclone.httpclient import fetch
@@ -19,12 +18,12 @@ carbon = CarbonClient(serverHost='bang')
 class Poller(object):
     def __init__(self, carbon):
         self.carbon = carbon
-        self.lastPollTime = 0
-        LoopingCall(self.poll).start(interval=periodSec)
+        reactor.callLater(0, self.poll)
 
     @inlineCallbacks
     def poll(self):
         ret = None
+        startTime = time.time()
         try:
             resp = yield fetch(
                 'http://{deviceIp}/cgi-bin/cgi_manager'.format(deviceIp=deviceIp),
@@ -51,7 +50,9 @@ class Poller(object):
             log.error("failed: %r", e)
             log.error(repr(ret))
 
-        self.lastPollTime = time.time()
+        now = time.time()
+        goal = startTime + periodSec
+        reactor.callLater(max(1, goal - now), self.poll)
 
 
 log.setLevel(logging.INFO)
