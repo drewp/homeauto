@@ -1,0 +1,3 @@
+cyclone==1.1
+service-identity==14.0.0
+Twisted==15.5.0
