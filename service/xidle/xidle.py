@@ -43,5 +43,5 @@ def graph():
     response.set_header('Content-type', 'application/x-trig')
     return g.asTrig()
 
-run(host="0.0.0.0", server='gunicorn', port=9107, quiet=True)
+run(host="[::]", server='gunicorn', port=9107, quiet=True)
 
