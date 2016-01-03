@@ -25,6 +25,9 @@ from loggingserial import LoggingSerial
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph
 
+sys.path.append("/my/proj/room")
+from carbondata import CarbonClient
+
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
 
@@ -70,7 +73,7 @@ class Board(object):
         self._polledDevs = [d for d in self._devs if d.generatePollCode()]
         
         self._statementsFromInputs = {} # input device uri: latest statements
-
+        self._carbon = CarbonClient(serverHost='bang')
         self.open()
 
     def description(self):
@@ -115,6 +118,18 @@ class Board(object):
         elapsed = time.time() - t1
         if elapsed > 1.0:
             log.warn('poll took %.1f seconds' % elapsed)
+        self._exportToGraphite()
+
+    def _exportToGraphite(self):
+        # note this is writing way too often- graphite is storing at a lower res
+        now = time.time()
+        # objects of these statements are suitable as graphite values.
+        graphitePredicates = {ROOM['temperatureF']} 
+        for s, graphiteName in self.graph.subject_objects(ROOM['graphiteName']):
+            for group in self._statementsFromInputs.values():
+                for stmt in group:
+                    if stmt[0] == s and stmt[1] in graphitePredicates:
+                        self._carbon.send(graphiteName, stmt[2].toPython(), now)
         
 
     def currentGraph(self):
