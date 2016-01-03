@@ -51,7 +51,7 @@ class Poller(object):
             log.error(repr(ret))
 
         now = time.time()
-        goal = startTime + periodSec
+        goal = startTime + periodSec - .2
         reactor.callLater(max(1, goal - now), self.poll)
 
 
