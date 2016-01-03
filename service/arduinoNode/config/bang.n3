@@ -1,0 +1,87 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix board0: <http://bigasterisk.com/homeauto/board0/> .
+@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
+@prefix board0ow: <http://bigasterisk.com/homeauto/board0/oneWire/> .
+
+ha:board0 a :ArduinoBoard;
+  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
+  :boardTag "atmega328";
+  :hasPin
+    board0pin:d3,
+    board0pin:d4,
+    board0pin:d5,
+    board0pin:d6,
+    board0pin:d7,
+    board0pin:d8
+    .
+
+board0pin:d3 :pinNumber 3 .
+board0pin:d4 :pinNumber 4 .
+board0pin:d5 :pinNumber 5 .
+board0pin:d6 :pinNumber 6 .
+board0pin:d7 :pinNumber 7 .
+board0pin:d8 :pinNumber 8 .
+
+
+board0pin:d3 :connectedTo sensor:motion0 .
+sensor:motion0 a :MotionSensor;
+  :sees houseLoc:storage .
+
+board0pin:d4 :connectedTo :heater .
+:heater a :DigitalOutput .
+
+board0pin:d5 :connectedTo :storageCeilingLedCross .
+:storageCeilingLedCross a :LedOutput .
+
+board0pin:d6 :connectedTo :storageCeilingLedLong .
+:storageCeilingLedLong a :LedOutput .
+  
+board0pin:d7 :connectedTo board0ow: .
+board0ow: a :OneWire;
+  :connectedTo board0ow:dev-1052790f02080086 .
+board0ow:dev-1052790f02080086 a :TemperatureSensor;
+  :position :storage;
+  :graphiteName "system.house.temp.storage" .
+
+
+ha:boardTest a :ArduinoBoard;
+  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A9YLHR7R-if00-port0";
+  :boardTag "nano328";
+  :hasPin :bt8 .
+
+:bt8 :pinNumber 8 .
+  
+board0pin:d8 :connectedTo board0:rgb .
+board0:rgb a :RgbPixels;
+  :pixels (
+  board0:rgb_left_top_0
+  board0:rgb_left_top_1
+  board0:rgb_left_top_2
+  board0:rgb_left_bottom_0
+  board0:rgb_left_bottom_1
+  board0:rgb_left_bottom_2
+  board0:rgb_right_top_0
+  board0:rgb_right_top_1
+  board0:rgb_right_top_2
+  board0:rgb_right_bottom_0
+  board0:rgb_right_bottom_1
+  board0:rgb_right_bottom_2
+  ).
+
+board0:rgb_left_top_0 rdfs:label "rgb_left_top_0" .
+board0:rgb_left_top_1 rdfs:label "rgb_left_top_1" .
+board0:rgb_left_top_2 rdfs:label "rgb_left_top_2" .
+board0:rgb_left_bottom_0 rdfs:label "rgb_left_bottom_0" .
+board0:rgb_left_bottom_1 rdfs:label "rgb_left_bottom_1" .
+board0:rgb_left_bottom_2 rdfs:label "rgb_left_bottom_2" .
+board0:rgb_right_top_0 rdfs:label "rgb_right_top_0" .
+board0:rgb_right_top_1 rdfs:label "rgb_right_top_1" .
+board0:rgb_right_top_2 rdfs:label "rgb_right_top_2" .
+board0:rgb_right_bottom_0 rdfs:label "rgb_right_bottom_0" .
+board0:rgb_right_bottom_1 rdfs:label "rgb_right_bottom_1" .
+board0:rgb_right_bottom_2 rdfs:label "rgb_right_bottom_2" .
