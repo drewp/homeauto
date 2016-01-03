@@ -1,0 +1,4 @@
+#!/bin/zsh
+/usr/local/bin/supervisorctl -s http://brace:9001 restart arduinoNodeBrace_9059
+/usr/local/bin/supervisorctl -s http://slash:9001 restart arduinoNodeSlash_9059
+/usr/local/bin/supervisorctl -s http://bang:9001 restart arduinoNodeBang_9059
