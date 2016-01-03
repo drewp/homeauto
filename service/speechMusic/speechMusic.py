@@ -133,4 +133,4 @@ class Server(object):
 sfx = SoundEffects()
 
 server = Server(sfx)
-server.app.run("0.0.0.0", 9049)
+server.app.run("::", 9049)

@@ -78,5 +78,5 @@ def graph():
 
 setDisplayToLocalX()
 
-run(host="0.0.0.0", server='gunicorn', port=9095, quiet=True)
+run(host="[::]", server='gunicorn', port=9095, quiet=True)
 
