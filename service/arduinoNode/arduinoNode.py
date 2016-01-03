@@ -133,7 +133,6 @@ class Board(object):
                     if stmt[0] == s and stmt[1] in graphitePredicates:
                         self._carbon.send(graphiteName, stmt[2].toPython(), now)
         
-
     def currentGraph(self):
         g = Graph()
         
@@ -142,6 +141,9 @@ class Board(object):
         for si in self._statementsFromInputs.values():
             for s in si:
                 g.add(s)
+        for dev in self._devs:
+            for stmt in dev.hostStatements():
+                g.add(stmt)
         return g
 
     def outputStatements(self, stmts):
@@ -165,9 +167,9 @@ class Board(object):
                         "matching output bytes" % dev.__class__)
                 log.info("success")
         if unused:
-            log.warn("No devices cared about these statements:")
+            log.info("Board %s doesn't care about these statements:", self.uri)
             for s in unused:
-                log.warn(repr(s))
+                log.info("%r", s)
         
     def generateArduinoCode(self):
         generated = {
@@ -343,7 +345,12 @@ class GraphPage(cyclone.web.RequestHandler):
         if self.get_argument('config', 'no') == 'yes':
             for stmt in self.settings.config.graph:
                 g.add(stmt)
-        
+
+        if self.request.headers.get('accept') == 'application/ld+json':
+            self.set_header('Content-type', 'application/ld+json')
+            self.write(g.asJsonLd())
+            return
+            
         self.set_header('Content-type', 'application/x-trig')
         self.write(g.asTrig())
 
@@ -357,7 +364,7 @@ class ArduinoCode(cyclone.web.RequestHandler):
     def get(self):
         board = [b for b in self.settings.boards if
                  b.uri == URIRef(self.get_argument('board'))][0]
-        self.set_header('Content-type', 'text/plain')
+        self.set_header('Content-Type', 'text/plain')
         code, cksum = board.generateArduinoCode()
         self.write(code)
 
@@ -402,7 +409,7 @@ def currentSerialDevices():
 
 def main():
     arg = docopt("""
-    Usage: reasoning.py [options]
+    Usage: arduinoNode.py [options]
 
     -v   Verbose
     """)
@@ -428,7 +435,8 @@ def main():
         b = Board(dev, config.graph, board, onChange)
         boards.append(b)
 
-    boards[0].deployToArduino()
+    for b in boards:
+        b.deployToArduino()
 
     log.info('open boards')
     for b in boards:

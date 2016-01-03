@@ -1,10 +1,11 @@
 from __future__ import division
-import itertools
+import itertools, logging, struct, os
 from rdflib import Namespace, RDF, URIRef, Literal
 import time
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
+log = logging.getLogger()
 
 def readLine(read):
     buf = ''
@@ -31,12 +32,20 @@ class DeviceType(object):
                                initBindings=dict(board=board,
                                                  thisType=cls.deviceType),
                                initNs={'': ROOM}):
+            log.info('found %s, a %s', row.dev, cls.deviceType)
             yield cls(graph, row.dev, int(row.pinNumber))
 
     # subclasses may add args to this
     def __init__(self, graph, uri, pinNumber):
         self.graph, self.uri = graph, uri
         self.pinNumber = pinNumber
+        self.hostStateInit()
+
+    def hostStateInit(self):
+        """
+        If you don't want to use __init__, you can use this to set up
+        whatever storage you might need for hostStatements
+        """
 
     def description(self):
         return {
@@ -57,6 +66,16 @@ class DeviceType(object):
         """
         raise NotImplementedError('readFromPoll in %s' % self.__class__)
 
+    def hostStatements(self):
+        """
+        Like readFromPoll but these statements come from the host-side
+        python code, not the connected device. Include output state
+        (e.g. light brightness) if its master version is in this
+        object. This method is called on /graph requests so it should
+        be fast.
+        """
+        return []
+        
     def watchPrefixes(self):
         """
         subj,pred pairs of the statements that might be returned from
@@ -147,8 +166,9 @@ class PingInput(DeviceType):
         return "Serial.write('k');"
         
     def readFromPoll(self, read):
-        if read(1) != 'k':
-            raise ValueError('invalid ping response')
+        byte = read(1)
+        if byte != 'k':
+            raise ValueError('invalid ping response: chr(%s)' % ord(byte))
         return [(self.uri, ROOM['ping'], ROOM['ok'])]
 
     def watchPrefixes(self):
@@ -196,13 +216,54 @@ class MotionSensorInput(DeviceType):
         ]
 
 @register
+class PushbuttonInput(DeviceType):
+    """add a switch to ground; we'll turn on pullup"""
+    deviceType = ROOM['Pushbutton']
+    def generateSetupCode(self):
+        return 'pinMode(%(pin)d, INPUT); digitalWrite(%(pin)d, HIGH);' % {
+            'pin': self.pinNumber,
+        }
+        
+    def generatePollCode(self):
+        # note: pulldown means unpressed reads as a 1
+        return "Serial.write(digitalRead(%(pin)d) ? '0' : '1');" % {
+            'pin': self.pinNumber
+        }
+        
+    def readFromPoll(self, read):
+        b = read(1)
+        if b not in '01':
+            raise ValueError('unexpected response %r' % b)
+        motion = b == '1'
+
+        #and exactly once for the transition
+        return [
+            (self.uri, ROOM['buttonState'],
+             ROOM['pressed'] if motion else ROOM['notPressed']),
+        ]
+    
+    def watchPrefixes(self):
+        return [
+            (self.uri, ROOM['buttonState']),
+        ]
+
+@register
 class OneWire(DeviceType):
     """
     A OW bus with temperature sensors (and maybe other devices, which
-    are also to be handled under this object)
+    are also to be handled under this object). We return graph
+    statements for all devices we find, even if we don't scan them, so
+    you can more easily add them to your config. Onewire search
+    happens only at device startup (not even program startup, yet).
+
+    self.uri is a resource representing the bus.
+    
+    DS18S20 pin 1: ground, pin 2: data and pull-up with 4.7k.
     """
     deviceType = ROOM['OneWire']
-   
+    def hostStateInit(self):
+        # eliminate this as part of removing watchPrefixes
+        self._knownTempSubjects = set()
     def generateIncludes(self):
         return ['OneWire.h', 'DallasTemperature.h']
 
@@ -214,14 +275,16 @@ class OneWire(DeviceType):
         return '''
 OneWire oneWire(%(pinNumber)s); 
 DallasTemperature sensors(&oneWire);
-DeviceAddress tempSensorAddress;
-#define NUM_TEMPERATURE_RETRIES 2
+#define MAX_DEVICES 8
+DeviceAddress tempSensorAddress[MAX_DEVICES];
 
-void initSensors() {
+void initSensors() {      
   sensors.begin();
+  sensors.setResolution(12);        
   sensors.setWaitForConversion(false);
-  sensors.getAddress(tempSensorAddress, 0);
-  sensors.setResolution(tempSensorAddress, 9); // down from 12 to avoid flicker
+  for (uint8_t i=0; i < sensors.getDeviceCount(); ++i) {
+    sensors.getAddress(tempSensorAddress[i], i);
+  }
 }
         ''' % dict(pinNumber=self.pinNumber)
     
@@ -230,45 +293,43 @@ void initSensors() {
     
     def generatePollCode(self):
         return r'''
-for (int i=0; i<NUM_TEMPERATURE_RETRIES; i++) {
   sensors.requestTemperatures();
-  // not waiting for conversion at all is fine- the temps will update soon
-  //unsigned long until = millis() + 750; while(millis() < until) {idle();}
-  float newTemp = sensors.getTempF(tempSensorAddress);
-    idle();
-  if (i < NUM_TEMPERATURE_RETRIES-1 && 
-      (newTemp < -100 || newTemp > 180)) {
-    // too many errors that were fixed by restarting arduino. 
-    // trying repeating this much init
-    initSensors();
-    continue;
+
+  // If we need frequent idle calls or fast polling again, this needs
+  // to be changed, but it makes temp sensing work. I had a note that I
+  // could just wait until the next cycle to get my reading, but that's
+  // not working today, maybe because of a changed poll rate.
+  sensors.setWaitForConversion(true); // ~100ms
+
+  Serial.write((uint8_t)sensors.getDeviceCount());
+  for (uint8_t i=0; i < sensors.getDeviceCount(); ++i) {
+    float newTemp = sensors.getTempF(tempSensorAddress[i]);
+ 
+    Serial.write(tempSensorAddress[i], 8);
+    Serial.write((uint8_t*)(&newTemp), 4);
   }
-  Serial.print(newTemp);
-idle();
-  Serial.print('\n');
-idle();
-  Serial.print((char)i);
-idle();
-  break;
-}
         '''
 
     def readFromPoll(self, read):
-        newTemp = readLine(read)
-        retries = ord(read(1))
-        # uri will change; there could (likely) be multiple connected sensors
-        return [
-            (self.uri, ROOM['temperatureF'],
-             Literal(newTemp, datatype=XSD['decimal'])),
-            (self.uri, ROOM['temperatureRetries'], Literal(retries)),
-            ]
+        t1 = time.time()
+        count = ord(read(1))
+        stmts = []
+        for i in range(count):
+            addr = struct.unpack('>Q', read(8))[0]
+            tempF = struct.unpack('<f', read(4))[0]
+            sensorUri = URIRef(os.path.join(self.uri, 'dev-%s' % hex(addr)[2:]))
+            stmts.extend([
+                (self.uri, ROOM['connectedTo'], sensorUri),
+                (sensorUri, ROOM['temperatureF'], Literal(tempF))])
+            self._knownTempSubjects.add(sensorUri)
+
+        log.debug("read temp in %.1fms" % ((time.time() - t1) * 1000))
+        return stmts
 
     def watchPrefixes(self):
         # these uris will become dynamic! see note on watchPrefixes
         # about eliminating it.
-        return [(self.uri, ROOM['temperatureF']),
-                (self.uri, ROOM['temperatureRetries']),
-                ]
+        return [(uri, ROOM['temperatureF']) for uri in self._knownTempSubjects]
 
 def byteFromFloat(f):
     return chr(int(min(255, max(0, f * 255))))
@@ -276,6 +337,9 @@ def byteFromFloat(f):
 @register
 class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
+    def hostStateInit(self):
+        self.value = 0
+        
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, OUTPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
@@ -287,10 +351,13 @@ class LedOutput(DeviceType):
     def sendOutput(self, statements, write, read):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['brightness'])
-        value = float(statements[0][2])
+        self.value = float(statements[0][2])
         if (self.uri, RDF.type, ROOM['ActiveLowOutput']) in self.graph:
-            value = 1 - value
-        write(byteFromFloat(value))
+            self.value = 1 - self.value
+        write(byteFromFloat(self.value))
+
+    def hostStatements(self):
+        return [(self.uri, ROOM['brightness'], Literal(self.value))]
         
     def generateActionCode(self):
         return r'''
@@ -311,6 +378,9 @@ class LedOutput(DeviceType):
 @register
 class DigitalOutput(DeviceType):
     deviceType = ROOM['DigitalOutput']
+    def hostStateInit(self):
+        self.value = 0
+        
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, OUTPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
@@ -322,8 +392,12 @@ class DigitalOutput(DeviceType):
     def sendOutput(self, statements, write, read):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['level'])
-        value = {"high": 1, "low": 0}[str(statements[0][2])]
-        write(chr(value))
+        self.value = {"high": 1, "low": 0}[str(statements[0][2])]
+        write(chr(self.value))
+
+    def hostStatements(self):
+        return [(self.uri, ROOM['level'],
+                 Literal('high' if self.value else 'low'))]
         
     def generateActionCode(self):
         return r'''
@@ -338,6 +412,7 @@ class DigitalOutput(DeviceType):
             'pred': ROOM['level'],
         }]
 
+       
 @register
 class PwmBoard(DeviceType):
     deviceType = ROOM['PwmBoard']
@@ -362,10 +437,17 @@ class PwmBoard(DeviceType):
             yield cls(graph, row.dev, outs=outs)
         
     def __init__(self, graph, dev, outs):
-        super(PwmBoard, self).__init__(graph, dev, pinNumber=None)
         self.codeVals = {'pwm': 'pwm%s' % (hash(str(dev)) % 99999)}
         self.outs = outs
+        super(PwmBoard, self).__init__(graph, dev, pinNumber=None)
 
+    def hostStateInit(self):
+        self.values = {uri: 0 for uri in self.outs.keys()} # uri: brightness
+
+    def hostStatements(self):
+        return [(uri, ROOM['brightness'], Literal(b))
+                for uri, b in self.values.items()]
+        
     def generateIncludes(self):
         return ['Wire.h', 'Adafruit_PWMServoDriver.h']
 
@@ -400,6 +482,7 @@ class PwmBoard(DeviceType):
         assert statements[0][1] == ROOM['brightness'];
         chan = self.outs[statements[0][0]]
         value = float(statements[0][2])
+        self.values[statements[0][0]] = value
         v12 = int(min(4095, max(0, value * 4095)))
         write(chr(chan) + chr(v12 >> 8) + chr(v12 & 0xff))
             
@@ -438,6 +521,7 @@ class ST7576Lcd(DeviceType):
     def __init__(self, graph, dev, connections):
         super(ST7576Lcd, self).__init__(graph, dev, pinNumber=None)
         self.connections = connections
+        self.text = ''
 
     def generateIncludes(self):
         return ['ST7565.h']
@@ -472,10 +556,13 @@ class ST7576Lcd(DeviceType):
     def sendOutput(self, statements, write, read):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['text'])
-        value = str(statements[0][2])
-        assert len(value) < 254, repr(value)
-        write(chr(len(value)) + value)
+        self.text = str(statements[0][2])
+        assert len(self.text) < 254, repr(self.text)
+        write(chr(len(self.text)) + self.text)
 
+    def hostStatements(self):
+        return [(self.uri, ROOM['text'], Literal(self.text))]
+        
     def outputWidgets(self):
         return [{
                 'element': 'output-fixed-text',
@@ -501,6 +588,90 @@ class ST7576Lcd(DeviceType):
           glcd.display();
         '''
 
+@register
+class RgbPixels(DeviceType):
+    """chain of FastLED-controllable rgb pixels"""
+    deviceType = ROOM['RgbPixels']
+
+    def __init__(self, graph, uri, pinNumber):
+        super(RgbPixels, self).__init__(graph, uri, pinNumber)
+        px = graph.value(self.uri, ROOM['pixels'])
+        self.pixelUris = list(graph.items(px))
+        self.values = dict((uri, Literal('#000000')) for uri in self.pixelUris)
+        self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
+                        'ledCount': len(self.pixelUris),
+                        'pin': self.pinNumber,
+                        'ledType': 'WS2812',
+        }
+    
+    def generateIncludes(self):
+        """filenames of .h files to #include"""
+        return ['FastLED.h']
+
+    def generateArduinoLibs(self):
+        """names of libraries for the ARDUINO_LIBS line in the makefile"""
+        return ['FastLED-3.1.0']
+
+    def myId(self):
+        return 'rgb_%s' % self.pinNumber
+    
+    def generateGlobalCode(self):
+        return 'CRGB {ledArray}[{ledCount}];'.format(**self.replace)
+
+    def generateSetupCode(self):
+        return 'FastLED.addLeds<{ledType}, {pin}>({ledArray}, {ledCount});'.format(**self.replace)
+    
+    def _rgbFromHex(self, h):
+        rrggbb = h.lstrip('#')
+        return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
+    
+    def sendOutput(self, statements, write, read):
+        px, pred, color = statements[0]
+        if pred != ROOM['color']:
+            raise ValueError(pred)
+        rgb = self._rgbFromHex(color)
+        if px not in self.values:
+            raise ValueError(px)
+        self.values[px] = Literal(color)
+        write(chr(self.pixelUris.index(px)) +
+              chr(rgb[1]) + # my WS2812 need these flipped
+              chr(rgb[0]) +
+              chr(rgb[2]))
+
+    def hostStatements(self):
+        return [(uri, ROOM['color'], hexCol)
+                for uri, hexCol in self.values.items()]
+        
+    def outputPatterns(self):
+        return [(px, ROOM['color'], None) for px in self.pixelUris]
+
+    def generateActionCode(self):
+        
+        return '''
+
+          while(Serial.available() < 1) NULL;
+          byte id = Serial.read();
+
+          while(Serial.available() < 1) NULL;
+          byte r = Serial.read();
+
+          while(Serial.available() < 1) NULL;
+          byte g = Serial.read();
+
+          while(Serial.available() < 1) NULL;
+          byte b = Serial.read();
+          
+        {ledArray}[id] = CRGB(r, g, b); FastLED.show();
+
+        '''.format(**self.replace)
+    
+    def outputWidgets(self):
+        return [{
+            'element': 'output-rgb',
+            'subj': px,
+            'pred': ROOM['color'],
+        } for px in self.pixelUris]
+    
 def makeDevices(graph, board):
     out = []
     for dt in sorted(_knownTypes, key=lambda cls: cls.__name__):
