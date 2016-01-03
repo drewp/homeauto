@@ -40,7 +40,9 @@ class Config(object):
     def __init__(self):
         self.graph = Graph()
         log.info('read config')
-        self.graph.parse('config.n3', format='n3')
+        for f in os.listdir('config'):
+            if f.startswith('.'): continue
+            self.graph.parse('config/%s' % f, format='n3')
         self.graph.bind('', ROOM) # not working
         self.graph.bind('rdf', RDF)
 

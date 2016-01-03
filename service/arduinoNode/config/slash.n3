@@ -5,91 +5,6 @@
 @prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
 
 
-@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
-@prefix board0ow: <http://bigasterisk.com/homeauto/board0/oneWire/> .
-
-ha:board0 a :ArduinoBoard;
-  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
-  :boardTag "atmega328";
-  :hasPin
-    board0pin:d3,
-    board0pin:d4,
-    board0pin:d5,
-    board0pin:d6,
-    board0pin:d7 .
-
-board0pin:d3 :pinNumber 3 .
-board0pin:d4 :pinNumber 4 .
-board0pin:d5 :pinNumber 5 .
-board0pin:d6 :pinNumber 6 .
-board0pin:d7 :pinNumber 7 .
-
-board0pin:d3 :connectedTo sensor:motion0 .
-sensor:motion0 a :MotionSensor;
-  :sees houseLoc:storage .
-
-board0pin:d4 :connectedTo :heater .
-:heater a :DigitalOutput .
-
-board0pin:d5 :connectedTo :storageCeilingLedCross .
-:storageCeilingLedCross a :LedOutput .
-
-board0pin:d6 :connectedTo :storageCeilingLedLong .
-:storageCeilingLedLong a :LedOutput .
-  
-board0pin:d7 :connectedTo board0ow: .
-board0ow: a :OneWire;
-  :connectedTo board0ow:temperatureSensor .
-board0ow:temperatureSensor a :TemperatureSensor;
-  :position :storage .
-  
-
-@prefix board1pin: <http://bigasterisk.com/homeauto/board1/pin/> .
-@prefix board1lcd: <http://bigasterisk.com/homeauto/board1/lcd/> .
-@prefix board1ow: <http://bigasterisk.com/homeauto/board1/oneWire/> .
-
-ha:board1 a :ArduinoBoard;
-  :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A6004bUG-if00-port0";
-  :boardTag "atmega328";
-  rdfs:comment "chip has been replaced with a 328";
-  :hasPin
-    board1pin:d3,
-    board1pin:d5,
-    board1pin:d6,
-    board1pin:d7,
-    board1pin:d8,
-    board1pin:d9,
-    board1pin:d10,
-    board1pin:d11,
-    board1pin:d12 .
-
-board1pin:d3 :pinNumber 3 .
-board1pin:d10 :pinNumber 10 .
-board1pin:d11 :pinNumber 11 .
-board1pin:d12 :pinNumber 12 .
-
-board1pin:d10 :connectedTo board1lcd:backlight .
-board1lcd:backlight a :LedOutput, :ActiveLowOutput .
-
-board1pin:d3 :connectedTo board1ow: .
-board1ow: a :OneWire;
-  :connectedTo board1ow:temperatureSensor .
-board1ow:temperatureSensor a :TemperatureSensor;
-  :position :office .
-  
-board1pin:d9 :pinNumber 9; :connectedTo board1lcd:SID .
-board1pin:d8 :pinNumber 8; :connectedTo board1lcd:SCLK .
-board1pin:d7 :pinNumber 7; :connectedTo board1lcd:A0 .
-board1pin:d6 :pinNumber 6; :connectedTo board1lcd:RST .
-board1pin:d5 :pinNumber 5; :connectedTo board1lcd:CS .
-
-board1lcd: a :ST7565Lcd;
-  :lcdSID board1lcd:SID;
-  :lcdSCLK board1lcd:SCLK;
-  :lcdA0 board1lcd:A0;
-  :lcdRST board1lcd:RST;
-  :lcdCS board1lcd:CS .
-
 @prefix shopPin: <http://bigasterisk.com/homeauto/boardShop/pin/> .
 @prefix shopBarcode: <http://bigasterisk.com/homeauto/boardShop/barcode/> .
 @prefix shopButtons: <http://bigasterisk.com/homeauto/boardShop/buttons/> .
@@ -123,9 +38,10 @@ shopPin:a4 :pinNumber "a4"; :connectedTo shopPwm:sda .
 shopPin:a5 :pinNumber "a5"; :connectedTo shopPwm:scl .
 
 shopOw: a :OneWire;
-  :connectedTo shopOw:temperatureSensor .
-shopOw:temperatureSensor a :TemperatureSensor;
-  :position :workshop .
+  :connectedTo shopOw:dev-28bf08d101000026 .
+shopOw:dev-28bf08d101000026 a :TemperatureSensor;
+  :position :workshop;
+  :graphiteName "system.house.temp.workshop" .
 
 shopPwm:roomLights a :PwmBoard;
   :scl shopPwm:scl;
@@ -145,4 +61,3 @@ shopPwm:roomLights a :PwmBoard;
 #SoftwareSerial barcode =  SoftwareSerial(/* rx pin, green */ 3, 
 #                                         /* tx pin, black */ 2,
 #                                         /* inverse */ true);
-
