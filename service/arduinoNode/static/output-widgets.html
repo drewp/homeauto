@@ -5,6 +5,7 @@
 
 <dom-module id="output-sender">
   <template>
+    <iron-ajax id="graphGet" url="../graph" method="GET" headers='{"Accept": "application/ld+json"}'></iron-ajax>
     <iron-ajax id="output" url="../output" method="PUT"></iron-ajax>
     Set <a href$="{{subj}}">{{compactUri(subj)}}</a>'s
     <span>{{compactUri(pred)}}</span> to
@@ -16,7 +17,57 @@
      properties: {
        subj: { notify: true },
        pred: { notify: true },
-       value: { observer: 'valueChanged' }
+       value: { notify: true, observer: 'valueChanged' }
+     },
+     ready: function() {
+       this.waitOnChangeMs = 100;
+       this.smallestRequestPeriodMs = 200;
+       this.synced = false;
+       
+       this.newRequestNeedsSending = false;
+       this.lastSendMs = 0;
+       this.$.output.addEventListener('response', this.onResponse.bind(this));
+
+       this.loadInitialValue();
+     },
+     loadInitialValue: function() {
+       this.$.graphGet.addEventListener('response', function(ev) {
+         ev.target.removeEventListener(ev.type, arguments.callee);
+
+         ev.detail.response.forEach(function(row) {
+           var subj = row['@id'];
+           if (subj == this.subj) {
+             Object.keys(row).forEach(function(pred) {
+               if (pred == this.pred) {
+                 row[pred].forEach(function(obj) {
+                   this.value = obj['@value'];
+                   this.synced = true;
+                 }.bind(this));
+               }
+             }.bind(this));
+           }
+         }.bind(this));
+
+       }.bind(this));
+       this.$.graphGet.generateRequest();
+     },
+     onResponse: function() {
+       if (!this.newRequestNeedsSending) {
+         return;
+       }
+       if (this.$.output.activeRequests.length > 0) {
+         return; // 'response' event will call us back
+       }
+
+       var now = Date.now(), dt = now - this.lastSendMs;
+       if (dt < this.smallestRequestPeriodMs) {
+         setTimeout(this.onResponse.bind(this),
+                    this.smallestRequestPeriodMs - dt);
+         return;
+       }
+       this.newRequestNeedsSending = false;
+       this.lastSendMs = now;
+       this.$.output.generateRequest();
      },
      valueChanged: function () {
        if (!this.subj || !this.pred) {
@@ -25,7 +76,8 @@
        //this.$.output.headers = {'content-type': ...}
        this.$.output.params = {s: this.subj, p: this.pred};
        this.$.output.body = this.value;
-       this.$.output.generateRequest();
+       this.newRequestNeedsSending = true;
+       setTimeout(this.onResponse.bind(this), this.waitOnChangeMs);
      }
    });
   </script>
@@ -33,11 +85,18 @@
 
 <dom-module id="output-rgb">
   <template>
-    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
-    <color-picker id="pick" width="200" height="100" color="{{value}}"></color-picker>
-    color pick <span>{{value}}</span>
-    <button on-click="black">Black</button>
+    <div style="display: flex">
+      <div>
+        <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+        <div>color pick <span>{{value}}</span>
+        <button on-click="black">Black</button>
         <button on-click="white">White</button>
+        </div>
+      </div>
+      <div>
+        <color-picker id="pick" width="200" height="100" color="{{value}}"></color-picker>
+      </div>
+    </div>
   </template>
   <script>
    Polymer({
