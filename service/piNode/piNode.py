@@ -167,7 +167,7 @@ def main():
         (r'/output', OutputPage),
         (r'/boards', Boards),
         #(r'/dot', Dot),
-        ], config=config, board=board, debug=arg['-v']))
+        ], config=config, board=board, debug=arg['-v']), interface='::')
     reactor.run()
 
 main()

@@ -125,6 +125,7 @@ class MotionSensorInput(DeviceType):
 
 @register
 class RgbStrip(DeviceType):
+    """3 PWMs for r/g/b on a strip"""
     deviceType = ROOM['RgbStrip']
     
     @classmethod
@@ -159,13 +160,16 @@ class RgbStrip(DeviceType):
 
     def outputPatterns(self):
         return [(self.uri, ROOM['color'], None)]
+
+    def _rgbFromHex(self, h):
+        rrggbb = h.lstrip('#')
+        return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
     
     def sendOutput(self, statements):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['color'])
 
-        rrggbb = statements[0][2].lstrip('#')
-        rgb = [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
+        rgb = self._rgbFromHex(statements[0][2])
 
         for (i, v) in zip(self.rgb, rgb):
             self.pi.set_PWM_dutycycle(i, v)
