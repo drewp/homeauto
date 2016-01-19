@@ -1,20 +1,23 @@
 from __future__ import division
 
-import time, logging
+import time, logging, os
 from rdflib import Namespace, RDF, URIRef, Literal
 
 try:
     import pigpio
 except ImportError:
     pigpio = None
+import w1thermsensor
     
+import sys
 
 log = logging.getLogger()
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
+RDFS = Namespace('http://www.w3.org/2000/01/rdf-schema#')
 
 class DeviceType(object):
-    deviceType = None
+    deviceType = NotImplementedError
     @classmethod
     def findInstances(cls, graph, board, pi):
         """
@@ -23,6 +26,7 @@ class DeviceType(object):
         but two sensors on the same onewire bus makes only one device
         (which yields more statements).
         """
+        log.debug("graph has any connected devices of type %s?", cls.deviceType)
         for row in graph.query("""SELECT ?dev ?gpioNumber WHERE {
                                     ?board :hasPin ?pin .
                                     ?pin :gpioNumber ?gpioNumber;
@@ -30,8 +34,7 @@ class DeviceType(object):
                                     ?dev a ?thisType .
                                   } ORDER BY ?dev""",
                                initBindings=dict(board=board,
-                                                 thisType=cls.deviceType),
-                               initNs={'': ROOM}):
+                                                 thisType=cls.deviceType)):
             yield cls(graph, row.dev, pi, int(row.gpioNumber))
 
     def __init__(self, graph, uri, pi, pinNumber):
@@ -91,6 +94,8 @@ def register(deviceType):
 
 @register
 class MotionSensorInput(DeviceType):
+    # compare motion sensor lib at http://pythonhosted.org/gpiozero/inputs/
+    # which is a bit fancier
     deviceType = ROOM['MotionSensor']
 
     def setup(self):
@@ -126,6 +131,9 @@ class MotionSensorInput(DeviceType):
 @register
 class RgbStrip(DeviceType):
     """3 PWMs for r/g/b on a strip"""
+    # pigpio daemon is working fine, but
+    # https://github.com/RPi-Distro/python-gpiozero/blob/59ba7154c5918745ac894ea03503667d6473c760/gpiozero/output_devices.py#L213
+    # can also apparently do PWM
     deviceType = ROOM['RgbStrip']
     
     @classmethod
@@ -183,6 +191,82 @@ class RgbStrip(DeviceType):
 
 
 @register
+class TempHumidSensor(DeviceType):
+    deviceType = ROOM['TempHumidSensor']
+
+    def __init__(self, *a, **kw):
+        DeviceType.__init__(self, *a, **kw)
+        sys.path.append('/opt/pigpio/EXAMPLES/Python/DHT22_AM2302_SENSOR')
+        import DHT22
+        self.sensor = DHT22.sensor(self.pi, self.pinNumber)
+    
+    def poll(self):
+        self.sensor.trigger()
+        humid, tempC = self.sensor.humidity(), self.sensor.temperature()
+
+        stmts = set()
+        if humid is not None:
+            stmts.add((self.uri, ROOM['humidity'], Literal(humid)))
+        else:
+            stmts.add((self.uri, RDFS['comment'],
+                       Literal('DHT read returned None')))
+        if tempC is not None:
+            stmts.add((self.uri, ROOM['temperatureF'],
+                       Literal(tempC * 9 / 5 + 32)))
+        else:
+            stmts.add((self.uri, RDFS['comment'],
+                       Literal('DHT read returned None')))
+        return stmts
+        
+    def watchPrefixes(self):
+        return [
+            (self.uri, ROOM['temperatureF']),
+            (self.uri, ROOM['humidity']),
+        ]
+
+@register
+class OneWire(DeviceType):
+    """
+    Also see /my/proj/ansible/roles/raspi_io_node/tasks/main.yml for
+    some system config that contains the pin number that you want to
+    use for onewire. The pin number in this config is currently ignored.
+    """
+    deviceType = ROOM['OneWire']
+    # deliberately written like arduinoNode's one for an easier merge.
+    def __init__(self,  *a, **kw):
+        DeviceType.__init__(self, *a, **kw)
+        log.info("scan for w1 devices")
+        self._sensors = w1thermsensor.W1ThermSensor.get_available_sensors()
+        for s in self._sensors:
+            # Something looks different about these ids
+            # ('000003a5a94c') vs the ones I get from arduino
+            # ('2813bea50300003d'). Not sure if I'm parsing them
+            # differently or what.
+            s.uri = URIRef(os.path.join(self.uri, 'dev-%s' % s.id))
+            log.info('  found temperature sensor %s' % s.uri)
+        
+    def poll(self):
+        try:
+            stmts = []
+            for sensor in self._sensors:
+                stmts.append((self.uri, ROOM['connectedTo'], sensor.uri))
+                try:
+                    tempF = sensor.get_temperature(sensor.DEGREES_F)
+                    stmts.append((sensor.uri, ROOM['temperatureF'],
+                                  Literal(tempF)))
+                except w1thermsensor.core.SensorNotReadyError as e:
+                    log.warning(e)
+
+            return stmts
+        except Exception as e:
+            log.error(e)
+            os.abort()
+            
+    def watchPrefixes(self):
+        return [(s.uri, ROOM['temperatureF']) for s in self._sensors]
+
+        
+@register
 class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
                 
@@ -219,7 +303,7 @@ class OnboardTemperature(DeviceType):
         for row in graph.query('''SELECT DISTINCT ?uri WHERE {
           ?board :onboardDevice ?uri . 
           ?uri a :OnboardTemperature .
-        }'''):
+        }''', initBindings=dict(board=board)):
             yield cls(graph, row.uri, pi, pinNumber=None)
     
     def poll(self):

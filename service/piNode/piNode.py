@@ -1,5 +1,5 @@
 from __future__ import division
-import sys, logging, socket, json
+import sys, logging, socket, json, time
 import cyclone.web
 from rdflib import Namespace, URIRef, Literal, Graph, RDF
 from rdflib.parser import StringInputSource
@@ -10,7 +10,7 @@ sys.path.append("/my/site/magma")
 sys.path.append("../../../../site/magma")
 
 from stategraph import StateGraph
-sys.path.append('/home/pi/dim/PIGPIO')
+sys.path.append('/opt/pigpio')
 try:
     import pigpio
 except ImportError:
@@ -20,6 +20,9 @@ except ImportError:
             return None
 
 import devices
+
+# from /my/proj/room
+from carbondata import CarbonClient
 
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
@@ -33,7 +36,7 @@ class Config(object):
         self.graph = Graph()
         log.info('read config')
         self.graph.parse('config.n3', format='n3')
-        self.graph.bind('', ROOM) # not working
+        self.graph.bind('', ROOM) # maybe working
         self.graph.bind('rdf', RDF)
 
 class GraphPage(cyclone.web.RequestHandler):
@@ -58,6 +61,7 @@ class Board(object):
         self._devs = devices.makeDevices(graph, self.uri, self.pi)
         log.debug('found %s devices', len(self._devs))
         self._statementsFromInputs = {} # input device uri: latest statements
+        self._carbon = CarbonClient(serverHost='bang')
 
     def startPolling(self):
         task.LoopingCall(self._poll).start(.5)
@@ -65,7 +69,8 @@ class Board(object):
     def _poll(self):
         for i in self._devs:
             self._statementsFromInputs[i.uri] = i.poll()
-        
+        self._exportToGraphite()
+
     def outputStatements(self, stmts):
         unused = set(stmts)
         for dev in self._devs:
@@ -85,6 +90,25 @@ class Board(object):
             log.warn("No devices cared about these statements:")
             for s in unused:
                 log.warn(repr(s))
+                
+    # needs merge with arduinoNode.py
+    def _exportToGraphite(self):
+        # note this is writing way too often- graphite is storing at a lower res
+        now = time.time()
+        # 20 sec is not precise; just trying to reduce wifi traffic
+        if getattr(self, 'lastGraphiteExport', 0) + 20 > now:
+            return
+        self.lastGraphiteExport = now
+        log.debug('graphite export:')
+        # objects of these statements are suitable as graphite values.
+        graphitePredicates = {ROOM['temperatureF']}
+        # bug: one sensor can have temp and humid- this will be ambiguous
+        for s, graphiteName in self.graph.subject_objects(ROOM['graphiteName']):
+            for group in self._statementsFromInputs.values():
+                for stmt in group:
+                    if stmt[0] == s and stmt[1] in graphitePredicates:
+                        log.debug('  sending %s -> %s', stmt[0], graphiteName)
+                        self._carbon.send(graphiteName, stmt[2].toPython(), now)
         
     def currentGraph(self):
         g = Graph()
@@ -154,8 +178,16 @@ def main():
         # notify reasoning
         pass
 
-    thisBoard = URIRef('http://bigasterisk.com/homeauto/node2')
-    
+    thisHost = Literal(socket.gethostname())
+    for row in config.graph.query(
+            'SELECT ?board WHERE { ?board a :PiBoard; :hostname ?h }',
+            initBindings=dict(h=thisHost)):
+        thisBoard = row.board
+        break
+    else:
+        raise ValueError("config had no board for :hostname %r" % thisHost)
+
+    log.info("found config for board %r" % thisBoard)
     board = Board(config.graph, thisBoard, onChange)
     board.startPolling()
     
