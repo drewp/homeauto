@@ -43,4 +43,31 @@ board2pin:GPIO27 :connectedTo :headboardWhite .
 #  :connectedTo board2ow:temperatureSensor .
 #board2ow:temperatureSensor a :TemperatureSensor;
 #  :position :bed .
-  
+
+@prefix board3pin: <http://bigasterisk.com/homeauto/board3/pin/> .
+@prefix board3ow: <http://bigasterisk.com/homeauto/board3/oneWire/> .
+
+ha:node3 a :PiBoard;
+  :hostname "kitchen";
+  :onboardDevice ha:kitchenPiTemp;
+  :hasPin
+    board3pin:GPIO4,
+    board3pin:GPIO17
+    .
+    
+ha:kitchenPiTemp a :OnboardTemperature .
+
+board3pin:GPIO4 :gpioNumber 4; :connectedTo sensor:tempHumidKitchen .
+sensor:tempHumidKitchen a :TempHumidSensor;
+  :sees houseLoc:kitchenCounter;
+  :graphiteName "system.house.temp.kitchenCounter" .
+
+board3pin:GPIO17 :gpioNumber 17; :connectedTo board3ow: .
+board3ow: a :OneWire; :connectedTo board3ow:dev-000003a5a94c .
+board3ow:dev-000003a5a94c a :TemperatureSensor;
+  :position houseLoc:kitchenCounter;
+  :graphiteName "system.house.temp.kitchenCounter_ds_test" .
+
+ha:node4 a :PiBoard;
+  :hostname "living";
+  :onboardDevice ha:livingPiTemp .
