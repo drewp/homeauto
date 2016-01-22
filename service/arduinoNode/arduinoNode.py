@@ -400,6 +400,7 @@ class Boards(cyclone.web.RequestHandler):
         
         self.set_header('Content-type', 'application/json')
         self.write(json.dumps({
+            'host': socket.gethostname(),
             'boards': [b.description() for b in self.settings.boards]
         }, indent=2))
             
