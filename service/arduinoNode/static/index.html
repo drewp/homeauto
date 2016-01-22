@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>arduinoNode</title>
+    <title>arduinoNode - </title>
     <meta name=viewport content="width=device-width, initial-scale=1">
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
@@ -153,6 +153,12 @@
        HTMLImports.whenReady(function () {
          Polymer({
            is: 'arduinonode-boards',
+           properties: {
+             ret: { type: Object, notify: true, observer: 'onBoards' }
+           },
+           onBoards: function() {
+             document.title = document.title + ' ' + this.ret.host;
+           },
            behaviors: [BigastUri]
          });
        });
