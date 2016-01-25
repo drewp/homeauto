@@ -10,20 +10,13 @@ from dateutil.tz import tzlocal
 from dateutil.relativedelta import relativedelta, FR
 from rdflib import Namespace, Literal
 sys.path.append("/my/proj/homeauto/lib")
-from patchablegraph import PatchableGraph, writeGraphResponse, GraphEventsHandler
-from cycloneerr import PrettyErrorHandler
+from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
 from twilight import isWithinTwilight
 
 from rdfdoc import Doc
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
-
-
-class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
-    def get(self):
-        writeGraphResponse(self, self.settings.masterGraph,
-                           self.request.headers.get('accept'))
 
 def update(masterGraph):
     stmt = lambda s, p, o: masterGraph.patchObject(ROOM.environment, s, p, o)
@@ -61,10 +54,13 @@ def main():
     class Application(cyclone.web.Application):
         def __init__(self):
             handlers = [
-                (r"/()", cyclone.web.StaticFileHandler,
+                (r"/()",
+                 cyclone.web.StaticFileHandler,
                  {"path": ".", "default_filename": "index.html"}),
-                (r'/graph', GraphHandler),
-                (r'/graph/events', GraphEventsHandler),
+                (r'/graph',
+                 CycloneGraphHandler, {'masterGraph': masterGraph}),
+                (r'/graph/events',
+                 CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
                 (r'/doc', Doc), # to be shared
             ]
             cyclone.web.Application.__init__(self, handlers,

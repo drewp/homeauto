@@ -1,3 +1,16 @@
+"""
+Design:
+
+1. Services each have (named) graphs, which they patch as things
+   change. PatchableGraph is an object for holding this graph.
+2. You can http GET that graph, or ...
+3. You can http GET/SSE that graph and hear about modifications to it
+4. The client that got the graph holds and maintains a copy. The
+   client may merge together multiple graphs.
+5. Client queries its graph with low-level APIs or client-side sparql.
+6. When the graph changes, the client knows and can update itself at
+   low or high granularity.
+"""
 import sys, json
 import cyclone.sse
 sys.path.append("/my/proj/light9")
@@ -5,6 +18,7 @@ from light9.rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
 from light9.rdfdb.rdflibpatch import patchQuads
 from rdflib_jsonld.serializer import from_rdf
+from cycloneerr import PrettyErrorHandler
 
 def writeGraphResponse(req, graph, acceptHeader):
     if acceptHeader == 'application/nquads':
@@ -18,7 +32,7 @@ def writeGraphResponse(req, graph, acceptHeader):
         graph.serialize(req, format='trig')
 
 # forked from /my/proj/light9/light9/rdfdb/rdflibpatch.py
-def graphFromQuads2(q):
+def _graphFromQuads2(q):
     g = ConjunctiveGraph()
     #g.addN(q) # no effect on nquad output
     for s,p,o,c in q:
@@ -28,8 +42,8 @@ def graphFromQuads2(q):
 
 def patchAsJson(p):
     return json.dumps({'patch': {
-        'adds': from_rdf(graphFromQuads2(p.addQuads)),
-        'deletes': from_rdf(graphFromQuads2(p.delQuads)),
+        'adds': from_rdf(_graphFromQuads2(p.addQuads)),
+        'deletes': from_rdf(_graphFromQuads2(p.delQuads)),
     }})
 
 class PatchableGraph(GraphEditApi):
@@ -64,8 +78,15 @@ class PatchableGraph(GraphEditApi):
             pass
         
 
+class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def initialize(self, masterGraph):
+        self.masterGraph = masterGraph
         
-class GraphEventsHandler(cyclone.sse.SSEHandler):
+    def get(self):
+        writeGraphResponse(self, self.masterGraph,
+                           self.request.headers.get('accept'))
+        
+class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
     """
     One session with one client.
     
@@ -76,11 +97,16 @@ class GraphEventsHandler(cyclone.sse.SSEHandler):
     response to send 'x-accel-buffering: no', per
     http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering
     """
+    def __init__(self, application, request, masterGraph):
+        cyclone.sse.SSEHandler.__init__(self, application, request)
+        self.masterGraph = masterGraph
+        
     def bind(self):
-        mg = self.settings.masterGraph
-        # todo: needs to be on one line, or else fix cyclone to stripe headers
-        self.sendEvent(message=mg.serialize(None, format='json-ld', indent=None), event='fullGraph')
-        mg.addObserver(self.onPatch)
+        self.sendEvent(
+            message=self.masterGraph.serialize(None, format='json-ld',
+                                               indent=None),
+            event='fullGraph')
+        self.masterGraph.addObserver(self.onPatch)
 
     def onPatch(self, patchJson):
         self.sendEvent(message=patchJson, event='patch')
