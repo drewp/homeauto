@@ -1,15 +1,15 @@
 from __future__ import division
 import sys, logging, socket, json, time
 import cyclone.web
-from rdflib import Namespace, URIRef, Literal, Graph, RDF
+from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
 from docopt import docopt
 logging.basicConfig(level=logging.DEBUG)
-sys.path.append("/my/site/magma")
-sys.path.append("../../../../site/magma")
-
-from stategraph import StateGraph
+sys.path.append("/opt/homeauto_lib")
+from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
+from light9.rdfdb.rdflibpatch import inContext
+from light9.rdfdb.patch import Patch
 sys.path.append('/opt/pigpio')
 try:
     import pigpio
@@ -32,31 +32,21 @@ HOST = Namespace('http://bigasterisk.com/ruler/host/')
 hostname = socket.gethostname()
 
 class Config(object):
-    def __init__(self):
-        self.graph = Graph()
+    def __init__(self, masterGraph):
+        self.graph = ConjunctiveGraph()
         log.info('read config')
         self.graph.parse('config.n3', format='n3')
         self.graph.bind('', ROOM) # maybe working
         self.graph.bind('rdf', RDF)
-
-class GraphPage(cyclone.web.RequestHandler):
-    def get(self):
-        g = StateGraph(ctx=ROOM['pi/%s' % hostname])
-
-        for stmt in self.settings.board.currentGraph():
-            g.add(stmt)
-
-        if self.get_argument('config', 'no') == 'yes':
-            for stmt in self.settings.config.graph:
-                g.add(stmt)
-        
-        self.set_header('Content-type', 'application/x-trig')
-        self.write(g.asTrig())
+        masterGraph.patch(Patch(addGraph=self.graph))
 
 class Board(object):
     """similar to arduinoNode.Board but without the communications stuff"""
-    def __init__(self, graph, uri, onChange):
+    def __init__(self, graph, masterGraph, uri):
         self.graph, self.uri = graph, uri
+        self.ctx = ROOM['pi/%s' % hostname]
+        self.masterGraph = masterGraph
+        self.masterGraph.patch(Patch(addQuads=self.staticStmts()))
         self.pi = pigpio.pi()
         self._devs = devices.makeDevices(graph, self.uri, self.pi)
         log.debug('found %s devices', len(self._devs))
@@ -68,7 +58,10 @@ class Board(object):
 
     def _poll(self):
         for i in self._devs:
-            self._statementsFromInputs[i.uri] = i.poll()
+            prev = inContext(self._statementsFromInputs.get(i.uri, []), self.ctx)
+            new = self._statementsFromInputs[i.uri] = i.poll()
+            new = inContext(new, self.ctx)
+            self.masterGraph.patch(Patch.fromDiff(prev, new))
         self._exportToGraphite()
 
     def outputStatements(self, stmts):
@@ -109,11 +102,15 @@ class Board(object):
                     if stmt[0] == s and stmt[1] in graphitePredicates:
                         log.debug('  sending %s -> %s', stmt[0], graphiteName)
                         self._carbon.send(graphiteName, stmt[2].toPython(), now)
-        
+
+    def staticStmts(self):
+        return [(HOST[socket.gethostname()], ROOM['connectedTo'], self.uri, self.ctx)]
+                        
     def currentGraph(self):
         g = Graph()
-        
-        g.add((HOST[socket.gethostname()], ROOM['connectedTo'], self.uri))
+
+        for s in self.staticStmts():
+            g.add(s[:3])
 
         for si in self._statementsFromInputs.values():
             for s in si:
@@ -173,11 +170,8 @@ def main():
 
         log.setLevel(logging.DEBUG)
     
-    config = Config()
-
-    def onChange():
-        # notify reasoning
-        pass
+    masterGraph = PatchableGraph()
+    config = Config(masterGraph)
 
     thisHost = Literal(socket.gethostname())
     for row in config.graph.query(
@@ -189,14 +183,15 @@ def main():
         raise ValueError("config had no board for :hostname %r" % thisHost)
 
     log.info("found config for board %r" % thisBoard)
-    board = Board(config.graph, thisBoard, onChange)
+    board = Board(config.graph, masterGraph, thisBoard)
     board.startPolling()
     
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "../arduinoNode/static", "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "../arduinoNode/static"}),
-        (r"/graph", GraphPage),
+        (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
+        (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
         (r'/boards', Boards),
         #(r'/dot', Dot),
