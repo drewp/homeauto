@@ -13,6 +13,8 @@
     <link rel="import" href="/room/ari/static/rdf-oneshot.html">
     <link rel="import" href="/room/ari/static/rdf-uri.html">
     <link rel="import" href="static/output-widgets.html">
+    <link rel="import" href="/rdf/streamed-graph.html">
+    <link rel="import" href="/rdf/graph-view.html">
     <style>
      body {
        font-family: monospace;
@@ -148,6 +150,8 @@
             </ul>
           </div>
         </template>
+        <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+        <graph-view graph="{{graph}}"></graph-view>
       </template>
       <script>
        HTMLImports.whenReady(function () {
