@@ -109,8 +109,10 @@ class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
         self.masterGraph.addObserver(self.onPatch)
 
     def onPatch(self, patchJson):
+        # throttle and combine patches here- ideally we could see how
+        # long the latency to the client is to make a better rate choice
         self.sendEvent(message=patchJson, event='patch')
                
     def unbind(self):
-        self.settings.masterGraph.removeObserver(self.onPatch)
+        self.masterGraph.removeObserver(self.onPatch)
 
