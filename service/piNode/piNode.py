@@ -106,17 +106,6 @@ class Board(object):
     def staticStmts(self):
         return [(HOST[socket.gethostname()], ROOM['connectedTo'], self.uri, self.ctx)]
                         
-    def currentGraph(self):
-        g = Graph()
-
-        for s in self.staticStmts():
-            g.add(s[:3])
-
-        for si in self._statementsFromInputs.values():
-            for s in si:
-                g.add(s)
-        return g
-
     def description(self):
         """for web page"""
         return {

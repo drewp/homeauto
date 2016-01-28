@@ -320,7 +320,11 @@ void initSensors() {
             sensorUri = URIRef(os.path.join(self.uri, 'dev-%s' % hex(addr)[2:]))
             stmts.extend([
                 (self.uri, ROOM['connectedTo'], sensorUri),
-                (sensorUri, ROOM['temperatureF'], Literal(tempF))])
+                # rounding may be working around a bug where the
+                # Literal gets two representations (at different
+                # roundings), and this makes an extra value linger on
+                # the client.
+                (sensorUri, ROOM['temperatureF'], Literal(round(tempF, 2)))])
             self._knownTempSubjects.add(sensorUri)
 
         log.debug("read temp in %.1fms" % ((time.time() - t1) * 1000))
