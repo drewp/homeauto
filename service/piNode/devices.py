@@ -206,13 +206,14 @@ class TempHumidSensor(DeviceType):
 
         stmts = set()
         if humid is not None:
-            stmts.add((self.uri, ROOM['humidity'], Literal(humid)))
+            stmts.add((self.uri, ROOM['humidity'], Literal(round(humid, 2))))
         else:
             stmts.add((self.uri, RDFS['comment'],
                        Literal('DHT read returned None')))
         if tempC is not None:
             stmts.add((self.uri, ROOM['temperatureF'],
-                       Literal(tempC * 9 / 5 + 32)))
+                       # see round() note in arduinoNode/devices.py
+                       Literal(round(tempC * 9 / 5 + 32, 2))))
         else:
             stmts.add((self.uri, RDFS['comment'],
                        Literal('DHT read returned None')))
@@ -253,7 +254,8 @@ class OneWire(DeviceType):
                 try:
                     tempF = sensor.get_temperature(sensor.DEGREES_F)
                     stmts.append((sensor.uri, ROOM['temperatureF'],
-                                  Literal(tempF)))
+                                  # see round() note in arduinoNode/devices.py
+                                  Literal(round(tempF, 2))))
                 except w1thermsensor.core.SensorNotReadyError as e:
                     log.warning(e)
 
