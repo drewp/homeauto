@@ -14,6 +14,7 @@ from twisted.internet import reactor, task
 from docopt import docopt
 
 import devices
+import write_arduino_code
 import dotrender
 import rdflib_patch
 rdflib_patch.fixQnameOfUriWithTrailingSlash()
@@ -172,100 +173,8 @@ class Board(object):
                 log.info("%r", s)
         
     def generateArduinoCode(self):
-        generated = {
-            'baudrate': self.baudrate,
-            'includes': '',
-            'global': '',
-            'setups': '',
-            'polls': '',
-            'idles': '',
-            'actions': '',            
-        }
-        for attr in ['includes', 'global', 'setups', 'polls', 'idles',
-                     'actions']:
-            for dev in self._devs:
-                if attr == 'includes':
-                    gen = '\n'.join('#include "%s"\n' % inc
-                                    for inc in dev.generateIncludes())
-                elif attr == 'global': gen = dev.generateGlobalCode()
-                elif attr == 'setups': gen = dev.generateSetupCode()
-                elif attr == 'polls': gen = dev.generatePollCode()
-                elif attr == 'idles': gen = dev.generateIdleCode()
-                elif attr == 'actions':
-                    code = dev.generateActionCode()
-                    if code:
-                        gen = '''else if (cmd == %(cmdNum)s) {
-                                   %(code)s
-                                   Serial.write('k');
-                                 }
-                              ''' % dict(cmdNum=self._devCommandNum[dev.uri],
-                                         code=code)
-                    else:
-                        gen = ''
-                else:
-                    raise NotImplementedError
-                    
-                if gen:
-                    generated[attr] += '// for %s\n%s\n' % (dev.uri, gen.strip())
-
-        code = '''
-%(includes)s
-
-%(global)s
-byte frame=0;       
-unsigned long lastFrame=0; 
-
-void setup() {
-    Serial.begin(%(baudrate)d);
-    Serial.flush();
-    %(setups)s
-}
-        
-void idle() {
-    // this slowdown is to spend somewhat less time PWMing, to reduce
-    // leaking from on channels to off ones (my shift register has no
-    // latching)
-    if (micros() < lastFrame + 80) {
-      return;
-    }
-    lastFrame = micros();
-    frame++;
-    %(idles)s
-}
-
-void loop() {
-    byte head, cmd;
-    idle();
-    if (Serial.available() >= 2) {
-        head = Serial.read();
-        if (head != 0x60) {
-            Serial.flush();
-            return;
-        }
-        cmd = Serial.read();
-        if (cmd == 0x00) { // poll
-          %(polls)s
-          Serial.write('x');
-        } else if (cmd == 0x01) { // get code checksum
-          Serial.write("CODE_CHECKSUM");
-        }
-        %(actions)s
-    }
-}
-        ''' % generated
-        try:
-            with tempfile.SpooledTemporaryFile() as codeFile:
-                codeFile.write(code)
-                codeFile.seek(0)
-                code = subprocess.check_output([
-                    'indent',
-                    '-linux',
-                    '-fc1', # ok to indent comments
-                    '-i4', # 4-space indent
-                    '-sob' # swallow blanks (not working)
-                ], stdin=codeFile)
-        except OSError as e:
-            log.warn("indent failed (%r)", e)
+        code = write_arduino_code.writeCode(self.baudrate, self._devs, self._devCommandNum)
+        code = write_arduino_code.indent(code)
         cksum = hashlib.sha1(code).hexdigest()
         code = code.replace('CODE_CHECKSUM', cksum)
         return code, cksum
@@ -313,20 +222,10 @@ void loop() {
 
     def _arduinoMake(self, workDir, code):
         with open(workDir + '/makefile', 'w') as makefile:
-            makefile.write('''
-BOARD_TAG = %(tag)s
-USER_LIB_PATH := %(libs)s
-ARDUINO_LIBS = %(arduinoLibs)s
-MONITOR_PORT = %(dev)s
-
-include /usr/share/arduino/Arduino.mk
-            ''' % {
-                'dev': self.dev,
-                'tag': self.graph.value(self.uri, ROOM['boardTag']),
-                'libs': os.path.abspath('arduino-libraries'),
-                'arduinoLibs': ' '.join(sum((d.generateArduinoLibs()
-                                             for d in self._devs), [])),
-               })
+            makefile.write(write_arduino_code.writeMakefile(
+                dev=self.dev,
+                tag=self.graph.value(self.uri, ROOM['boardTag']),
+                allLibs=sum((d.generateArduinoLibs() for d in self._devs), [])))
 
         with open(workDir + '/main.ino', 'w') as main:
             main.write(code)
