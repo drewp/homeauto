@@ -33,8 +33,6 @@
        if (!streamedGraph.graph) {
          return;
        }
-       console.log('output-sender sees change to version', streamedGraph.version);
-       console.log('the index im about to read:', stringifyMap(streamedGraph.graph.quadStore.index));
        var env = streamedGraph.graph.store.rdf;
        streamedGraph.graph.quadStore.quads({
          subject: env.createNamedNode(this.subj),
@@ -56,10 +54,9 @@
          setTimeout(this.onResponse.bind(this),
                     this.smallestRequestPeriodMs - dt);
          return;
-       }
+       } 
        this.newRequestNeedsSending = false;
        this.lastSendMs = now;
-       console.log(Date.now(), 'sending', this.$.output.body);
        this.$.output.generateRequest();
      },
      browserChangedValue: function () {
@@ -73,7 +70,6 @@
        setTimeout(this.onResponse.bind(this), this.waitOnChangeMs);
      },
      serverChangedValue: function(v) {
-       console.log('server gave', v);
        this.value = v;
        this.synced = true;
      }
