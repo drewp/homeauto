@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
   <head>
-    <title>arduinoNode - </title>
+    <title>ha - </title>
     <meta name=viewport content="width=device-width, initial-scale=1">
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
@@ -9,12 +9,11 @@
     <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
     <link rel="import" href="/lib/polymer/1.0.9/iron-flex-layout/iron-flex-layout.html">
     <link rel="import" href="/lib/polymer/1.0.9/paper-button/paper-button.html">
-    <link rel="import" href="/room/ari/static/rdf-observe.html">
-    <link rel="import" href="/room/ari/static/rdf-oneshot.html">
-    <link rel="import" href="/room/ari/static/rdf-uri.html">
-    <link rel="import" href="static/output-widgets.html">
+    <link rel="import" href="/rdf/rdf-oneshot.html">
+    <link rel="import" href="/rdf/rdf-uri.html">
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/rdf/graph-view.html">
+    <link rel="import" href="static/output-widgets.html">
     <style>
      body {
        font-family: monospace;
@@ -51,15 +50,11 @@
       </script>
     </dom-module>
 
-    <!-- subj/pred are compact uris -->
     <dom-module id="watched-subgraph">
       <style>
        .read { font-weight: bold; }
       </style>
       <template>
-        <rdf-observe graph="{{graph}}" subject="{{subj}}" predicate="{{pred}}" out="{{out}}">
-        </rdf-observe>
-
         <div><span>{{compactUri(subj)}}</span>, <span>{{compactUri(pred)}}</span>,
           <span class="read">{{formatted(out)}}</span>
         </div>
@@ -70,18 +65,28 @@
          Polymer({
            is: 'watched-subgraph',
            properties: {
-             graph: { notify: true },
+             streamedGraph: { notify: true, observer: 'onGraphChange' }, // streamed-graph output
              out: { notify: true },
-             pred: { notify: true },
-             subj: { notify: true }
+             pred: { notify: true }, // uri
+             subj: { notify: true } // uri
            },
            behaviors: [BigastUri],
-           formatted: function (out) {
-             var obj = out[this.compactUri(this.pred)];
-             if (typeof obj == 'string') {
+           onGraphChange: function(streamedGraph) {
+             if (!streamedGraph.graph) {
+               return;
+             }
+             var env = streamedGraph.graph.store.rdf;
+             streamedGraph.graph.quadStore.quads({subject: env.createNamedNode(this.subj),
+                                                  predicate: env.createNamedNode(this.pred)},
+                                                 function(quad) {
+               this.out = quad.object.valueOf();
+             }.bind(this));
+           },
+           formatted: function (obj) {
+             if (typeof(obj) == 'string') {
                return this.compactUri(obj);
              } else {
-               return obj['@value'];
+               return obj;
              }
            }
          });
@@ -111,15 +116,22 @@
        .device {
          background: #fff;
        }
+       .devs {
+         -webkit-column-width: 440px;
+       }
+       .devs .device {
+         -webkit-column-break-inside: avoid;
+       }
       </style>
       <template>
+        <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
         <iron-ajax url="boards" auto="true" handle-as="json"
                    last-response="{{ret}}"></iron-ajax>
         <template is="dom-repeat" items="{{ret.boards}}" as="board">
           <div class="board">
             <h1>Board <linked-uri href$="{{board.uri}}"></linked-uri></h1>
             <h2>Devices</h2>
-            <ul>
+            <ul class="devs">
               <template is="dom-repeat" items="{{board.devices}}" as="dev">
                 <div class="device">
                   <h1>
@@ -130,7 +142,7 @@
                     <div>watching:</div>
                     <ul>
                       <template is="dom-repeat" items="{{dev.watchPrefixes}}" as="prefix">
-                        <watched-subgraph graph="{{board.graph}}" subj="{{prefix.0}}" pred="{{prefix.1}}"></watched-subgraph>
+                        <watched-subgraph streamed-graph="{{graph}}" subj="{{prefix.0}}" pred="{{prefix.1}}"></watched-subgraph>
                       </template>
                     </ul>
                   </template>
@@ -140,7 +152,7 @@
                     <ul>
                       <template is="dom-repeat" items="{{dev.outputWidgets}}" as="out">
                         <div>
-                          <output-widget-any desc="{{out}}"></output-widget-any>
+                          <output-widget-any streamed-graph="{{graph}}" desc="{{out}}"></output-widget-any>
                         </div>
                       </template>
                     </ul>
@@ -150,7 +162,6 @@
             </ul>
           </div>
         </template>
-        <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
         <graph-view graph="{{graph}}"></graph-view>
       </template>
       <script>

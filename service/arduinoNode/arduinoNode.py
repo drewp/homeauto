@@ -41,7 +41,8 @@ HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 ACTION_BASE = 10 # higher than any of the fixed command numbers
 
-CTX = ROOM['arduinosOn%s' % socket.gethostname()]
+hostname = socket.gethostname()
+CTX = ROOM['arduinosOn%s' % hostname]
 
 class Config(object):
     def __init__(self, masterGraph):
@@ -74,10 +75,8 @@ class Board(object):
         self.masterGraph = masterGraph
         self.dev = dev
 
-        self.masterGraph.patch(Patch(addQuads=[
-            (HOST[socket.gethostname()], ROOM['connectedTo'], self.uri, CTX),
-        ]))
-        
+        self.masterGraph.patch(Patch(addQuads=self.staticStmts()))
+
         # The order of this list needs to be consistent between the
         # deployToArduino call and the poll call.
         self._devs = devices.makeDevices(configGraph, self.uri)
@@ -98,7 +97,6 @@ class Board(object):
             'dev': self.dev,
             'baudrate': self.baudrate,
             'devices': [d.description() for d in self._devs],
-            'graph': 'http://%s6:9059/graph' % socket.gethostname(), #todo
             }
         
     def open(self):
@@ -143,14 +141,21 @@ class Board(object):
     def _exportToGraphite(self):
         # note this is writing way too often- graphite is storing at a lower res
         now = time.time()
+        # 20 sec is not precise; just trying to reduce wifi traffic
+        if getattr(self, 'lastGraphiteExport', 0) + 20 > now:
+            return
+        self.lastGraphiteExport = now
+        log.debug('graphite export:')
         # objects of these statements are suitable as graphite values.
-        graphitePredicates = {ROOM['temperatureF']} 
+        graphitePredicates = {ROOM['temperatureF']}
+        # bug: one sensor can have temp and humid- this will be ambiguous
         for s, graphiteName in self.configGraph.subject_objects(ROOM['graphiteName']):
             for group in self._statementsFromInputs.values():
                 for stmt in group:
                     if stmt[0] == s and stmt[1] in graphitePredicates:
+                        log.debug('  sending %s -> %s', stmt[0], graphiteName)
                         self._carbon.send(graphiteName, stmt[2].toPython(), now)
-        
+
     def outputStatements(self, stmts):
         unused = set(stmts)
         for dev in self._devs:
@@ -176,19 +181,24 @@ class Board(object):
                 # should be good enough. The right answer is to give
                 # each dev the masterGraph for it to write to.
                 self.syncMasterGraphToHostStatements(dev)
-                log.info("success")
+                log.info("output and masterGraph sync complete")
         if unused:
             log.info("Board %s doesn't care about these statements:", self.uri)
             for s in unused:
-                log.info("%r", s)
+                log.warn("%r", s)
 
     def syncMasterGraphToHostStatements(self, dev):
         hostStmtCtx = URIRef(dev.uri + '/host')
         newQuads = inContext(dev.hostStatements(), hostStmtCtx)
-        self.masterGraph.patchSubgraph(hostStmtCtx, newQuads)
-                
+        p = self.masterGraph.patchSubgraph(hostStmtCtx, newQuads)
+        log.debug("patch master with these host stmts %s", p)
+
+    def staticStmts(self):
+        return [(HOST[hostname], ROOM['connectedTo'], self.uri, CTX)]
+
     def generateArduinoCode(self):
-        code = write_arduino_code.writeCode(self.baudrate, self._devs, self._devCommandNum)
+        code = write_arduino_code.writeCode(self.baudrate, self._devs,
+                                            self._devCommandNum)
         code = write_arduino_code.indent(code)
         cksum = hashlib.sha1(code).hexdigest()
         code = code.replace('CODE_CHECKSUM', cksum)
@@ -300,10 +310,9 @@ class OutputPage(cyclone.web.RequestHandler):
         
 class Boards(cyclone.web.RequestHandler):
     def get(self):
-        
         self.set_header('Content-type', 'application/json')
         self.write(json.dumps({
-            'host': socket.gethostname(),
+            'host': hostname,
             'boards': [b.description() for b in self.settings.boards]
         }, indent=2))
             
@@ -344,7 +353,7 @@ def main():
         b.startPolling()
 
 
-    app = cyclone.web.Application([
+    reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "static", "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
@@ -354,8 +363,7 @@ def main():
         (r'/output', OutputPage),
         (r'/arduinoCode', ArduinoCode),
         (r'/dot', Dot),
-        ], config=config, boards=boards)
-    reactor.listenTCP(9059, app, interface='::')
+        ], config=config, boards=boards), interface='::')
     reactor.run()
 
 main()

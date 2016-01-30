@@ -10,8 +10,17 @@ Design:
 5. Client queries its graph with low-level APIs or client-side sparql.
 6. When the graph changes, the client knows and can update itself at
    low or high granularity.
+
+
+See also:
+* http://iswc2007.semanticweb.org/papers/533.pdf RDFSync: efficient remote synchronization of RDF
+models
+* https://www.w3.org/2009/12/rdf-ws/papers/ws07 Supporting Change Propagation in RDF
+* https://www.w3.org/DesignIssues/lncs04/Diff.pdf Delta: an ontology for the distribution of
+differences between RDF graphs
+
 """
-import sys, json
+import sys, json, logging
 import cyclone.sse
 sys.path.append("/my/proj/light9")
 from light9.rdfdb.grapheditapi import GraphEditApi
@@ -19,6 +28,8 @@ from rdflib import ConjunctiveGraph
 from light9.rdfdb.rdflibpatch import patchQuads
 from rdflib_jsonld.serializer import from_rdf
 from cycloneerr import PrettyErrorHandler
+
+log = logging.getLogger('patchablegraph')
 
 def writeGraphResponse(req, graph, acceptHeader):
     if acceptHeader == 'application/nquads':
@@ -46,6 +57,11 @@ def patchAsJson(p):
         'deletes': from_rdf(_graphFromQuads2(p.delQuads)),
     }})
 
+def graphAsJson(g):
+    # This is not the same as g.serialize(format='json-ld')! That
+    # version omits literal datatypes.
+    return json.dumps(from_rdf(g))
+    
 class PatchableGraph(GraphEditApi):
     """
     Master graph that you modify with self.patch, and we get the
@@ -68,6 +84,9 @@ class PatchableGraph(GraphEditApi):
         for ob in self._observers:
             ob(patchAsJson(p))
 
+    def asJsonLd(self):
+        return graphAsJson(self._graph)
+            
     def addObserver(self, onPatch):
         self._observers.append(onPatch)
         
@@ -102,10 +121,9 @@ class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
         self.masterGraph = masterGraph
         
     def bind(self):
-        self.sendEvent(
-            message=self.masterGraph.serialize(None, format='json-ld',
-                                               indent=None),
-            event='fullGraph')
+        graphJson = self.masterGraph.asJsonLd()
+        log.debug("send fullGraph event: %s", graphJson)
+        self.sendEvent(message=graphJson, event='fullGraph')
         self.masterGraph.addObserver(self.onPatch)
 
     def onPatch(self, patchJson):

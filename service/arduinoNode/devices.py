@@ -51,7 +51,7 @@ class DeviceType(object):
         return {
             'uri': self.uri,
             'className': self.__class__.__name__,
-            'pinNumber': self.pinNumber,
+            'pinNumber': getattr(self, 'pinNumber', None),
             'outputPatterns': self.outputPatterns(),
             'watchPrefixes': self.watchPrefixes(),
             'outputWidgets': self.outputWidgets(),

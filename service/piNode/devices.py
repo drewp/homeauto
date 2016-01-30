@@ -40,7 +40,14 @@ class DeviceType(object):
     def __init__(self, graph, uri, pi, pinNumber):
         self.graph, self.uri, self.pi = graph, uri, pi
         self.pinNumber = pinNumber
+        self.hostStateInit()
 
+    def hostStateInit(self):
+        """
+        If you don't want to use __init__, you can use this to set up
+        whatever storage you might need for hostStatements
+        """
+        
     def description(self):
         return {
             'uri': self.uri,
@@ -51,6 +58,16 @@ class DeviceType(object):
             'outputWidgets': self.outputWidgets(),
         }
 
+    def hostStatements(self):
+        """
+        Like readFromPoll but these statements come from the host-side
+        python code, not the connected device. Include output state
+        (e.g. light brightness) if its master version is in this
+        object. This method is called on /graph requests so it should
+        be fast.
+        """
+        return []
+        
     def watchPrefixes(self):
         """
         subj,pred pairs of the statements that might be returned from
@@ -159,13 +176,17 @@ class RgbStrip(DeviceType):
     def __init__(self, graph, uri, pi, r, g, b):
         self.graph, self.uri, self.pi = graph, uri, pi
         self.rgb = map(int, [r, g, b])
+        self.value = '#000000'
             
     def setup(self):
         for i in self.rgb:
             self.pi.set_mode(i, pigpio.OUTPUT)
             self.pi.set_PWM_frequency(i, 200)
             self.pi.set_PWM_dutycycle(i, 0)
-
+            
+    def hostStatements(self):
+        return [(self.uri, ROOM['color'], Literal(self.value))]
+        
     def outputPatterns(self):
         return [(self.uri, ROOM['color'], None)]
 
@@ -178,6 +199,7 @@ class RgbStrip(DeviceType):
         assert statements[0][:2] == (self.uri, ROOM['color'])
 
         rgb = self._rgbFromHex(statements[0][2])
+        self.value = statements[0][2]
 
         for (i, v) in zip(self.rgb, rgb):
             self.pi.set_PWM_dutycycle(i, v)
@@ -271,7 +293,10 @@ class OneWire(DeviceType):
 @register
 class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
-                
+
+    def hostStateInit(self):
+        self.value = 0
+    
     def setup(self):
         self.pi.set_mode(self.pinNumber, pigpio.OUTPUT)
         self.pi.set_PWM_frequency(self.pinNumber, 200)
@@ -283,8 +308,12 @@ class LedOutput(DeviceType):
     def sendOutput(self, statements):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['brightness'])
-        v = int(float(statements[0][2]) * 255)
+        self.value = float(statements[0][2])
+        v = int(self.value * 255)
         self.pi.set_PWM_dutycycle(self.pinNumber, v)
+
+    def hostStatements(self):
+        return [(self.uri, ROOM['brightness'], Literal(self.value))]       
         
     def outputWidgets(self):
         return [{

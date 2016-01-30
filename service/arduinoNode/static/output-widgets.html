@@ -5,7 +5,6 @@
 
 <dom-module id="output-sender">
   <template>
-    <iron-ajax id="graphGet" url="../graph" method="GET" headers='{"Accept": "application/ld+json"}'></iron-ajax>
     <iron-ajax id="output" url="../output" method="PUT"></iron-ajax>
     Set <a href$="{{subj}}">{{compactUri(subj)}}</a>'s
     <span>{{compactUri(pred)}}</span> to
@@ -15,41 +14,34 @@
      is: 'output-sender',
      behaviors: [BigastUri],
      properties: {
+       streamedGraph: { notify: true, observer: 'onGraphChange' },
        subj: { notify: true },
        pred: { notify: true },
-       value: { notify: true, observer: 'valueChanged' }
+       value: { notify: true, observer: 'browserChangedValue' }
      },
      ready: function() {
        this.waitOnChangeMs = 100;
-       this.smallestRequestPeriodMs = 200;
+       this.smallestRequestPeriodMs = 100;
        this.synced = false;
        
        this.newRequestNeedsSending = false;
        this.lastSendMs = 0;
        this.$.output.addEventListener('response', this.onResponse.bind(this));
 
-       this.loadInitialValue();
      },
-     loadInitialValue: function() {
-       this.$.graphGet.addEventListener('response', function(ev) {
-         ev.target.removeEventListener(ev.type, arguments.callee);
-
-         ev.detail.response.forEach(function(row) {
-           var subj = row['@id'];
-           if (subj == this.subj) {
-             Object.keys(row).forEach(function(pred) {
-               if (pred == this.pred) {
-                 row[pred].forEach(function(obj) {
-                   this.value = obj['@value'];
-                   this.synced = true;
-                 }.bind(this));
-               }
-             }.bind(this));
-           }
-         }.bind(this));
-
+     onGraphChange: function(streamedGraph) {
+       if (!streamedGraph.graph) {
+         return;
+       }
+       console.log('output-sender sees change to version', streamedGraph.version);
+       console.log('the index im about to read:', stringifyMap(streamedGraph.graph.quadStore.index));
+       var env = streamedGraph.graph.store.rdf;
+       streamedGraph.graph.quadStore.quads({
+         subject: env.createNamedNode(this.subj),
+         predicate: env.createNamedNode(this.pred)
+       }, function(quad) {
+         this.serverChangedValue(quad.object.valueOf());
        }.bind(this));
-       this.$.graphGet.generateRequest();
      },
      onResponse: function() {
        if (!this.newRequestNeedsSending) {
@@ -67,9 +59,10 @@
        }
        this.newRequestNeedsSending = false;
        this.lastSendMs = now;
+       console.log(Date.now(), 'sending', this.$.output.body);
        this.$.output.generateRequest();
      },
-     valueChanged: function () {
+     browserChangedValue: function () {
        if (!this.subj || !this.pred) {
          return;
        }
@@ -78,6 +71,11 @@
        this.$.output.body = this.value;
        this.newRequestNeedsSending = true;
        setTimeout(this.onResponse.bind(this), this.waitOnChangeMs);
+     },
+     serverChangedValue: function(v) {
+       console.log('server gave', v);
+       this.value = v;
+       this.synced = true;
      }
    });
   </script>
@@ -87,7 +85,7 @@
   <template>
     <div style="display: flex">
       <div>
-        <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+        <output-sender streamed-graph="{{streamedGraph}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
         <div>color pick <span>{{value}}</span>
         <button on-click="black">Black</button>
         <button on-click="white">White</button>
@@ -117,18 +115,19 @@
 
 <dom-module id="output-slider">
   <template>
-    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <output-sender streamed-graph="{{streamedGraph}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
     <input type="range" min="{{min}}" max="{{max}}" step="{{step}}" value="{{value::input}}"> <span>{{value}}</span>
   </template>
   <script>
-    Polymer({
-      is: 'output-slider',
-      properties: {
-        max: { notify: true },
-        min: { notify: true },
-        step: { notify: true }
-      },
-    });
+   Polymer({
+     is: 'output-slider',
+     properties: {
+       streamedGraph: { notify: true }, 
+       max: { notify: true },
+       min: { notify: true },
+       step: { notify: true }
+     },
+   });
   </script>
 </dom-module>
 
@@ -138,7 +137,7 @@
  -->
 <dom-module id="output-fixed-text">
   <template>
-    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <output-sender streamed-graph="{{streamedGraph}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
     <textarea rows="{{rows}}" cols="{{cols}}" value="{{value::input}}"></textarea>
   </template>
   <script>
@@ -154,7 +153,7 @@
 
 <dom-module id="output-switch">
   <template>
-    <output-sender subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <output-sender streamed-graph="{{streamedGraph}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
     <input type="checkbox" checked="{{check::change}}"> <span>{{value}}</span>
   </template>
   <script>
@@ -181,13 +180,20 @@
    Polymer({
      is: 'output-widget-any',
      properties: {
-       desc: { type: Object, notify: true }
+       desc: { type: Object, notify: true },
+       streamedGraph: { type: Object, notify: true, observer: 'onGraph' },
      },
      ready: function () {
-       var elem = document.createElement(this.desc.element);
-       this.appendChild(elem);
+       this.elem = document.createElement(this.desc.element);
+       this.appendChild(this.elem);
        for (var k of Object.keys(this.desc)) {
-         elem.setAttribute(k, this.desc[k]);
+         this.elem.setAttribute(k, this.desc[k]);
+       }
+       this.elem.streamedGraph = this.streamedGraph;
+     },
+     onGraph: function(g) {
+       if (this.elem) {
+         this.elem.streamedGraph = g;
        }
      }
    });
