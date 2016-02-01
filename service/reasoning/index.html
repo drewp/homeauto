@@ -39,7 +39,7 @@ flex-direction: column;
   <body layout vertical fit>
 
     <div style="flex: 0 0 auto">
-      <service-rows nameSubstrs="reasoning map"></service-rows>
+      <service-rows nameSubstrs="reasoning"></service-rows>
     </div>
     
     <div class="pane">
@@ -66,56 +66,49 @@ flex-direction: column;
     </div>
 
     <script src="//bigasterisk.com/lib/jquery-2.0.3.min.js"></script>
- <script type="text/javascript">
-      // <![CDATA[
-      $(function () { 
-	  function abbrev(term) { // does rdfquery do this?
-	      var repl = [
-		  ["http://projects.bigasterisk.com/room/", "room:"],
-		  ["http://projects.bigasterisk.com/device/", "dev:"],
-		  ["http://purl.org/dc/terms/", "dcterms:"],
-		  ["http://www.w3.org/2000/01/rdf-schema#", "rdfs:"],
-		  ["http://bigasterisk.com/map#", "map:"],
-		  ["http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf:"]]; 
-	      for (i in repl) {
-		  var p=repl[i];
-		  if (term.match(new RegExp("^" + p[0]))) {
-		      return term.replace(p[0], p[1]);
-		  }
-	      }
-	      return term;
-	  }
+    <script>
+     window.NS = {
+       room: "http://projects.bigasterisk.com/room/", 
+       dev: "http://projects.bigasterisk.com/device/", 
+       dcterms: "http://purl.org/dc/terms/", 
+       rdfs: "http://www.w3.org/2000/01/rdf-schema#", 
+       map: "http://bigasterisk.com/map#", 
+       rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#", 
+     };
+    </script>
+    <link rel="import" href="/rdf/rdf-uri.html">
+    <script type="text/javascript">
+     // <![CDATA[
+     $(function () { 
+       function update() {
+	 function makeAddStmts(elem) {
+	   return function (stmts) {
+	     elem.empty();
+	     $.each(stmts, function (i, s) {
+	       elem.append($("<div>").html(
+		 "<span>"+BigastUri.compactUri(s[0])+"</span> "+
+                 "<span class=\"pred\">"+BigastUri.compactUri(s[1])+"</span> "+
+	         "<span class=\"obj\">"+BigastUri.compactUri(s[2])+"</span>"));
+	     })
+	   }
+	 }
 
-	  function update() {
-	      function makeAddStmts(elem) {
-		  return function (stmts) {
-		      elem.empty();
-		      $.each(stmts, function (i, s) {
-			  elem.append($("<div>").html(
-			      "<span>"+abbrev(s[0])+"</span> "+
-				  "<span class=\"pred\">"+abbrev(s[1])+"</span> "+
-				  "<span class=\"obj\">"+abbrev(s[2])+"</span>"));
-
-		      })
-		  }
-	      }
-
-	      $.get("lastInputGraph", makeAddStmts($("#input")));
-	      $.get("lastOutputGraph", makeAddStmts($("#output")));
-	      $.get("rules", function (txt) { 
-		  $("#rules").empty().text(txt);
-	      });
-	  }
-	  function loop() {
-	      update();
-	      if ($("input#auto").is(":checked")) {
-		  setTimeout(loop, 2000);
-	      }
-	  }
-	  loop();
-	  $("input#auto").click(loop);
-      });
-      // ]]>
-</script>
+	 $.get("lastInputGraph", makeAddStmts($("#input")));
+	 $.get("lastOutputGraph", makeAddStmts($("#output")));
+	 $.get("rules", function (txt) { 
+	   $("#rules").empty().text(txt);
+	 });
+       }
+       function loop() {
+	 update();
+	 if ($("input#auto").is(":checked")) {
+	   setTimeout(loop, 2000);
+	 }
+       }
+       loop();
+       $("input#auto").click(loop);
+     });
+     // ]]>
+    </script>
   </body>
 </html>
