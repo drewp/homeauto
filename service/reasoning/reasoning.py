@@ -24,7 +24,8 @@ from rdflib import Namespace, URIRef, Literal, RDF
 from rdflib.parser import StringInputSource
 from cyclone.httpclient import fetch
 import cyclone.web, cyclone.websocket
-from inference import addTrig, infer
+from inference import infer
+from rdflibtrig import addTrig
 from graphop import graphEqual
 from docopt import docopt
 
@@ -168,7 +169,6 @@ class Reasoning(object):
 
         self.inputGraph = InputGraph([], self.graphChanged)
         self.inputGraph.updateFileData()
-
 
     def readRules(self):
         self.rulesN3 = open('rules.n3').read() # for web display
@@ -559,11 +559,26 @@ if __name__ == '__main__':
     
     r = Reasoning()
     if arg['-v']:
+        from colorlog import ColoredFormatter
+        log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s%(reset)s %(white)s%(message)s",
+        datefmt=None,
+        reset=True,
+        log_colors={
+                'DEBUG':    'cyan',
+                'INFO':     'green',
+                'WARNING':  'yellow',
+                'ERROR':    'red',
+                'CRITICAL': 'red,bg_white',
+        },
+        secondary_log_colors={},
+        style='%'
+))
+
         import twisted.python.log
         twisted.python.log.startLogging(sys.stdout)
         log.setLevel(logging.DEBUG)
         outlog.setLevel(logging.DEBUG)
 
     task.LoopingCall(r.poll).start(1.0)
-    reactor.listenTCP(9071, Application(r))
+    reactor.listenTCP(9071, Application(r), interface='::')
     reactor.run()
