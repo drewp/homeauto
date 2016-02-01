@@ -2,7 +2,8 @@
 <html>
   <head>
     <title>reasoning</title>
-    <link rel="import" href="https://bigasterisk.com/lib/polymer/0.5.2/core-splitter/core-splitter.html">
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <link rel="import" href="/lib/polymer/1.0.9/iron-collapse/iron-collapse.html"
     <link rel="import" href="https://bigasterisk.com/supdebug/bang/service-rows/main.html">
     <style type="text/css" media="all">
      /* <![CDATA[ */
@@ -43,25 +44,31 @@
     
     <div class="pane">
       <h2>Input</h2>
-      <pre id="input"/>
+      <div><input id="inputQ"></div>
+      <div style="max-height: 600px; margin-right: 30px; overflow: auto">
+        <pre id="input"></pre>
+      </div>
     </div>
 
-    <core-splitter direction="up"></core-splitter> 
 
     <div  class="pane">
       <h2>Rules</h2>
-      <pre id="rules"/>
+      <div style="max-height: 300px; margin-right: 30px; overflow: auto">
+        <pre id="rules"></pre>
+      </div>
     </div>
 
-    <core-splitter direction="up"></core-splitter>
 
     <div  class="pane">
       <h2>Output</h2>
-      <pre id="output"/>
+      <div><input id="outputQ"></div>
+      <div style="max-height: 300px; margin-right: 30px; overflow: auto">
+        <pre id="output"></pre>
+      </div>
     </div>
 
     <div>
-      <input id="auto" type="checkbox"/> <label for="auto">auto refresh</label>
+      <label><input id="auto" type="checkbox"> auto refresh</label>
     </div>
 
     <script src="//bigasterisk.com/lib/jquery-2.0.3.min.js"></script>
@@ -79,25 +86,48 @@
     <script type="text/javascript">
      // <![CDATA[
      $(function () { 
-       function update() {
-	 function makeAddStmts(elem) {
-	   return function (stmts) {
-	     elem.empty();
-	     $.each(stmts, function (i, s) {
-	       elem.append($("<div>").html(
-		 "<span>"+BigastUri.compactUri(s[0])+"</span> "+
-                 "<span class=\"pred\">"+BigastUri.compactUri(s[1])+"</span> "+
-	         "<span class=\"obj\">"+BigastUri.compactUri(s[2])+"</span>"));
-	     })
-	   }
-	 }
 
-	 $.get("lastInputGraph", makeAddStmts($("#input")));
-	 $.get("lastOutputGraph", makeAddStmts($("#output")));
+       function makeAddStmts(elem, q) {
+	 return function (stmts) {
+	   elem.empty();
+	   $.each(stmts, function (i, stmt) {
+             var s = BigastUri.compactUri(stmt[0]);
+             var p = BigastUri.compactUri(stmt[1]);
+             var o = BigastUri.compactUri(stmt[2]);
+
+             if (q.toLowerCase() &&
+                 s.toLowerCase().indexOf(q) == -1 &&
+                 p.toLowerCase().indexOf(q) == -1 &&
+                 o.toLowerCase().indexOf(q) == -1) {
+               return;
+             }
+             
+	     elem.append(
+               $("<div>")
+                  .append($("<span>").text(s))
+                  .append(" ")
+                  .append($("<span>").addClass("pred").text(p))
+                  .append(" ")
+                  .append($("<span>").addClass("obj").text(o)));
+	   })
+	 }
+       }
+
+       function updateIn() {
+$.get("lastInputGraph", makeAddStmts($("#input"), $("#inputQ").val()));
+       }
+       function updateOut() {
+$.get("lastOutputGraph", makeAddStmts($("#output"), $("#outputQ").val()));
+         }
+       
+       function update() {
+	 updateIn();
+         updateOut();
 	 $.get("rules", function (txt) { 
 	   $("#rules").empty().text(txt);
 	 });
        }
+       $("#inputQ").on('keyup', updateIn);
        function loop() {
 	 update();
 	 if ($("input#auto").is(":checked")) {
