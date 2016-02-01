@@ -1,16 +1,14 @@
-import re, time
-import restkit
-from rdflib.parser import StringInputSource
+import time
+import requests
 from rdflib import ConjunctiveGraph
         
 def addTrig(graph, url, timeout=2):
     t1 = time.time()
-    response = restkit.request(url, timeout=timeout)
-    if response.status_int != 200:
+    response = requests.get(url, stream=True, timeout=timeout)
+    if response.status_code != 200:
         raise ValueError("status %s from %s" % (response.status, url))
-    trig = response.body_string()
-    fetchTime = time.time() - t1
     g = ConjunctiveGraph()
-    g.parse(StringInputSource(trig), format='trig')
+    g.parse(response.raw, format='trig')
+    fetchTime = time.time() - t1
     graph.addN(g.quads())
     return fetchTime
