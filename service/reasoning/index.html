@@ -95,7 +95,8 @@
              var p = BigastUri.compactUri(stmt[1]);
              var o = BigastUri.compactUri(stmt[2]);
 
-             if (q.toLowerCase() &&
+             q = q.toLowerCase()
+             if (q &&
                  s.toLowerCase().indexOf(q) == -1 &&
                  p.toLowerCase().indexOf(q) == -1 &&
                  o.toLowerCase().indexOf(q) == -1) {
@@ -114,11 +115,11 @@
        }
 
        function updateIn() {
-$.get("lastInputGraph", makeAddStmts($("#input"), $("#inputQ").val()));
+         $.get("lastInputGraph", makeAddStmts($("#input"), $("#inputQ").val()));
        }
        function updateOut() {
-$.get("lastOutputGraph", makeAddStmts($("#output"), $("#outputQ").val()));
-         }
+         $.get("lastOutputGraph", makeAddStmts($("#output"), $("#outputQ").val()));
+       }
        
        function update() {
 	 updateIn();
