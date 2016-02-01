@@ -15,7 +15,6 @@ from FuXi.Rete.Util import generateTokenSet
 from FuXi.Rete import ReteNetwork
 from rdflib import plugin
 from rdflib.store import Store
-from rdflibtrig import parseTrig, addTrig
 
 def infer(graph, rules):
     """
