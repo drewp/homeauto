@@ -55,13 +55,6 @@ class Actions(object):
 
         #self._frontDoorPuts(deviceGraph, inferred)
 
-
-    def _put(self, url, payload):
-        def err(e):
-            log.warn("    put %s failed (%r)", url, e)
-        log.info("    PUT %s payload=%r", url, payload)
-        fetch(url, method="PUT", postdata=payload, timeout=2).addErrback(err)
-
     def _oneShotPostActions(self, deviceGraph, inferred):
         """
         Inferred graph may contain some one-shot statements. We'll send
@@ -101,32 +94,58 @@ class Actions(object):
         http://{mpd}/addAndPlay?uri={toPlay} or maybe toPlay as the payload
         which would be fairly general but still allow toPlay uris to
         be matched with any player."""
-        def post(postTarget):
-            log.info("special mpd POST %s", postTarget)
-            def err(e):
-                log.warn("post %s failed", postTarget)
-            fetch(postTarget, method="POST", timeout=2).addErrback(err)
 
         rootSkippingAuth = "http://brace:9009/"
         for mpd in [URIRef("http://bigasterisk.com/host/brace/mpd")]:
 
-
             for song in inferred.objects(mpd, ROOM['startMusic']):
                 log.info("mpd statement: %r" % song)
                 assert song.startswith('http://bigasterisk.com/music/')
-                post(rootSkippingAuth + "addAndPlay" + urllib.quote(song[len("http://bigasterisk.com/music"):]))
+                self.post(rootSkippingAuth + "addAndPlay" + urllib.quote(song[len("http://bigasterisk.com/music"):]))
 
             for state in inferred.objects(mpd, ROOM['playState']):
                 log.info('hello playstate %s', state)
                 if state == ROOM['pause']:
                     log.info("mpd %s %s", mpd, state)
-                    post(rootSkippingAuth + "mpd/pause")
+                    self.post(rootSkippingAuth + "mpd/pause")
             for vol in inferred.objects(mpd, ROOM['audioState']):
                 if vol == ROOM['volumeStepUp']:
-                    post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
+                    self.post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
                 if vol == ROOM['volumeStepDown']:
-                    post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
+                    self.post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
             
+
+    def _frontDoorPuts(self, deviceGraph, inferred):
+        # todo: shouldn't have to be a special case
+        brt = inferred.value(DEV.frontDoorLcd, ROOM.brightness)
+        if brt is None:
+            return
+        url = deviceGraph.value(DEV.frontDoorLcdBrightness, ROOM.putUrl)
+        log.info("put lcd %s brightness %s", url, brt)
+        self._put(str(url) + "?brightness=%s" % str(brt), payload='')
+
+        msg = "open %s motion %s" % (
+            inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
+            inferred.value(DEV['frontDoorMotionIndicator'], ROOM.text))
+        # this was meant to be 2 chars in the bottom row, but the
+        # easier test was to replace the whole top msg
+        #restkit.Resource("http://slash:9080/").put("lcd", message=msg)
+
+    
+
+
+    def _put(self, url, payload):
+        def err(e):
+            log.warn("    put %s failed (%r)", url, e)
+        log.info("    PUT %s payload=%r", url, payload)
+        fetch(url, method="PUT", postdata=payload, timeout=2).addErrback(err)
+        
+    def post(self, postTarget):
+        log.info("special mpd POST %s", postTarget)
+        def err(e):
+            log.warn("post %s failed", postTarget)
+        fetch(postTarget, method="POST", timeout=2).addErrback(err)
+        
     def _putZero(self, deviceGraph, dev, pred, putUrl):
         # zerovalue should be a function of pred as well.
         value = deviceGraph.value(dev, ROOM.zeroValue)
@@ -151,21 +170,3 @@ class Actions(object):
         else:
             log.warn("don't know what payload to put for %s. obj=%r",
                         putUrl, obj)
-
-    def _frontDoorPuts(self, deviceGraph, inferred):
-        # todo: shouldn't have to be a special case
-        brt = inferred.value(DEV.frontDoorLcd, ROOM.brightness)
-        if brt is None:
-            return
-        url = deviceGraph.value(DEV.frontDoorLcdBrightness, ROOM.putUrl)
-        log.info("put lcd %s brightness %s", url, brt)
-        self._put(str(url) + "?brightness=%s" % str(brt), payload='')
-
-        msg = "open %s motion %s" % (
-            inferred.value(DEV['frontDoorOpenIndicator'], ROOM.text),
-            inferred.value(DEV['frontDoorMotionIndicator'], ROOM.text))
-        # this was meant to be 2 chars in the bottom row, but the
-        # easier test was to replace the whole top msg
-        #restkit.Resource("http://slash:9080/").put("lcd", message=msg)
-
-    
