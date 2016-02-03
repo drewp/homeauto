@@ -2,9 +2,7 @@
 <html>
   <head>
     <title>reasoning</title>
-    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
-    <link rel="import" href="/lib/polymer/1.0.9/iron-collapse/iron-collapse.html"
-    <link rel="import" href="https://bigasterisk.com/supdebug/bang/service-rows/main.html">
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.js"></script>
     <style type="text/css" media="all">
      /* <![CDATA[ */
      body {
@@ -34,12 +32,14 @@
      }
      /* ]]> */
     </style>
+    <link rel="import" href="/supdebug/bang/service-rows/main.html">
 
   </head>
   <body layout vertical fit>
-
+    <h1>reasoning service</h1>
     <div style="flex: 0 0 auto">
-      <service-rows nameSubstrs="reasoning"></service-rows>
+      <h2>Service</h2>
+      <service-rows name-substrs="reasoning"></service-rows>
     </div>
     
     <div class="pane">
