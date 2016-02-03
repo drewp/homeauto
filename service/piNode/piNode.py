@@ -57,18 +57,34 @@ class Board(object):
         self._devs = devices.makeDevices(graph, self.uri, self.pi)
         log.debug('found %s devices', len(self._devs))
         self._statementsFromInputs = {} # input device uri: latest statements
+        self._lastPollTime = {} # input device uri: time()
         self._carbon = CarbonClient(serverHost='bang')
         for d in self._devs:
             self.syncMasterGraphToHostStatements(d)
+            
     def startPolling(self):
-        task.LoopingCall(self._poll).start(.5)
+        task.LoopingCall(self._poll).start(.05)
 
     def _poll(self):
         for i in self._devs:
-            prev = inContext(self._statementsFromInputs.get(i.uri, []), CTX)
-            new = self._statementsFromInputs[i.uri] = i.poll()
-            new = inContext(new, CTX)
-            self.masterGraph.patch(Patch.fromDiff(prev, new))
+            now = time.time()
+            if (hasattr(i, 'pollPeriod') and
+                self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
+                continue
+            new = i.poll()
+            prev = self._statementsFromInputs.get(i.uri, [])
+            if new or prev:
+                self._statementsFromInputs[i.uri] = new
+                # it's important that quads from different devices
+                # don't clash, since that can lead to inconsistent
+                # patches (e.g.
+                #   dev1 changes value from 1 to 2;
+                #   dev2 changes value from 2 to 3;
+                #   dev1 changes from 2 to 4 but this patch will
+                #     fail since the '2' statement is gone)
+                self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
+                                                      inContext(new, i.uri)))
+            self._lastPollTime[i.uri] = now
         self._exportToGraphite()
 
     def _exportToGraphite(self):

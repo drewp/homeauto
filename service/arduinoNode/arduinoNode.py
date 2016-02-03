@@ -85,6 +85,7 @@ class Board(object):
         self._polledDevs = [d for d in self._devs if d.generatePollCode()]
         
         self._statementsFromInputs = {} # input device uri: latest statements
+        self._lastPollTime = {} # input device uri: time()
         self._carbon = CarbonClient(serverHost='bang')
         self.open()
         for d in self._devs:
@@ -122,12 +123,23 @@ class Board(object):
             
     def _pollWork(self):
         t1 = time.time()
-        self.ser.write("\x60\x00")
+        self.ser.write("\x60\x00") # "poll everything"
         for i in self._polledDevs:
+            now = time.time()
+            new = i.readFromPoll(self.ser.read)
             prev = self._statementsFromInputs.get(i.uri, [])
-            new = self._statementsFromInputs[i.uri] = inContext(
-                i.readFromPoll(self.ser.read), i.uri)
-            self.masterGraph.patch(Patch.fromDiff(prev, new))
+            if new or prev:
+                self._statementsFromInputs[i.uri] = new
+                # it's important that quads from different devices
+                # don't clash, since that can lead to inconsistent
+                # patches (e.g.
+                #   dev1 changes value from 1 to 2;
+                #   dev2 changes value from 2 to 3;
+                #   dev1 changes from 2 to 4 but this patch will
+                #     fail since the '2' statement is gone)
+                self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
+                                                      inContext(new, i.uri)))
+            self._lastPollTime[i.uri] = now
             
         #plus statements about succeeding or erroring on the last poll
         byte = self.ser.read(1)
