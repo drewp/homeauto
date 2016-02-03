@@ -1,7 +1,7 @@
 from __future__ import division
 
 import time, logging, os
-from rdflib import Namespace, RDF, URIRef, Literal
+from rdflib import Namespace, URIRef, Literal
 
 try:
     import pigpio
@@ -329,6 +329,7 @@ class LedOutput(DeviceType):
 @register
 class OnboardTemperature(DeviceType):
     deviceType = ROOM['OnboardTemperature']
+    pollPeriod = 10
     @classmethod
     def findInstances(cls, graph, board, pi):
         for row in graph.query('''SELECT DISTINCT ?uri WHERE {
