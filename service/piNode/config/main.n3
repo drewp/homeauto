@@ -5,8 +5,8 @@
 @prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
 
 @prefix board2pin: <http://bigasterisk.com/homeauto/board2/pin/> .
-@prefix board2ow: <http://bigasterisk.com/homeauto/board2/oneWire/> .
-
+@prefix board2ow:  <http://bigasterisk.com/homeauto/board2/oneWire/> .
+@prefix bed:       <http://bigasterisk.com/homeauto/sensor/bed/> .
 ha:node2 a :PiBoard;
   :hostname "sticker";
   :onboardDevice ha:bedroomPiTemp;
@@ -15,7 +15,9 @@ ha:node2 a :PiBoard;
     board2pin:GPIO3,
     board2pin:GPIO4,
     board2pin:GPIO17,
-    board2pin:GPIO27
+    board2pin:GPIO27,
+    board2pin:GPIO18,
+    board2pin:GPIO23 
     .
 
 ha:bedroomPiTemp a :OnboardTemperature .
@@ -25,6 +27,13 @@ board2pin:GPIO3 :gpioNumber 3 .
 board2pin:GPIO4 :gpioNumber 4 .
 board2pin:GPIO17 :gpioNumber 17 .
 board2pin:GPIO27 :gpioNumber 27 .
+board2pin:GPIO18 :gpioNumber 18 .
+board2pin:GPIO23 :gpioNumber 23 .
+
+board2pin:GPIO18 :connectedTo bed:greenButton .
+board2pin:GPIO23 :connectedTo bed:redButton .
+bed:greenButton a :Pushbutton .
+bed:redButton a :Pushbutton .
 
 board2pin:GPIO17 :connectedTo sensor:motion1 .
 sensor:motion1 a :MotionSensor;
