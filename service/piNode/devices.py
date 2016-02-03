@@ -248,6 +248,30 @@ class TempHumidSensor(DeviceType):
         ]
 
 @register
+class PushbuttonInput(DeviceType):
+    """add a switch to ground; we'll turn on pullup"""
+    deviceType = ROOM['Pushbutton']
+
+    def __init__(self, *a, **kw):
+        DeviceType.__init__(self, *a, **kw)
+        log.debug("setup switch on %r", self.pinNumber)
+        self.pi.set_mode(self.pinNumber, pigpio.INPUT)
+        self.pi.set_pull_up_down(self.pinNumber, pigpio.PUD_UP)
+
+    def poll(self):
+        closed = not self.pi.read(self.pinNumber)
+        
+        return [
+            (self.uri, ROOM['buttonState'],
+             ROOM['pressed'] if closed else ROOM['notPressed']),
+        ]
+        
+    def watchPrefixes(self):
+        return [
+            (self.uri, ROOM['buttonState']),
+        ]
+        
+@register
 class OneWire(DeviceType):
     """
     Also see /my/proj/ansible/roles/raspi_io_node/tasks/main.yml for
