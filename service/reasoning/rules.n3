@@ -7,9 +7,12 @@
 @prefix env: <http://projects.bigasterisk.com/device/environment>.
 @prefix math: <http://www.w3.org/2000/10/swap/math#> .
 
-{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
-{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
-{ <http://bigasterisk.com/wifiDevice/x> :connected bigast:wifiAccessPoints . } => { :playstation :powerState :on } .
+@prefix star: <http://bigasterisk.com/host/star/> .
+@prefix dash: <http://bigasterisk.com/host/dash/> .
+@prefix slash: <http://bigasterisk.com/host/slash/> .
+
+{ ?d :deviceName "drew-phone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+{ ?d :deviceName "Kelsis-iPhone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 
 { env: :localHour 8 } => { env: :localHour :awakeTime } .
 { env: :localHour 9 } => { env: :localHour :awakeTime } .
@@ -48,60 +51,58 @@
 } .
 
 { :darkKey :state :press } => {
-  <http://bigasterisk.com/host/dash/monitor> :powerState :off .
+  dash:monitor :powerState :off .
 } .
 
 { <http://projects.bigasterisk.com/room/star/button/blu> :change :down . } =>
 {
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://bigasterisk.com/host/star/slideshow/advance> .
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/beep2> .
+  star:slideshow :postAction star:slideshowadvance .
+  star:slideshow :postAction <http://star:9049/effects/beep2> .
 } .
 
 
 { <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
 {
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://bigasterisk.com/host/star/slideshow/toggleFeeder> .
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/beep1> .
+  star:slideshow :postAction star:slideshowtoggleFeeder .
+  star:slideshow :postAction <http://star:9049/effects/beep1> .
 } .
 
 { <http://projects.bigasterisk.com/room/barcodeScan> <http://projects.bigasterisk.com/room/read> <http://projects.bigasterisk.com/room/barcode/UPC-A/4984343881945> } =>
 {
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://star:9049/effects/troyandabed> .
+  star:slideshow :postAction <http://star:9049/effects/troyandabed> .
 } .
 
 @prefix bed: <http://projects.bigasterisk.com/room/ariBed/> . 
 { bed:button1 :change :down . } => {
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9055/starTrekLight/toggle> .
-  <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/highlight> .
+  star:slideshow :postAction <http://brace:9055/starTrekLight/toggle> .
+  star:slideshow :postAction <http://brace:9049/effects/highlight> .
 } .
-{ bed:button2 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/troyandabed> . } .
-{ bed:button3 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/beep1> . } .
-{ bed:button4 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/beep1> . } .
-{ bed:button5 :change :down . } => { <http://bigasterisk.com/host/star/slideshow> :postAction <http://brace:9049/effects/jazztrumpet> . } .
+{ bed:button2 :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/troyandabed> . } .
+{ bed:button3 :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/beep1> . } .
+{ bed:button4 :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/beep1> . } .
+{ bed:button5 :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/jazztrumpet> . } .
 
 
 # sound wasn't responding; waiting for other button fixes
 # { <http://projects.bigasterisk.com/room/star/button/yel> :change :down . } =>
 # {
-#   <http://bigasterisk.com/host/star/sound> :postAction <http://star:9049/sound?filename=/my/music/ubuntuone/Daft+Punk/Discovery/Harder+Better+Faster+Stronger.mp3> .
+#   star:sound :postAction <http://star:9049/sound?filename=/my/music/ubuntuone/Daft+Punk/Discovery/Harder+Better+Faster+Stronger.mp3> .
 # } .
 
 { <http://projects.bigasterisk.com/room/livingRoom/shuttlepro/dial> :change :up . } => {
-  <http://bigasterisk.com/host/slash/sound> :postAction <http://slash:9049/volume?offset=.05&max=.6> .
+  slash:sound :postAction <http://slash:9049/volume?offset=.05&max=.6> .
 } .
 
 { <http://projects.bigasterisk.com/room/livingRoom/shuttlepro/dial> :change :down . } => {
-  <http://bigasterisk.com/host/slash/sound> :postAction <http://slash:9049/volume?offset=-.05&max=.6> .
+  slash:sound :postAction <http://slash:9049/volume?offset=-.05&max=.6> .
 } .
-
-#{ :playstation :powerState ?s } => { <http://bigasterisk.com/host/bang/monitor> :powerState ?s } .
 
 {
   # this won't update right, currently, since I don't let the exact
   # idle time into the rules recalculator. This threshold should be
   # applied upstream.
  
-  <http://bigasterisk.com/host/dash/xidle> :idleTimeMinutes ?idle .
+  dash:xidle :idleTimeMinutes ?idle .
   # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
 } => {
   :drew :at :desk .
