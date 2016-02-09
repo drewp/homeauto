@@ -29,14 +29,16 @@ class Actions(object):
         
         self._oneShotPostActions(deviceGraph, inferred)
         for dev, pred in [
-            # the config of each putUrl should actually be in the
-            # context of a dev and predicate pair, and then that would
-            # be the source of this list
-            #(DEV.theaterDoorLock, ROOM.state),
-            #(URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
-            (URIRef('http://bigasterisk.com/host/dash/monitor'), ROOM.powerState),
-            (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedLong'), ROOM.brightness),
-            (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedCross'), ROOM.brightness),               
+                # the config of each putUrl should actually be in the
+                # context of a dev and predicate pair, and then that would
+                # be the source of this list
+                #(DEV.theaterDoorLock, ROOM.state),
+                #(URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
+                (URIRef('http://bigasterisk.com/host/dash/monitor'), ROOM.powerState),
+                (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedLong'), ROOM.brightness),
+                (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedCross'), ROOM.brightness),
+                (URIRef('http://projects.bigasterisk.com/room/headboardWhite'), ROOM.brightness),
+                (URIRef('http://projects.bigasterisk.com/room/bedLedStrip'), ROOM.color),
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
 

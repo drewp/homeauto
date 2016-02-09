@@ -127,3 +127,13 @@
   :storageCeilingLedCross :brightness "1" .
   :storageCeilingLedLong :brightness "1" .
 } .
+
+@prefix bed: <http://bigasterisk.com/homeauto/sensor/bed/> .
+
+{ bed:greenButton :buttonState :pressed } => {
+  :headboardWhite :brightness 0 .
+} .
+
+{ bed:redButton :buttonState :pressed } => {
+  :headboardWhite :brightness 0.04 .
+} .
