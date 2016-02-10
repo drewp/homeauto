@@ -291,7 +291,7 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
 def parseRdf(text, contentType):
     g = Graph()
     g.parse(StringInputSource(text), format={
-        'text/n3': ['n3'],
+        'text/n3': 'n3',
         }[contentType])
     return g
 
@@ -314,7 +314,9 @@ class OneShot(cyclone.web.RequestHandler):
             if not len(g):
                 log.warn("incoming oneshot graph had no statements: %r", self.request.body)
                 return
+            t1 = time.time()
             self.settings.reasoning.inputGraph.addOneShot(g)
+            self.set_header('x-graph-ms', str(1000 * (time.time() - t1)))
         except Exception as e:
             log.error(e)
             raise
