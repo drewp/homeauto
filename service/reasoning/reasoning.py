@@ -19,7 +19,7 @@ with PSHB, that their graph has changed.
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks, gatherResults
 from twisted.python.filepath import FilePath
-import time, traceback, sys, json, logging, urllib
+import time, traceback, sys, json, logging
 from rdflib import Graph, ConjunctiveGraph
 from rdflib import Namespace, URIRef, Literal, RDF
 from rdflib.parser import StringInputSource
@@ -37,6 +37,9 @@ from logsetup import log
 log.setLevel(logging.WARN)
 outlog = logging.getLogger('output')
 outlog.setLevel(logging.WARN)
+
+sys.path.append('../../../ffg/ffg')
+import evtiming
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
@@ -188,7 +191,7 @@ class Reasoning(object):
         self.inputGraph = InputGraph([], self.graphChanged)      
         self.inputGraph.updateFileData()
 
-
+    @evtiming.serviceLevel.timed('readRules')
     def readRules(self):
         self.rulesN3 = open('rules.n3').read() # for web display
         self.ruleStore = N3RuleStore()
@@ -197,12 +200,14 @@ class Reasoning(object):
 
     @inlineCallbacks
     def poll(self):
+        t1 = time.time()
         try:
             yield self.inputGraph.updateRemoteData()
             self.lastPollTime = time.time()
         except Exception, e:
             log.error(traceback.format_exc())
             self.lastError = str(e)
+        evtiming.serviceLevel.addData('poll', time.time() - t1)
 
     def updateRules(self):
         try:
@@ -219,6 +224,7 @@ class Reasoning(object):
         return [(ROOM['reasoner'], ROOM['ruleParseTime'],
                                Literal(ruleParseTime))]
 
+    evtiming.serviceLevel.timed('graphChanged')
     def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
         t1 = time.time()
         oldInferred = self.inferred
@@ -259,6 +265,8 @@ class Reasoning(object):
 
 class Index(cyclone.web.RequestHandler):
     def get(self):
+        print evtiming.serviceLevel.serviceJsonReport()
+
         # make sure GET / fails if our poll loop died
         ago = time.time() - self.settings.reasoning.lastPollTime
         if ago > 2:
