@@ -122,11 +122,11 @@ class MotionSensorInput(DeviceType):
     def poll(self):
         motion = self.pi.read(17)
         
-        return [
+        return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
             self.recentMotionStatement(motion),
-        ]
+        ], 'oneshot': []}
 
     def recentMotionStatement(self, motion):
         if not hasattr(self, 'lastMotionTime'):
@@ -257,14 +257,25 @@ class PushbuttonInput(DeviceType):
         log.debug("setup switch on %r", self.pinNumber)
         self.pi.set_mode(self.pinNumber, pigpio.INPUT)
         self.pi.set_pull_up_down(self.pinNumber, pigpio.PUD_UP)
+        self.lastClosed = None
 
     def poll(self):
         closed = not self.pi.read(self.pinNumber)
-        
-        return [
+
+        if self.lastClosed is not None and closed != self.lastClosed:
+            oneshot = [
+                (self.uri, ROOM['buttonState'],
+                 ROOM['press'] if closed else ROOM['release']),
+            ]
+        else:
+            oneshot = []
+        self.lastClosed = closed
+            
+        return {'latest': [
             (self.uri, ROOM['buttonState'],
              ROOM['pressed'] if closed else ROOM['notPressed']),
-        ]
+        ],
+                'oneshot':oneshot}
         
     def watchPrefixes(self):
         return [

@@ -310,7 +310,7 @@ class OneShot(cyclone.web.RequestHandler):
         try:
             g = parseRdf(self.request.body, self.request.headers['content-type'])
             for s in g:
-                print "stmt", s
+                log.debug("oneshot stmt %r", s)
             if not len(g):
                 log.warn("incoming oneshot graph had no statements: %r", self.request.body)
                 return

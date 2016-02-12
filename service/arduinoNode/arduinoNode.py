@@ -8,6 +8,7 @@ import glob, sys, logging, subprocess, socket, os, hashlib, time, tempfile
 import shutil, json
 import serial
 import cyclone.web
+from cyclone.httpclient import fetch
 from rdflib import Graph, Namespace, URIRef, Literal, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
@@ -127,6 +128,11 @@ class Board(object):
         for i in self._polledDevs:
             now = time.time()
             new = i.readFromPoll(self.ser.read)
+            if isinstance(new, dict): # new style
+                oneshot = new['oneshot']
+                new = new['latest']
+            else:
+                oneshot = None
             prev = self._statementsFromInputs.get(i.uri, [])
             if new or prev:
                 self._statementsFromInputs[i.uri] = new
@@ -139,6 +145,8 @@ class Board(object):
                 #     fail since the '2' statement is gone)
                 self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
                                                       inContext(new, i.uri)))
+            if oneshot:
+                self._sendOneshot(oneshot)
             self._lastPollTime[i.uri] = now
             
         #plus statements about succeeding or erroring on the last poll
@@ -149,6 +157,15 @@ class Board(object):
         if elapsed > 1.0:
             log.warn('poll took %.1f seconds' % elapsed)
         self._exportToGraphite()
+
+    def _sendOneshot(self, oneshot):
+        body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
+                         for s,p,o in oneshot)).encode('utf8')
+        bang6 = 'fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa'
+        fetch(method='POST',
+              url='http://[%s]:9071/oneShot' % bang6,
+              headers={'Content-Type': ['text/n3']}, postdata=body,
+              timeout=5)
 
     def _exportToGraphite(self):
         # note this is writing way too often- graphite is storing at a lower res
