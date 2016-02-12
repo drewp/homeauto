@@ -177,6 +177,10 @@ class PingInput(DeviceType):
 @register
 class MotionSensorInput(DeviceType):
     deviceType = ROOM['MotionSensor']
+    def __init__(self, graph, uri, pinNumber):
+        DeviceType.__init__(self, graph, uri, pinNumber)
+        self.lastRead = None
+        
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, INPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
@@ -192,12 +196,17 @@ class MotionSensorInput(DeviceType):
         if b not in 'yn':
             raise ValueError('unexpected response %r' % b)
         motion = b == 'y'
-                
-        return [
+
+        oneshot = []
+        if self.lastRead is not None and motion != self.lastRead:
+            oneshot = [(self.uri, ROOM['sees'], ROOM['motionStart'])]
+        self.lastRead = motion
+        
+        return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
             self.recentMotionStatement(motion),
-        ]
+        ], 'oneshot': oneshot}
 
     def recentMotionStatement(self, motion):
         if not hasattr(self, 'lastMotionTime'):

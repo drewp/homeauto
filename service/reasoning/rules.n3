@@ -129,12 +129,17 @@
   :storageCeilingLedLong :brightness "1" .
 } .
 
+{ <http://bigasterisk.com/homeauto/sensor/motion0> :sees <http://projects.bigasterisk.com/room/motionStart> . } => {
+  :storageCeilingLedCross :brightness "1" .
+  :storageCeilingLedLong :brightness "1" .
+} .
+
 @prefix bed: <http://bigasterisk.com/homeauto/sensor/bed/> .
 
-{ bed:greenButton :buttonState :pressed } => {
+{ bed:greenButton :buttonState :press } => {
   :headboardWhite :brightness 0 .
 } .
 
-{ bed:redButton :buttonState :pressed } => {
+{ bed:redButton :buttonState :press } => {
   :headboardWhite :brightness 0.04 .
 } .
