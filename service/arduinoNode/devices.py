@@ -228,6 +228,10 @@ class MotionSensorInput(DeviceType):
 class PushbuttonInput(DeviceType):
     """add a switch to ground; we'll turn on pullup"""
     deviceType = ROOM['Pushbutton']
+    def __init__(self, graph, uri, pinNumber):
+        DeviceType.__init__(self, graph, uri, pinNumber)
+        self.lastClosed = None
+        
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, INPUT); digitalWrite(%(pin)d, HIGH);' % {
             'pin': self.pinNumber,
@@ -243,13 +247,22 @@ class PushbuttonInput(DeviceType):
         b = read(1)
         if b not in '01':
             raise ValueError('unexpected response %r' % b)
-        motion = b == '1'
+        closed = b == '0'
 
-        #and exactly once for the transition
-        return [
+        if self.lastClosed is not None and closed != self.lastClosed:
+            oneshot = [
+                (self.uri, ROOM['buttonState'],
+                 ROOM['press'] if closed else ROOM['release']),
+            ]
+        else:
+            oneshot = []
+        self.lastClosed = closed
+            
+        return {'latest': [
             (self.uri, ROOM['buttonState'],
-             ROOM['pressed'] if motion else ROOM['notPressed']),
-        ]
+             ROOM['pressed'] if closed else ROOM['notPressed']),
+        ],
+                'oneshot': oneshot}
     
     def watchPrefixes(self):
         return [
