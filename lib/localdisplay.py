@@ -19,6 +19,7 @@ def setDisplayToLocalX():
             display = ":0.0"
         assert display.startswith(':'), display
         os.environ['DISPLAY'] = display
+        os.environ['XAUTHORITY'] = os.path.expanduser('~/.Xauthority')
         break
     else:
         raise ValueError("didn't find an Xorg process")
