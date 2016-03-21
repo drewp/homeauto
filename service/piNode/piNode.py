@@ -36,6 +36,20 @@ hostname = socket.gethostname()
 
 CTX = ROOM['pi/%s' % hostname]
 
+def patchRandid():
+    """
+    I'm concerned urandom is slow on raspberry pi, and I'm adding to
+    graphs a lot. Unclear what the ordered return values might do to
+    the balancing of the graph.
+    """
+    _id_serial = [1000]
+    def randid():
+        _id_serial[0] += 1
+        return _id_serial[0]
+    import rdflib.plugins.memory
+    rdflib.plugins.memory.randid = randid
+patchRandid()
+
 class Config(object):
     def __init__(self, masterGraph):
         self.graph = ConjunctiveGraph()
@@ -43,6 +57,7 @@ class Config(object):
         for f in os.listdir('config'):
             if f.startswith('.'): continue
             self.graph.parse('config/%s' % f, format='n3')
+            log.info('  parsed %s', f)
         self.graph.bind('', ROOM) # not working
         self.graph.bind('rdf', RDF)
         # config graph is too noisy; maybe make it a separate resource
@@ -245,6 +260,7 @@ def main():
         (r'/output', OutputPage),
         (r'/dot', Dot),
         ], config=config, board=board, debug=arg['-v']), interface='::')
+    log.warn('serving on 9059')
     reactor.run()
 
 main()
