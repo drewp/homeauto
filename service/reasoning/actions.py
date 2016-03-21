@@ -51,6 +51,7 @@ class Actions(object):
             if len(inferredObjects) == 0:
                 self._putZero(deviceGraph, dev, pred, url)
             elif len(inferredObjects) == 1:
+                log.debug('inferredObject: %r', inferredObjects[0])
                 self._putInferred(deviceGraph, url, inferredObjects[0])
             elif len(inferredObjects) > 1:
                 log.info("conflict, ignoring: %s has %s of %s" %
@@ -116,8 +117,7 @@ class Actions(object):
                 if vol == ROOM['volumeStepUp']:
                     self.post(rootSkippingAuth + "volumeAdjust?amount=6&max=70")
                 if vol == ROOM['volumeStepDown']:
-                    self.post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")
-            
+                    self.post(rootSkippingAuth + "volumeAdjust?amount=-6&min=10")            
 
     def _frontDoorPuts(self, deviceGraph, inferred):
         # todo: shouldn't have to be a special case
