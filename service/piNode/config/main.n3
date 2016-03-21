@@ -77,6 +77,53 @@ board3ow:dev-000003a5a94c a :TemperatureSensor;
   :position houseLoc:kitchenCounter;
   :graphiteName "system.house.temp.kitchenCounter_ds_test" .
 
+@prefix board4pin: <http://bigasterisk.com/homeauto/board4/pin/> .
+
 ha:node4 a :PiBoard;
   :hostname "living";
   :onboardDevice ha:livingPiTemp .
+
+ha:livingPiTemp a :OnboardTemperature .
+
+
+@prefix board5: <http://bigasterisk.com/homeauto/board5/> .
+@prefix board5pin: <http://bigasterisk.com/homeauto/board5/pin/> .
+
+ha:node5 a :PiBoard;
+  :hostname "changing";
+  :onboardDevice ha:changingPiTemp;
+  :hasPin
+    board5pin:GPIO4,
+    board5pin:GPIO17,
+    board5pin:GPIO18 .
+
+ha:changingPiTemp a :OnboardTemperature .
+
+board5pin:GPIO4 :gpioNumber 4 .
+board5pin:GPIO17 :gpioNumber 17 .
+board5pin:GPIO18 :gpioNumber 18 .
+
+board5pin:GPIO4 :connectedTo :changingWhite .
+:changingWhite a :LedOutput .
+
+board5pin:GPIO17 :connectedTo sensor:motion2 .
+sensor:motion2 a :MotionSensor;
+  :sees :changing .
+  
+board5pin:GPIO18 :connectedTo :changingRgb .
+:changingRgb a :RgbPixels;
+  :pixels (
+  board5:rgb0
+  board5:rgb1
+  board5:rgb2
+  board5:rgb3
+  board5:rgb4
+  board5:rgb5 ) .
+
+board5:rgb0 rdfs:label "rgb0" .
+board5:rgb1 rdfs:label "rgb1" .
+board5:rgb2 rdfs:label "rgb2" .
+board5:rgb3 rdfs:label "rgb3" .
+board5:rgb4 rdfs:label "rgb4" .
+board5:rgb5 rdfs:label "rgb5" .
+
