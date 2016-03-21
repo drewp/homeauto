@@ -105,8 +105,8 @@ class Board(object):
         self.ser = LoggingSerial(port=self.dev, baudrate=self.baudrate,
                                  timeout=2)
         
-    def startPolling(self):
-        task.LoopingCall(self._poll).start(.5)
+    def startPolling(self, period=.5):
+        task.LoopingCall(self._poll).start(period)
             
     def _poll(self):
         """
@@ -126,29 +126,32 @@ class Board(object):
         t1 = time.time()
         self.ser.write("\x60\x00") # "poll everything"
         for i in self._polledDevs:
-            now = time.time()
-            new = i.readFromPoll(self.ser.read)
-            if isinstance(new, dict): # new style
-                oneshot = new['oneshot']
-                new = new['latest']
-            else:
-                oneshot = None
-            prev = self._statementsFromInputs.get(i.uri, [])
-            if new or prev:
-                self._statementsFromInputs[i.uri] = new
-                # it's important that quads from different devices
-                # don't clash, since that can lead to inconsistent
-                # patches (e.g.
-                #   dev1 changes value from 1 to 2;
-                #   dev2 changes value from 2 to 3;
-                #   dev1 changes from 2 to 4 but this patch will
-                #     fail since the '2' statement is gone)
-                self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
-                                                      inContext(new, i.uri)))
-            if oneshot:
-                self._sendOneshot(oneshot)
-            self._lastPollTime[i.uri] = now
-            
+            try:
+                now = time.time()
+                new = i.readFromPoll(self.ser.read)
+                if isinstance(new, dict): # new style
+                    oneshot = new['oneshot']
+                    new = new['latest']
+                else:
+                    oneshot = None
+                prev = self._statementsFromInputs.get(i.uri, [])
+                if new or prev:
+                    self._statementsFromInputs[i.uri] = new
+                    # it's important that quads from different devices
+                    # don't clash, since that can lead to inconsistent
+                    # patches (e.g.
+                    #   dev1 changes value from 1 to 2;
+                    #   dev2 changes value from 2 to 3;
+                    #   dev1 changes from 2 to 4 but this patch will
+                    #     fail since the '2' statement is gone)
+                    self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
+                                                          inContext(new, i.uri)))
+                if oneshot:
+                    self._sendOneshot(oneshot)
+                self._lastPollTime[i.uri] = now
+            except:
+                log.warn('while polling %r:', i.uri)
+                raise
         #plus statements about succeeding or erroring on the last poll
         byte = self.ser.read(1)
         if byte != 'x':
@@ -379,7 +382,7 @@ def main():
 
     log.info('open boards')
     for b in boards:
-        b.startPolling()
+        b.startPolling(period=.1 if not arg['-v'] else 10)
 
 
     reactor.listenTCP(9059, cyclone.web.Application([
