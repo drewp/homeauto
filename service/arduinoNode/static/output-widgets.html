@@ -5,7 +5,7 @@
 
 <dom-module id="output-sender">
   <template>
-    <iron-ajax id="output" url="../output" method="PUT"></iron-ajax>
+    <iron-ajax id="output" url="{{output}}" method="PUT"></iron-ajax>
     Set <a href$="{{subj}}">{{compactUri(subj)}}</a>'s
     <span>{{compactUri(pred)}}</span> to
   </template>
@@ -14,6 +14,7 @@
      is: 'output-sender',
      behaviors: [BigastUri],
      properties: {
+       output: { type: String, value: "output" }, // url to PUT outputs
        streamedGraph: { notify: true, observer: 'onGraphChange' },
        subj: { notify: true },
        pred: { notify: true },
@@ -111,13 +112,14 @@
 
 <dom-module id="output-slider">
   <template>
-    <output-sender streamed-graph="{{streamedGraph}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
+    <output-sender streamed-graph="{{streamedGraph}}" output="{{output}}" subj="{{subj}}" pred="{{pred}}" value="{{value}}"></output-sender>
     <input type="range" min="{{min}}" max="{{max}}" step="{{step}}" value="{{value::input}}"> <span>{{value}}</span>
   </template>
   <script>
    Polymer({
      is: 'output-slider',
      properties: {
+       output: { notify: true },
        streamedGraph: { notify: true }, 
        max: { notify: true },
        min: { notify: true },
