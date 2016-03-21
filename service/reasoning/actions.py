@@ -38,6 +38,8 @@ class Actions(object):
                 (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedLong'), ROOM.brightness),
                 (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedCross'), ROOM.brightness),
                 (URIRef('http://projects.bigasterisk.com/room/headboardWhite'), ROOM.brightness),
+                (URIRef('http://projects.bigasterisk.com/room/changingWhite'), ROOM.brightness),
+                (URIRef('http://projects.bigasterisk.com/room/starTrekLight'), ROOM.brightness),
                 (URIRef('http://projects.bigasterisk.com/room/bedLedStrip'), ROOM.color),
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
