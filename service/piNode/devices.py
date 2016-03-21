@@ -119,14 +119,22 @@ class MotionSensorInput(DeviceType):
         self.pi.set_mode(17, pigpio.INPUT)
         self.pi.set_pull_up_down(17, pigpio.PUD_DOWN)
 
+    def hostStateInit(self):
+        self.lastRead = None
+
     def poll(self):
         motion = self.pi.read(17)
+        
+        oneshot = []
+        if self.lastRead is not None and motion != self.lastRead:
+            oneshot = [(self.uri, ROOM['sees'], ROOM['motionStart'])]
+        self.lastRead = motion
         
         return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
             self.recentMotionStatement(motion),
-        ], 'oneshot': []}
+        ], 'oneshot': oneshot}
 
     def recentMotionStatement(self, motion):
         if not hasattr(self, 'lastMotionTime'):

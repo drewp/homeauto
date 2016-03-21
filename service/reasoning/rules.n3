@@ -143,3 +143,20 @@
 { bed:redButton :buttonState :press } => {
   :headboardWhite :brightness 0.04 .
 } .
+
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+{ sensor:buttonAriBed :buttonState :press } => {
+  :starTrekLight :brightness 0.0 .
+} .
+
+{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :noMotion } => {
+  :changingWhite :brightness 0.0 .
+  } .
+
+{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :motion } => {
+  :changingWhite :brightness 0.2 .
+} .
+
+{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :motionStart } => {
+  :changingCam :grab <http://bang:9057/changing.jpg> .
+  } .
