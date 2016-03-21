@@ -8,7 +8,11 @@ try:
 except ImportError:
     pigpio = None
 import w1thermsensor
-    
+try:
+    import NeoPixel
+except ImportError:
+    NeoPixel = None
+
 import sys
 
 log = logging.getLogger()
@@ -375,10 +379,12 @@ class OnboardTemperature(DeviceType):
     pollPeriod = 10
     @classmethod
     def findInstances(cls, graph, board, pi):
+        log.debug('graph has any connected devices of type OnboardTemperature on %r?', board)
         for row in graph.query('''SELECT DISTINCT ?uri WHERE {
           ?board :onboardDevice ?uri . 
           ?uri a :OnboardTemperature .
         }''', initBindings=dict(board=board)):
+            log.debug('  found %s', row.uri)
             yield cls(graph, row.uri, pi, pinNumber=None)
     
     def poll(self):
@@ -394,6 +400,53 @@ class OnboardTemperature(DeviceType):
         # about eliminating it.
         return [(self.uri, ROOM['temperatureF']),
                 ]
+
+@register
+class RgbPixels(DeviceType):
+    """chain of ws2812 rgb pixels on pin GPIO18"""
+    deviceType = ROOM['RgbPixels']
+
+    def hostStateInit(self):
+        px = self.graph.value(self.uri, ROOM['pixels'])
+        self.pixelUris = list(self.graph.items(px))
+        self.values = dict((uri, Literal('#000000')) for uri in self.pixelUris)
+        self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
+                        'ledCount': len(self.pixelUris),
+                        'pin': self.pinNumber,
+                        'ledType': 'WS2812',
+        }
+        self.neo = NeoPixel.NeoPixel(len(self.values))
+        self.neo.begin()
+    
+    def _rgbFromHex(self, h):
+        rrggbb = h.lstrip('#')
+        return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
+    
+    def sendOutput(self, statements):
+        px, pred, color = statements[0]
+        if pred != ROOM['color']:
+            raise ValueError(pred)
+        rgb = self._rgbFromHex(color)
+        if px not in self.values:
+            raise ValueError(px)
+        self.values[px] = Literal(color)
+        self.neo.setPixelColor(self.pixelUris.index(px), rgb[0], rgb[1], rgb[2])
+        self.neo.show()
+
+    def hostStatements(self):
+        return [(uri, ROOM['color'], hexCol)
+                for uri, hexCol in self.values.items()]
+        
+    def outputPatterns(self):
+        return [(px, ROOM['color'], None) for px in self.pixelUris]
+
+    def outputWidgets(self):
+        return [{
+            'element': 'output-rgb',
+            'subj': px,
+            'pred': ROOM['color'],
+        } for px in self.pixelUris]
+
         
 def makeDevices(graph, board, pi):
     out = []
