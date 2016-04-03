@@ -270,11 +270,16 @@ class PushbuttonInput(DeviceType):
         self.pi.set_mode(self.pinNumber, pigpio.INPUT)
         self.pi.set_pull_up_down(self.pinNumber, pigpio.PUD_UP)
         self.lastClosed = None
+        self.invert = (self.uri, ROOM['style'],
+                       ROOM['inverted']) in self.graph
 
     def poll(self):
         closed = not self.pi.read(self.pinNumber)
+        if self.invert:
+            closed = not closed
 
         if self.lastClosed is not None and closed != self.lastClosed:
+            log.debug('%s changed to %s', self.uri, closed)
             oneshot = [
                 (self.uri, ROOM['buttonState'],
                  ROOM['press'] if closed else ROOM['release']),

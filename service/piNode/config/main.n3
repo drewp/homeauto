@@ -79,12 +79,28 @@ board3ow:dev-000003a5a94c a :TemperatureSensor;
 
 @prefix board4pin: <http://bigasterisk.com/homeauto/board4/pin/> .
 
+# pinout: https://www.raspberrypi.org/documentation/usage/gpio-plus-and-raspi2/
 ha:node4 a :PiBoard;
   :hostname "living";
-  :onboardDevice ha:livingPiTemp .
+  :onboardDevice ha:livingPiTemp;
+  :hasPin
+    board4pin:GPIO17,
+    board4pin:GPIO4,
+    board4pin:GPIO27,
+    board4pin:GPIO22 .
+
+board4pin:GPIO17 :gpioNumber 17; :connectedTo sensor:tempHumidLivingRoomCeiling .
+board4pin:GPIO4 :gpioNumber 4; :connectedTo :livingRoomLamp1 .
+board4pin:GPIO27 :gpioNumber 27; :connectedTo :livingRoomLamp2 .
+board4pin:GPIO22 :gpioNumber 22; :connectedTo :bookSwitch .
 
 ha:livingPiTemp a :OnboardTemperature .
-
+sensor:tempHumidLivingRoomCeiling a :TempHumidSensor;
+  :sees houseLoc:livingRoomCeiling;
+  :graphiteName "system.house.temp.livingRoomCeiling" .
+:livingRoomLamp1 a :LedOutput .
+:livingRoomLamp2 a :LedOutput .
+:bookSwitch a :Pushbutton; :style :inverted .
 
 @prefix board5: <http://bigasterisk.com/homeauto/board5/> .
 @prefix board5pin: <http://bigasterisk.com/homeauto/board5/pin/> .
