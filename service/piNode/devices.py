@@ -9,9 +9,18 @@ except ImportError:
     pigpio = None
 import w1thermsensor
 try:
-    import NeoPixel
+    import neopixel
 except ImportError:
-    NeoPixel = None
+    neopixel = None
+
+def setupPwm(pi, pinNumber, hz=8000):
+    pi.set_mode(pinNumber, pigpio.OUTPUT)
+    # see http://abyz.co.uk/rpi/pigpio/cif.html#gpioCfgClock
+    # and http://abyz.co.uk/rpi/pigpio/cif.html#gpioSetPWMfrequency
+    actual = pi.set_PWM_frequency(pinNumber, hz)
+    if actual != hz:
+        raise ValueError('pwm actual=%s' % actual)
+    pi.set_PWM_dutycycle(pinNumber, 0)
 
 import sys
 
@@ -192,9 +201,7 @@ class RgbStrip(DeviceType):
             
     def setup(self):
         for i in self.rgb:
-            self.pi.set_mode(i, pigpio.OUTPUT)
-            self.pi.set_PWM_frequency(i, 200)
-            self.pi.set_PWM_dutycycle(i, 0)
+            setupPwm(self.pi, i)
             
     def hostStatements(self):
         return [(self.uri, ROOM['color'], Literal(self.value))]
@@ -350,9 +357,7 @@ class LedOutput(DeviceType):
         self.value = 0
     
     def setup(self):
-        self.pi.set_mode(self.pinNumber, pigpio.OUTPUT)
-        self.pi.set_PWM_frequency(self.pinNumber, 200)
-        self.pi.set_PWM_dutycycle(self.pinNumber, 0)
+        setupPwm(self.pi, self.pinNumber)
 
     def outputPatterns(self):
         return [(self.uri, ROOM['brightness'], None)]
@@ -415,14 +420,25 @@ class RgbPixels(DeviceType):
         px = self.graph.value(self.uri, ROOM['pixels'])
         self.pixelUris = list(self.graph.items(px))
         self.values = dict((uri, Literal('#000000')) for uri in self.pixelUris)
+        colorOrder, stripType = self.getColorOrder(self.graph, self.uri)
         self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
                         'ledCount': len(self.pixelUris),
                         'pin': self.pinNumber,
                         'ledType': 'WS2812',
+                        'colorOrder': colorOrder
         }
-        self.neo = NeoPixel.NeoPixel(len(self.values))
+        self.neo = neopixel.Adafruit_NeoPixel(len(self.values), pin=18, strip_type=stripType)
         self.neo.begin()
-    
+
+    def getColorOrder(self, graph, uri):
+        colorOrder = graph.value(uri, ROOM['colorOrder'],
+                                 default=ROOM['ledColorOrder/RGB'])
+        head, tail = str(colorOrder).rsplit('/', 1)
+        if head != str(ROOM['ledColorOrder']):
+            raise NotImplementedError('%r colorOrder %r' % (uri, colorOrder))
+        stripType = getattr(neopixel.ws, 'WS2811_STRIP_%s' % tail)
+        return colorOrder, stripType
+        
     def _rgbFromHex(self, h):
         rrggbb = h.lstrip('#')
         return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
@@ -435,7 +451,7 @@ class RgbPixels(DeviceType):
         if px not in self.values:
             raise ValueError(px)
         self.values[px] = Literal(color)
-        self.neo.setPixelColor(self.pixelUris.index(px), rgb[0], rgb[1], rgb[2])
+        self.neo.setPixelColorRGB(self.pixelUris.index(px), rgb[0], rgb[1], rgb[2])
         self.neo.show()
 
     def hostStatements(self):

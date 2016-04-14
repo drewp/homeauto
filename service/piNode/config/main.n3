@@ -1,5 +1,6 @@
 @prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
 @prefix ha:       <http://bigasterisk.com/homeauto/> .
 @prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
 @prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
@@ -128,6 +129,7 @@ sensor:motion2 a :MotionSensor;
   
 board5pin:GPIO18 :connectedTo :changingRgb .
 :changingRgb a :RgbPixels;
+  :colorOrder order:GRB;
   :pixels (
   board5:rgb0
   board5:rgb1
