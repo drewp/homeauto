@@ -146,23 +146,26 @@ class MotionSensorInput(DeviceType):
         return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
-            self.recentMotionStatement(motion),
-        ], 'oneshot': oneshot}
+        ] + self.recentMotionStatements(motion),
+        'oneshot': oneshot}
 
-    def recentMotionStatement(self, motion):
+    def recentMotionStatements(self, motion):
         if not hasattr(self, 'lastMotionTime'):
             self.lastMotionTime = 0
         now = time.time()
         if motion:
             self.lastMotionTime = now
-        recentMotion = now - self.lastMotionTime < 60 * 10
-        return (self.uri, ROOM['seesRecently'],
-                ROOM['motion'] if recentMotion else ROOM['noMotion'])        
+        dt = now - self.lastMotionTime
+        return [(self.uri, ROOM['seesRecently'],
+                 ROOM['motion'] if (dt < 60 * 10) else ROOM['noMotion']),
+                (self.uri, ROOM['seesRecently30'],
+                 ROOM['motion'] if (dt < 30) else ROOM['noMotion'])]
     
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['sees']),
             (self.uri, ROOM['seesRecently']),
+            (self.uri, ROOM['seesRecently30']),
         ]
 
 
