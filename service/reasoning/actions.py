@@ -35,12 +35,14 @@ class Actions(object):
                 #(DEV.theaterDoorLock, ROOM.state),
                 #(URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
                 (URIRef('http://bigasterisk.com/host/dash/monitor'), ROOM.powerState),
-                (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedLong'), ROOM.brightness),
-                (URIRef('http://projects.bigasterisk.com/room/storageCeilingLedCross'), ROOM.brightness),
-                (URIRef('http://projects.bigasterisk.com/room/headboardWhite'), ROOM.brightness),
-                (URIRef('http://projects.bigasterisk.com/room/changingWhite'), ROOM.brightness),
-                (URIRef('http://projects.bigasterisk.com/room/starTrekLight'), ROOM.brightness),
-                (URIRef('http://projects.bigasterisk.com/room/bedLedStrip'), ROOM.color),
+                (ROOM['storageCeilingLedLong'], ROOM.brightness),
+                (ROOM['storageCeilingLedCross'], ROOM.brightness),
+                (ROOM['headboardWhite'], ROOM.brightness),
+                (ROOM['changingWhite'], ROOM.brightness),
+                (ROOM['starTrekLight'], ROOM.brightness),
+                (ROOM['livingRoomLamp1'], ROOM.brightness),
+                (ROOM['livingRoomLamp2'], ROOM.brightness),
+                (ROOM['bedLedStrip'], ROOM.color),
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
 
