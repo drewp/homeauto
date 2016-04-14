@@ -82,6 +82,12 @@ class Board(object):
         task.LoopingCall(self._poll).start(.05)
 
     def _poll(self):
+        try:
+            self._pollMaybeError()
+        except Exception:
+            log.exception("During poll:")
+            
+    def _pollMaybeError(self):
         for i in self._devs:
             now = time.time()
             if (hasattr(i, 'pollPeriod') and
@@ -115,11 +121,17 @@ class Board(object):
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
-        bang6 = 'fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa'
-        fetch(method='POST',
-              url='http://[%s]:9071/oneShot' % bang6,
-              headers={'Content-Type': ['text/n3']}, postdata=body,
-              timeout=5)
+        bang = '[fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa]'
+        url = 'http://%s:9071/oneShot' % bang
+        d = fetch(method='POST',
+                  url=url,
+                  headers={'Content-Type': ['text/n3']},
+                  postdata=body,
+                  timeout=5)
+        def err(e):
+            log.info('oneshot post to %r failed:  %s',
+                     url, e.getErrorMessage())
+        d.addErrback(err)
 
     def _exportToGraphite(self):
         # note this is writing way too often- graphite is storing at a lower res
