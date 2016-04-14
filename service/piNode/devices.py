@@ -2,6 +2,7 @@ from __future__ import division
 
 import time, logging, os
 from rdflib import Namespace, URIRef, Literal
+from twisted.internet import reactor
 
 try:
     import pigpio
@@ -351,6 +352,46 @@ class OneWire(DeviceType):
     def watchPrefixes(self):
         return [(s.uri, ROOM['temperatureF']) for s in self._sensors]
 
+class FilteredValue(object):
+    def __init__(self, setter,
+                 slew=2.0, # step/sec max slew rate
+                 accel=5, # step/sec^2 acceleration
+    ):
+        self.setter = setter
+        self.slew, self.accel = slew, accel
+        
+        self.x = None
+        self.dx = 0
+        self.goal = self.x
+        self.lastStep = 0
+
+    def set(self, goal):
+        self.goal = goal
+        self.step()
+
+    def step(self):
+        now = time.time()
+        dt = min(.1, now - self.lastStep)
+        self.lastStep = now
+
+        if self.x is None:
+            self.x = self.goal
+
+        if self.goal > self.x:
+            self.dx = min(self.slew, self.dx + self.accel * dt)
+        else:
+            self.dx = max(-self.slew, self.dx - self.accel * dt)
+
+        nextX = self.x + self.dx * dt
+        if self.x == self.goal or (self.x < self.goal < nextX) or (self.x > self.goal > nextX):
+            self.x = self.goal
+            self.dx = 0
+        else:
+            self.x = nextX
+            reactor.callLater(.05, self.step)
+
+        #print "x= %(x)s dx= %(dx)s goal= %(goal)s" % self.__dict__
+        self.setter(self.x)
         
 @register
 class LedOutput(DeviceType):
@@ -358,6 +399,7 @@ class LedOutput(DeviceType):
 
     def hostStateInit(self):
         self.value = 0
+        self.fv = FilteredValue(self._setPwm)
     
     def setup(self):
         setupPwm(self.pi, self.pinNumber)
@@ -369,7 +411,10 @@ class LedOutput(DeviceType):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['brightness'])
         self.value = float(statements[0][2])
-        v = int(self.value * 255)
+        self.fv.set(self.value)
+
+    def _setPwm(self, x):
+        v = int(x * 255)
         self.pi.set_PWM_dutycycle(self.pinNumber, v)
 
     def hostStatements(self):
