@@ -6,7 +6,7 @@
 <http://kitchen:9059/graph>  is :source of :reasoning; rdfs:label "kitchen pi" .
 <http://living:9059/graph>   is :source of :reasoning; rdfs:label "living room pi" .
 <http://slash:9059/graph>    is :source of :reasoning; rdfs:label "slash arduino" .
-<http://sticker:9059/graph>  is :source of :reasoning; rdfs:label "bed pi" .
+<http://bed:9059/graph>  is :source of :reasoning; rdfs:label "bed pi" .
 <http://brace6:9059/graph>   is :source of :reasoning; rdfs:label "brace arduino" .
 <http://changing:9059/graph> is :source of :reasoning; rdfs:label "changing pi" .
 

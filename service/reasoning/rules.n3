@@ -157,6 +157,11 @@
   :changingWhite :brightness 0.2 .
 } .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :motionStart } => {
+{ sensor:motionChanging :sees :motionStart } => {
   :changingCam :grab <http://bang:9057/changing.jpg> .
   } .
+
+{ :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 0.0 . } => {
+  :livingRoomLamp1 :brightness 1.0 . :livingRoomLamp2 :brightness 1.0 } .
+{ :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 1.0 . } => {
+  :livingRoomLamp1 :brightness 0.0 . :livingRoomLamp2 :brightness 0.0 } .
