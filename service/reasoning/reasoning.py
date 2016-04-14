@@ -46,7 +46,7 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 
 
 class InputGraph(object):
-    def __init__(self, inputDirs, onChange):
+    def __init__(self, inputDirs, onChange, sourceSubstr=None):
         """
         this has one Graph that's made of:
           - all .n3 files from inputDirs (read at startup)
@@ -61,13 +61,18 @@ class InputGraph(object):
         ones with the predicates on the boring list. onChange(self,
         oneShot=True) means: don't store the result of this change
         anywhere; it needs to be processed only once
+
+        sourceSubstr filters to only pull from sources containing the
+        string (for debugging).
         """
         self.inputDirs = inputDirs
         self.onChange = onChange
+        self.sourceSubstr = sourceSubstr
         self._fileGraph = Graph()
         self._remoteGraph = None
         self._combinedGraph = None
         self._oneShotAdditionGraph = None
+        self._lastErrLog = {} # source: error
 
     def updateFileData(self):
         """
@@ -102,22 +107,32 @@ class InputGraph(object):
         @inlineCallbacks
         def fetchOne(source):
             try:
-                # this part could be parallelized
-                fetchTime = yield addTrig(g, source)
+                fetchTime = yield addTrig(g, source, timeout=5)
             except Exception, e:
-                log.error("  can't add source %s: %s", source, e)
-                g.add((URIRef(source), ROOM['graphLoadError'], Literal(str(e))))
+                e = str(e)
+                if self._lastErrLog.get(source) != e:
+                    log.error("  can't add source %s: %s", source, e)
+                    self._lastErrLog[source] = e
+                g.add((URIRef(source), ROOM['graphLoadError'], Literal(e)))
                 g.add((URIRef(source), RDF.type, ROOM['FailedGraphLoad']))
             else:
+                if self._lastErrLog.get(source):
+                    log.warning("  source %s is back", source)
+                    self._lastErrLog[source] = None
                 g.add((URIRef(source), ROOM['graphLoadMs'],
                        Literal(round(fetchTime * 1000, 1))))
 
         fetchDone = []
+        filtered = 0
         for source in self._fileGraph.objects(ROOM['reasoning'],
                                               ROOM['source']):
+            if self.sourceSubstr and self.sourceSubstr not in source:
+                filtered += 1
+                continue
             fetchDone.append(fetchOne(source))
         yield gatherResults(fetchDone, consumeErrors=True)
-        log.debug("loaded all in %.1f ms", 1000 * (time.time() - t1))
+        log.debug("loaded %s (skipping %s) in %.1f ms", len(fetchDone),
+                  filtered, 1000 * (time.time() - t1))
         
         prevGraph = self._remoteGraph
         self._remoteGraph = g
@@ -414,7 +429,8 @@ if __name__ == '__main__':
     arg = docopt("""
     Usage: reasoning.py [options]
 
-    -v   Verbose (and slow updates)
+    -v                Verbose (and slow updates)
+    --source=<substr>  Limit sources to those with this string.
     """)
     
     r = Reasoning()
