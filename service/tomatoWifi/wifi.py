@@ -15,10 +15,13 @@ class Wifi(object):
     gather the users of wifi from the tomato routers
     """
     def __init__(self, accessN3="/my/proj/openid_proxy/access.n3"):
+        self.rereadConfig()
+        #self._loadRouters(accessN3, tomatoUrl)
+
+    def rereadConfig(self):
         self.graph = Graph()
         self.graph.parse('config.n3', format='n3')
-
-        #self._loadRouters(accessN3, tomatoUrl)
+        
         
     def _loadRouters(self, accessN3, tomatoUrl):
         g = Graph()
@@ -56,6 +59,7 @@ class Wifi(object):
 
     @inlineCallbacks
     def getPresentMacAddrs(self):
+        self.rereadConfig()
         rows = yield loadUvaData()
         for row in rows:
             if 'clientHostname' in row:
