@@ -58,7 +58,7 @@ class Config(object):
             if f.startswith('.'): continue
             self.graph.parse('config/%s' % f, format='n3')
             log.info('  parsed %s', f)
-        self.graph.bind('', ROOM) # not working
+        self.graph.bind('', ROOM)
         self.graph.bind('rdf', RDF)
         # config graph is too noisy; maybe make it a separate resource
         #masterGraph.patch(Patch(addGraph=self.graph))
