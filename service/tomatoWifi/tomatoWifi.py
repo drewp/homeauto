@@ -175,6 +175,7 @@ class Poller(object):
             self.lastWithSignal = newWithSignal
             if actions: # this doesn't currently include signal strength changes
                 fetch(reasoning + "immediateUpdate",
+                      method='PUT',
                       timeout=2,
                       headers={'user-agent': ['tomatoWifi']}).addErrback(log.warn)
             self.lastAddrs = newAddrs
