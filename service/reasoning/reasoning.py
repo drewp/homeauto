@@ -42,7 +42,16 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
 NS = {'': ROOM, 'dev': DEV}
-        
+
+
+def unquoteStatement(graph, stmt):
+    # todo: use the standard schema for this, or eliminate
+    # it in favor of n3 graph literals.
+    return (graph.value(stmt, ROOM['subj']),
+            graph.value(stmt, ROOM['pred']),
+            graph.value(stmt, ROOM['obj']))
+
+
 class Reasoning(object):
     def __init__(self):
         self.prevGraph = None
@@ -104,6 +113,10 @@ class Reasoning(object):
             
             g = inputGraph.getGraph()
             self.inferred = self._makeInferred(g)
+
+            for qs in self.inferred.objects(ROOM['output'], ROOM['statement']):
+                self.inferred.add(unquoteStatement(self.inferred, qs))
+            
             [self.inferred.add(s) for s in ruleStatStmts]
 
             if oneShot:
