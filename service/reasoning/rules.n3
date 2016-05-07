@@ -140,8 +140,12 @@
   :headboardWhite :brightness 0.0 .
 } .
 
-{ bed:redButton :buttonState :press } => {
-  :headboardWhite :brightness 0.04 .
+{ bed:redButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
+  :headboardWhite :brightness 0.2 .
+} .
+
+{ bed:redButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
+  :headboardWhite :brightness 1 .
 } .
 
 @prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
