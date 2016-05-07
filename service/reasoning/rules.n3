@@ -141,11 +141,14 @@
 } .
 
 { bed:redButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
-  :headboardWhite :brightness 0.2 .
+  # Desired:
+  #   :output :subgraph { :headboardWhite :brightness 0.2 }
+  # but I haven't been able to extract the inner graph triples yet.
+  :output :statement [ :subj :headboardWhite; :pred :brightness; :obj 0.2 ] . 
 } .
 
 { bed:redButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
-  :headboardWhite :brightness 1 .
+  :output :statement [ :subj :headboardWhite; :pred :brightness; :obj 1 ] .
 } .
 
 @prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
