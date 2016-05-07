@@ -16,27 +16,24 @@ with PSHB, that their graph has changed.
 """
 
 
-from twisted.internet import reactor, task
-from twisted.internet.defer import inlineCallbacks, gatherResults
-import time, traceback, sys, json, logging
-from rdflib import Graph, ConjunctiveGraph
-from rdflib import Namespace, URIRef, Literal, RDF
-from rdflib.parser import StringInputSource
+import json, time, traceback, sys
+from logging import getLogger, DEBUG, WARN
 
-import cyclone.web, cyclone.websocket
-from inference import infer
+from FuXi.Rete.RuleStore import N3RuleStore
+from colorlog import ColoredFormatter
 from docopt import docopt
+from rdflib import Namespace, Literal, RDF, Graph
+from twisted.internet import reactor, task
+from twisted.internet.defer import inlineCallbacks
+import cyclone.web, cyclone.websocket
+
+from inference import infer
 from actions import Actions
 from inputgraph import InputGraph
-from FuXi.Rete.RuleStore import N3RuleStore
 
 sys.path.append("../../lib")
 from logsetup import log
-log.setLevel(logging.WARN)
-outlog = logging.getLogger('output')
-outlog.setLevel(logging.WARN)
-fetchlog = logging.getLogger('fetch')
-fetchlog.setLevel(logging.WARN)
+
 
 sys.path.append('../../../ffg/ffg')
 import evtiming
@@ -94,6 +91,11 @@ class Reasoning(object):
 
     evtiming.serviceLevel.timed('graphChanged')
     def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
+        log.info("----------------------")
+        log.info("graphChanged oneShot=%s", oneShot)
+        if oneShot:
+            for s in oneShotGraph:
+                log.debug("oneshot stmt %r", s)
         t1 = time.time()
         oldInferred = self.inferred
         try:
@@ -158,9 +160,9 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
         todo: this should do the right thing when many requests come
         in very quickly
         """
-        print self.request.headers
-        log.info("immediateUpdate from %s",
-                 self.request.headers.get('User-Agent', '?'))
+        log.info("immediateUpdate from %s %s",
+                 self.request.headers.get('User-Agent', '?'),
+                 self.request.headers['Host'])
         yield r.poll()
         self.set_status(202)
 
@@ -277,20 +279,11 @@ class Application(cyclone.web.Application):
         ]
         cyclone.web.Application.__init__(self, handlers, reasoning=reasoning)
 
-if __name__ == '__main__':
-
-    arg = docopt("""
-    Usage: reasoning.py [options]
-
-    -v                Verbose (and slow updates)
-    -f                Verbose log for fetching
-    --source=<substr>  Limit sources to those with this string.
-    """)
+def configLogging(arg):
+    log.setLevel(WARN)
     
-    r = Reasoning()
-    if arg['-v']:
-        from colorlog import ColoredFormatter
-        log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s%(reset)s %(white)s%(message)s",
+    if arg['-i'] or arg['-r'] or arg['-o']:
+        log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s %(name)-6s %(filename)-12s:%(lineno)-3s %(funcName)-20s%(reset)s %(white)s%(message)s",
         datefmt=None,
         reset=True,
         log_colors={
@@ -304,14 +297,27 @@ if __name__ == '__main__':
         style='%'
 ))
 
+    if arg['-i']:
         import twisted.python.log
         twisted.python.log.startLogging(sys.stdout)
-        log.setLevel(logging.DEBUG)
-        outlog.setLevel(logging.DEBUG)
 
-    if arg['-f']:
-        fetchlog.setLevel(logging.DEBUG)
-        
-    task.LoopingCall(r.poll).start(1.0 if not arg['-v'] else 10)
+    getLogger('fetch').setLevel(DEBUG if arg['-i'] else WARN)
+    log.setLevel(DEBUG if arg['-r'] else WARN)
+    getLogger('output').setLevel(DEBUG if arg['-o'] else WARN)
+
+
+if __name__ == '__main__':
+    arg = docopt("""
+    Usage: reasoning.py [options]
+
+    -i                Verbose log on the input phase (and slow down the polling)
+    -r                Verbose log on the reasoning phase and web stuff
+    -o                Verbose log on the actions/output phase
+    --source=<substr> Limit sources to those with this string.
+    """)
+    
+    r = Reasoning()
+    configLogging(arg)
+    task.LoopingCall(r.poll).start(1.0 if not arg['-i'] else 10)
     reactor.listenTCP(9071, Application(r), interface='::')
     reactor.run()

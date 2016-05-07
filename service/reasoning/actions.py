@@ -53,7 +53,10 @@ class Actions(object):
             if len(inferredObjects) == 0:
                 self._putZero(deviceGraph, dev, pred, url)
             elif len(inferredObjects) == 1:
-                log.debug('inferredObject: %r', inferredObjects[0])
+                log.debug('inferredObject: %s %s %r',
+                          deviceGraph.qname(dev),
+                          deviceGraph.qname(pred),
+                          inferredObjects[0])
                 self._putInferred(deviceGraph, url, inferredObjects[0])
             elif len(inferredObjects) > 1:
                 log.info("conflict, ignoring: %s has %s of %s" %
@@ -168,10 +171,8 @@ class Actions(object):
         """
         value = deviceGraph.value(obj, ROOM.putValue)
         if value is not None:
-            log.info("put %s to %s", value, putUrl)
             self._put(putUrl, payload=str(value))
         elif isinstance(obj, Literal):
-            log.info("put %s to %s", obj, putUrl)
             self._put(putUrl, payload=str(obj))
         else:
             log.warn("don't know what payload to put for %s. obj=%r",
