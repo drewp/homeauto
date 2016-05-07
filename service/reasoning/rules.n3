@@ -120,24 +120,24 @@
 { shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
 
 { <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/noMotion> . } => {
-  :storageCeilingLedCross :brightness "0" .
-  :storageCeilingLedLong :brightness "0" .
+  :storageCeilingLedCross :brightness 0 .
+  :storageCeilingLedLong :brightness 0 .
 } .
 
 { <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/motion> . } => {
-  :storageCeilingLedCross :brightness "1" .
-  :storageCeilingLedLong :brightness "1" .
+  :storageCeilingLedCross :brightness 1 .
+  :storageCeilingLedLong :brightness 1 .
 } .
 
 { <http://bigasterisk.com/homeauto/sensor/motion0> :sees <http://projects.bigasterisk.com/room/motionStart> . } => {
-  :storageCeilingLedCross :brightness "1" .
-  :storageCeilingLedLong :brightness "1" .
+  :storageCeilingLedCross :brightness 1 .
+  :storageCeilingLedLong :brightness 1 .
 } .
 
 @prefix bed: <http://bigasterisk.com/homeauto/sensor/bed/> .
 
 { bed:greenButton :buttonState :press } => {
-  :headboardWhite :brightness 0 .
+  :headboardWhite :brightness 0.0 .
 } .
 
 { bed:redButton :buttonState :press } => {
@@ -165,3 +165,4 @@
   :livingRoomLamp1 :brightness 1.0 . :livingRoomLamp2 :brightness 1.0 } .
 { :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 1.0 . } => {
   :livingRoomLamp1 :brightness 0.0 . :livingRoomLamp2 :brightness 0.0 } .
+
