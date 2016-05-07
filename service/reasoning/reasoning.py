@@ -41,6 +41,7 @@ import evtiming
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
+NS = {'': ROOM, 'dev': DEV}
         
 class Reasoning(object):
     def __init__(self):
@@ -87,7 +88,7 @@ class Reasoning(object):
                                Literal(traceback.format_exc())))
             raise
         return [(ROOM['reasoner'], ROOM['ruleParseTime'],
-                               Literal(ruleParseTime))]
+                 Literal(ruleParseTime))], ruleParseTime
 
     evtiming.serviceLevel.timed('graphChanged')
     def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
@@ -99,11 +100,11 @@ class Reasoning(object):
         t1 = time.time()
         oldInferred = self.inferred
         try:
-            ruleStmts = self.updateRules()
+            ruleStatStmts, ruleParseSec = self.updateRules()
             
             g = inputGraph.getGraph()
             self.inferred = self._makeInferred(g)
-            [self.inferred.add(s) for s in ruleStmts]
+            [self.inferred.add(s) for s in ruleStatStmts]
 
             if oneShot:
                 # unclear where this should go, but the oneshot'd
@@ -118,13 +119,16 @@ class Reasoning(object):
         finally:
             if oneShot:
                 self.inferred = oldInferred
-        log.info("graphChanged %.1f ms (putResults %.1f ms)" %
+        log.info("graphChanged took %.1f ms (rule parse %.1f ms, putResults %.1f ms)" %
                  ((time.time() - t1) * 1000,
+                  ruleParseSec * 1000,
                   putResultsTime * 1000))
 
     def _makeInferred(self, inputGraph):
         t1 = time.time()
         out = infer(inputGraph, self.ruleStore)
+        for p, n in NS.iteritems():
+            out.bind(p, n, override=True)
         inferenceTime = time.time() - t1
 
         out.add((ROOM['reasoner'], ROOM['inferenceTime'],
@@ -166,13 +170,6 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
         yield r.poll()
         self.set_status(202)
 
-def parseRdf(text, contentType):
-    g = Graph()
-    g.parse(StringInputSource(text), format={
-        'text/n3': 'n3',
-        }[contentType])
-    return g
-
 class OneShot(cyclone.web.RequestHandler):
     def post(self):
         """
@@ -186,15 +183,9 @@ class OneShot(cyclone.web.RequestHandler):
         everything appears to be a 'change'.
         """
         try:
-            g = parseRdf(self.request.body, self.request.headers['content-type'])
-            for s in g:
-                log.debug("oneshot stmt %r", s)
-            if not len(g):
-                log.warn("incoming oneshot graph had no statements: %r", self.request.body)
-                return
-            t1 = time.time()
-            self.settings.reasoning.inputGraph.addOneShot(g)
-            self.set_header('x-graph-ms', str(1000 * (time.time() - t1)))
+            dt = self.settings.reasoning.inputGraph.addOneShotFromString(
+                self.request.body, self.request.headers['content-type'])
+            self.set_header('x-graph-ms', str(1000 * dt))
         except Exception as e:
             log.error(e)
             raise
