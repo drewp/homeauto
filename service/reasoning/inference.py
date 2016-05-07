@@ -4,10 +4,8 @@ see ./reasoning for usage
 
 import sys
 try:
-    from rdflib import StringInputSource
     from rdflib.Graph import Graph
 except ImportError:
-    from rdflib.parser import StringInputSource
     from rdflib import Graph
 
 sys.path.append("/my/proj/room/fuxi/build/lib.linux-x86_64-2.6")

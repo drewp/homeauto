@@ -2,6 +2,7 @@ import logging, time
 
 from rdflib import Graph, ConjunctiveGraph
 from rdflib import Namespace, URIRef, Literal, RDF
+from rdflib.parser import StringInputSource
 
 from twisted.python.filepath import FilePath
 from twisted.internet.defer import inlineCallbacks, gatherResults
@@ -13,6 +14,14 @@ log = logging.getLogger('fetch')
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
+
+
+def parseRdf(text, contentType):
+    g = Graph()
+    g.parse(StringInputSource(text), format={
+        'text/n3': 'n3',
+        }[contentType])
+    return g
 
 
 class InputGraph(object):
@@ -143,6 +152,15 @@ class InputGraph(object):
             self._oneShotAdditionGraph = None
             self._combinedGraph = None
 
+    def addOneShotFromString(self, body, contentType):
+        g = parseRdf(body, contentType)
+        if not len(g):
+            log.warn("incoming oneshot graph had no statements: %r", body)
+            return 0
+        t1 = time.time()
+        self.addOneShot(g)
+        return time.time() - t1
+            
     def getGraph(self):
         """rdflib Graph with the file+remote contents of the input graph"""
         # this could be much faster with the combined readonly graph
