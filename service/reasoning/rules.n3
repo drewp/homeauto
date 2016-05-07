@@ -149,15 +149,15 @@
   :starTrekLight :brightness 0.0 .
 } .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :noMotion } => {
+{ sensor:motionChanging :seesRecently30 :noMotion } => {
   :changingWhite :brightness 0.0 .
   } .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion2> :sees :motion } => {
-  :changingWhite :brightness 0.2 .
+{ sensor:motionChanging :seesRecently30 :motion } => {
+  :changingWhite :brightness 0.3 .
 } .
 
-{ sensor:motionChanging :sees :motionStart } => {
+{ sensor:motionChanging :sees :motionStart90 } => {
   :changingCam :grab <http://bang:9057/changing.jpg> .
   } .
 
