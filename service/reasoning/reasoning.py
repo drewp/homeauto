@@ -143,7 +143,7 @@ class Index(cyclone.web.RequestHandler):
 
         # make sure GET / fails if our poll loop died
         ago = time.time() - self.settings.reasoning.lastPollTime
-        if ago > 2:
+        if ago > 15:
             self.set_status(500)
             self.finish("last poll was %s sec ago. last error: %s" %
                         (ago, self.settings.reasoning.lastError))
