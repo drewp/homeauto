@@ -19,7 +19,6 @@ with PSHB, that their graph has changed.
 import json, time, traceback, sys
 from logging import getLogger, DEBUG, WARN
 
-from FuXi.Rete.RuleStore import N3RuleStore
 from colorlog import ColoredFormatter
 from docopt import docopt
 from rdflib import Namespace, Literal, RDF, Graph
@@ -27,9 +26,10 @@ from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.websocket
 
-from inference import infer
+from inference import infer, readRules
 from actions import Actions
 from inputgraph import InputGraph
+from escapeoutputstatements import unquoteOutputStatements
 
 sys.path.append("../../lib")
 from logsetup import log
@@ -42,15 +42,6 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
 NS = {'': ROOM, 'dev': DEV}
-
-
-def unquoteStatement(graph, stmt):
-    # todo: use the standard schema for this, or eliminate
-    # it in favor of n3 graph literals.
-    return (graph.value(stmt, ROOM['subj']),
-            graph.value(stmt, ROOM['pred']),
-            graph.value(stmt, ROOM['obj']))
-
 
 class Reasoning(object):
     def __init__(self):
@@ -66,13 +57,6 @@ class Reasoning(object):
         self.inputGraph = InputGraph([], self.graphChanged)      
         self.inputGraph.updateFileData()
 
-    @evtiming.serviceLevel.timed('readRules')
-    def readRules(self):
-        self.rulesN3 = open('rules.n3').read() # for web display
-        self.ruleStore = N3RuleStore()
-        self.ruleGraph = Graph(self.ruleStore)
-        self.ruleGraph.parse('rules.n3', format='n3') # for inference
-
     @inlineCallbacks
     def poll(self):
         t1 = time.time()
@@ -85,9 +69,14 @@ class Reasoning(object):
         evtiming.serviceLevel.addData('poll', time.time() - t1)
 
     def updateRules(self):
+        rulesPath = 'rules.n3'
         try:
             t1 = time.time()
-            self.readRules()
+            self.rulesN3, self.ruleGraph = readRules(
+                rulesPath, outputPatterns=[
+                    # incomplete
+                    (None, ROOM['brightness'], None)])
+            self._readRules(rulesPath)
             ruleParseTime = time.time() - t1
         except ValueError:
             # this is so if you're just watching the inferred output,
@@ -111,11 +100,9 @@ class Reasoning(object):
         try:
             ruleStatStmts, ruleParseSec = self.updateRules()
             
-            g = inputGraph.getGraph()
-            self.inferred = self._makeInferred(g)
+            self.inferred = self._makeInferred(inputGraph.getGraph())
 
-            for qs in self.inferred.objects(ROOM['output'], ROOM['statement']):
-                self.inferred.add(unquoteStatement(self.inferred, qs))
+            self.inferred += unquoteOutputStatements(self.inferred)
             
             [self.inferred.add(s) for s in ruleStatStmts]
 
