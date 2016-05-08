@@ -74,8 +74,13 @@ class Reasoning(object):
             t1 = time.time()
             self.rulesN3, self.ruleGraph = readRules(
                 rulesPath, outputPatterns=[
-                    # incomplete
-                    (None, ROOM['brightness'], None)])
+                    # Incomplete. See escapeoutputstatements.py for
+                    # explanation.
+                    (None, ROOM['brightness'], None),
+                    (None, ROOM['playState'], None),
+                    (None, ROOM['powerState'], None),
+                    (None, ROOM['state'], None),
+                ])
             self._readRules(rulesPath)
             ruleParseTime = time.time() - t1
         except ValueError:
