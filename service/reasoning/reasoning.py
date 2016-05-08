@@ -90,11 +90,15 @@ class Reasoning(object):
 
     evtiming.serviceLevel.timed('graphChanged')
     def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
+        """
+        If we're getting called for a oneShot event, the oneShotGraph
+        statements are already in inputGraph.getGraph().
+        """
         log.info("----------------------")
-        log.info("graphChanged oneShot=%s", oneShot)
+        log.info("graphChanged:")
         if oneShot:
             for s in oneShotGraph:
-                log.debug("oneshot stmt %r", s)
+                log.debug("  oneshot stmt %r", s)
         t1 = time.time()
         oldInferred = self.inferred
         try:
@@ -104,14 +108,15 @@ class Reasoning(object):
 
             self.inferred += unquoteOutputStatements(self.inferred)
             
-            [self.inferred.add(s) for s in ruleStatStmts]
+            self.inferred += ruleStatStmts
 
             if oneShot:
-                # unclear where this should go, but the oneshot'd
-                # statements should be just as usable as inferred
-                # ones.
-                for s in oneShotGraph:
-                    self.inferred.add(s)
+                # It's possible a oneShotGraph statement didn't
+                # trigger a rule to do something, but was itself the
+                # output statement. Probably we could just mix in the
+                # whole inputGraph here and not special-case the
+                # oneShotGraph.
+                self.inferred += oneShotGraph
 
             t2 = time.time()
             self.actions.putResults(self.inputGraph.getGraph(), self.inferred)
@@ -134,7 +139,6 @@ class Reasoning(object):
         out.add((ROOM['reasoner'], ROOM['inferenceTime'],
                  Literal(inferenceTime)))
         return out
-
 
 
 class Index(cyclone.web.RequestHandler):
