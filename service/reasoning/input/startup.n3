@@ -1,19 +1,21 @@
 @prefix : <http://projects.bigasterisk.com/room/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 
+# Note that turning off a source in here doesn't stop incoming oneshot
+# requests (but it could, if we got continuous graphs such that
+# oneshot was just a sequence of updates and not a reverse-direction
+# request).
 
 <http://bang:9059/graph>     is :source of :reasoning; rdfs:label "bang arduino" .
 <http://kitchen:9059/graph>  is :source of :reasoning; rdfs:label "kitchen pi" .
 <http://living:9059/graph>   is :source of :reasoning; rdfs:label "living room pi" .
 <http://slash:9059/graph>    is :source of :reasoning; rdfs:label "slash arduino" .
-<http://bed:9059/graph>  is :source of :reasoning; rdfs:label "bed pi" .
+<http://bed:9059/graph>      is :source of :reasoning; rdfs:label "bed pi" .
 <http://brace6:9059/graph>   is :source of :reasoning; rdfs:label "brace arduino" .
 <http://changing:9059/graph> is :source of :reasoning; rdfs:label "changing pi" .
-
-#<http://changing:8208/graph> is :source of :reasoning; rdfs:label "changing camera" .
+<http://bang:9075/graph>     is :source of :reasoning; rdfs:label "env" .
 
 <http://bang:9070/graph>     is :source of :reasoning; rdfs:label "wifi usage" .
-<http://bang:9075/graph>     is :source of :reasoning; rdfs:label "env" .
 <http://bang:9099/graph>     is :source of :reasoning; rdfs:label "trails" .
 
 <http://dash:9095/graph>     is :source of :reasoning; rdfs:label "dash monitor" .
@@ -21,8 +23,12 @@
 <http://brace6:9095/graph>   is :source of :reasoning; rdfs:label "brace monitor" .
 <http://brace6:9107/graph>   is :source of :reasoning; rdfs:label "brace x idle" .
 <http://slash:9095/graph>    is :source of :reasoning; rdfs:label "slash monitor" .
-<http://slash:9107/graph>    is :source of :reasoning; rdfs:label "slash x idle" .
+<http://slash:9107/graph>    is :source of :reasoning; rdfs:label "slash x idle" .#
+
+
+# not built yet
 #<http://bang:9095/graph>    is :source of :reasoning; rdfs:label "bang monitor" .
+#<http://changing:8208/graph> is :source of :reasoning; rdfs:label "changing camera" .
 
 
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/star/slideshow>; :predicate :postAction ] .
