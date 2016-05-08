@@ -2,17 +2,61 @@
 see ./reasoning for usage
 """
 
-import sys
+import sys, os
 try:
     from rdflib.Graph import Graph
 except ImportError:
     from rdflib import Graph
+    
+from rdflib.parser import StringInputSource
 
 sys.path.append("/my/proj/room/fuxi/build/lib.linux-x86_64-2.6")
 from FuXi.Rete.Util import generateTokenSet
 from FuXi.Rete import ReteNetwork
-from rdflib import plugin
+from FuXi.Rete.RuleStore import N3RuleStore
+
+from rdflib import plugin, Namespace
 from rdflib.store import Store
+
+sys.path.append('../../../ffg/ffg')
+import evtiming
+
+from escapeoutputstatements import escapeOutputStatements
+ROOM = Namespace("http://projects.bigasterisk.com/room/")
+
+_rulesCache = (None, None, None, None)
+@evtiming.serviceLevel.timed('readRules')
+def readRules(rulesPath, outputPatterns):
+    """
+    returns (rulesN3, ruleGraph)
+
+    This includes escaping certain statements in the output
+    (implied) subgraaphs so they're not confused with input
+    statements.
+    """
+    global _rulesCache
+    mtime = os.path.getmtime(rulesPath)
+    key = (rulesPath, mtime)
+    if _rulesCache[:2] == key:
+        _, _, rulesN3, expandedN3 = _rulesCache
+    else:
+        rulesN3 = open(rulesPath).read() # for web display
+
+        plainGraph = Graph()
+        plainGraph.parse(StringInputSource(rulesN3),
+                         format='n3') # for inference
+        escapeOutputStatements(plainGraph, outputPatterns=outputPatterns)
+        expandedN3 = plainGraph.serialize(format='n3')
+        _rulesCache = key + (rulesN3, expandedN3)
+
+    # the rest needs to happen each time since inference is
+    # consuming the ruleGraph somehow
+    ruleStore = N3RuleStore()
+    ruleGraph = Graph(ruleStore)
+
+    ruleGraph.parse(StringInputSource(expandedN3), format='n3')
+    log.debug('%s rules' % len(ruleStore.rules))
+    return rulesN3, ruleGraph
 
 def infer(graph, rules):
     """
