@@ -2,21 +2,18 @@
 see ./reasoning for usage
 """
 
-import sys, os, contextlib
+import os, contextlib
 try:
     from rdflib.Graph import Graph
 except ImportError:
     from rdflib import Graph
     
+from rdflib import Namespace
 from rdflib.parser import StringInputSource
 
-sys.path.append("/my/proj/room/fuxi/build/lib.linux-x86_64-2.6")
 from FuXi.Rete.Util import generateTokenSet
 from FuXi.Rete import ReteNetwork
 from FuXi.Rete.RuleStore import N3RuleStore
-
-from rdflib import plugin, Namespace
-from rdflib.store import Store
 
 from greplin import scales 
 STATS = scales.collection('/web',

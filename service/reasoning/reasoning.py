@@ -26,7 +26,6 @@ from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.websocket
 
-sys.path.append("scales/src")
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
 
@@ -113,7 +112,7 @@ class Reasoning(object):
         try:
             ruleStatStmts, ruleParseSec = self.updateRules()
 
-            self.inferred = self._makeInferred(inputGraph.getGraph())
+            self.inferred, inferSec = self._makeInferred(inputGraph.getGraph())
 
             self.inferred += unquoteOutputStatements(self.inferred)
 
@@ -127,27 +126,29 @@ class Reasoning(object):
                 # oneShotGraph.
                 self.inferred += oneShotGraph
 
-            t2 = time.time()
+            t3 = time.time()
             self.actions.putResults(self.inputGraph.getGraph(), self.inferred)
-            putResultsTime = time.time() - t2
+            putResultsTime = time.time() - t3
         finally:
             if oneShot:
                 self.inferred = oldInferred
-        log.info("graphChanged took %.1f ms (rule parse %.1f ms, putResults %.1f ms)" %
+        log.info("graphChanged took %.1f ms (rule parse %.1f ms, infer %.1f ms, putResults %.1f ms)" %
                  ((time.time() - t1) * 1000,
                   ruleParseSec * 1000,
+                  inferSec * 1000,
                   putResultsTime * 1000))
 
     def _makeInferred(self, inputGraph):
         t1 = time.time()
+
         out = infer(inputGraph, self.ruleStore)
         for p, n in NS.iteritems():
             out.bind(p, n, override=True)
-        inferenceTime = time.time() - t1
 
+        inferenceTime = time.time() - t1
         out.add((ROOM['reasoner'], ROOM['inferenceTime'],
                  Literal(inferenceTime)))
-        return out
+        return out, inferenceTime
 
 
         
