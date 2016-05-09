@@ -26,6 +26,10 @@ from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.websocket
 
+sys.path.append("scales/src")
+from greplin import scales
+from greplin.scales.cyclonehandler import StatsHandler
+
 from inference import infer, readRules
 from actions import Actions
 from inputgraph import InputGraph
@@ -35,13 +39,14 @@ sys.path.append("../../lib")
 from logsetup import log
 
 
-sys.path.append('../../../ffg/ffg')
-import evtiming
-
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
 NS = {'': ROOM, 'dev': DEV}
+
+STATS = scales.collection('/web',
+                          scales.PmfStat('poll'),
+                          scales.PmfStat('graphChanged'))
 
 class Reasoning(object):
     def __init__(self):
@@ -58,21 +63,21 @@ class Reasoning(object):
         self.inputGraph.updateFileData()
 
     @inlineCallbacks
+    @STATS.poll.time()
     def poll(self):
-        t1 = time.time()
         try:
             yield self.inputGraph.updateRemoteData()
             self.lastPollTime = time.time()
         except Exception, e:
             log.error(traceback.format_exc())
             self.lastError = str(e)
-        evtiming.serviceLevel.addData('poll', time.time() - t1)
+
 
     def updateRules(self):
         rulesPath = 'rules.n3'
         try:
             t1 = time.time()
-            self.rulesN3, self.ruleGraph = readRules(
+            self.rulesN3, self.ruleStore = readRules(
                 rulesPath, outputPatterns=[
                     # Incomplete. See escapeoutputstatements.py for
                     # explanation.
@@ -81,7 +86,6 @@ class Reasoning(object):
                     (None, ROOM['powerState'], None),
                     (None, ROOM['state'], None),
                 ])
-            self._readRules(rulesPath)
             ruleParseTime = time.time() - t1
         except ValueError:
             # this is so if you're just watching the inferred output,
@@ -93,7 +97,7 @@ class Reasoning(object):
         return [(ROOM['reasoner'], ROOM['ruleParseTime'],
                  Literal(ruleParseTime))], ruleParseTime
 
-    evtiming.serviceLevel.timed('graphChanged')
+    @STATS.graphChanged.time()
     def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
         """
         If we're getting called for a oneShot event, the oneShotGraph
@@ -108,11 +112,11 @@ class Reasoning(object):
         oldInferred = self.inferred
         try:
             ruleStatStmts, ruleParseSec = self.updateRules()
-            
+
             self.inferred = self._makeInferred(inputGraph.getGraph())
 
             self.inferred += unquoteOutputStatements(self.inferred)
-            
+
             self.inferred += ruleStatStmts
 
             if oneShot:
@@ -146,9 +150,9 @@ class Reasoning(object):
         return out
 
 
+        
 class Index(cyclone.web.RequestHandler):
     def get(self):
-        print evtiming.serviceLevel.serviceJsonReport()
 
         # make sure GET / fails if our poll loop died
         ago = time.time() - self.settings.reasoning.lastPollTime
@@ -276,6 +280,7 @@ class Application(cyclone.web.Application):
             (r'/rules', Rules),
             (r'/status', Status),
             (r'/events', Events),
+            (r'/stats/(.*)', StatsHandler, {'serverName': 'reasoning'}),
         ]
         cyclone.web.Application.__init__(self, handlers, reasoning=reasoning)
 

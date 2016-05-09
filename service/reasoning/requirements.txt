@@ -3,3 +3,4 @@ ipdb==0.7
 docopt==0.6.2
 rdflib==4.2.1
 git+http://github.com/drewp/FuXi.git@22263b0751a29839013ce43646dd18302c7b9bb1#egg=FuXi
+git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
