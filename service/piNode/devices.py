@@ -400,6 +400,7 @@ class LedOutput(DeviceType):
     def hostStateInit(self):
         self.value = 0
         self.fv = FilteredValue(self._setPwm)
+        self.gamma = float(self.graph.value(self.uri, ROOM['gamma'], default=1))
     
     def setup(self):
         setupPwm(self.pi, self.pinNumber)
@@ -414,7 +415,7 @@ class LedOutput(DeviceType):
         self.fv.set(self.value)
 
     def _setPwm(self, x):
-        v = int(x * 255)
+        v = int((x ** self.gamma)* 255)
         self.pi.set_PWM_dutycycle(self.pinNumber, v)
 
     def hostStatements(self):

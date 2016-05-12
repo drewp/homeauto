@@ -46,7 +46,7 @@ sensor:motionBed a :MotionSensor;
   :blueChannel board2pin:GPIO4 .
     
 board2pin:GPIO27 :connectedTo :headboardWhite .
-:headboardWhite a :LedOutput .
+:headboardWhite a :LedOutput ; :gamma 2 .
   
 #board2pin:b29 :connectedTo board2ow: .
 #board2ow: a :OneWire;
