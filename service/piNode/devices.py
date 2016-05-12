@@ -125,7 +125,18 @@ def register(deviceType):
 
 @register
 class MotionSensorInput(DeviceType):
-    # compare motion sensor lib at http://pythonhosted.org/gpiozero/inputs/
+    """
+                    0          30s          60s         90s                    10min
+                    |           |           |           |          ...          |          
+    Sensor input    ******** ** ******* ****
+    :sees output    ........ .. ....... ....
+    :seesRecently   .............................................................
+    :seesRecently30 ....................................
+    :motionStart    x        x  x       x
+    :motionStart30  x           x
+    """
+    # compare motion sensor lib at
+    # https://gpiozero.readthedocs.org/en/v1.2.0/api_input.html#motion-sensor-d-sun-pir
     # which is a bit fancier
     deviceType = ROOM['MotionSensor']
 
@@ -135,25 +146,31 @@ class MotionSensorInput(DeviceType):
 
     def hostStateInit(self):
         self.lastRead = None
+        self.lastMotionStart30 = 0
+        self.lastMotionStart90 = 0
 
     def poll(self):
         motion = self.pi.read(17)
+        now  = time.time()
         
         oneshot = []
         if self.lastRead is not None and motion != self.lastRead:
             oneshot = [(self.uri, ROOM['sees'], ROOM['motionStart'])]
+            for v, t in [('lastMotionStart30', 30), ('lastMotionStart90', 90)]:
+                if now - getattr(self, v) > t:
+                    oneshot.append((self.uri, ROOM['sees'], ROOM['motionStart%s' % t]))
+                    setattr(self, v, now)
         self.lastRead = motion
         
         return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
-        ] + self.recentMotionStatements(motion),
+        ] + self.recentMotionStatements(now, motion),
         'oneshot': oneshot}
 
-    def recentMotionStatements(self, motion):
+    def recentMotionStatements(self, now, motion):
         if not hasattr(self, 'lastMotionTime'):
             self.lastMotionTime = 0
-        now = time.time()
         if motion:
             self.lastMotionTime = now
         dt = now - self.lastMotionTime
