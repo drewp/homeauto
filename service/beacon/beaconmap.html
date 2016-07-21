@@ -1,0 +1,358 @@
+<!doctype html>
+<html>
+  <head>
+    <title>beaconmap</title>
+    <meta charset="utf-8" />
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
+    <script>
+      window.Polymer = {
+      dom: 'shadow',
+      };
+    </script>
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-list/iron-list.html"> 
+    <link rel="import" href="/lib/polymer/1.0.9/paper-header-panel/paper-header-panel.html">
+    <link rel="import" href="/lib/polymer/1.0.9/iron-flex-layout/iron-flex-layout-classes.html">
+    <style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
+   
+    <script src="dat.gui.min.js"></script>
+    <link rel="import" href="beacon-map.html">
+    <link rel="import" href="house-model.html">
+  </head>
+  <body class="fullbleed layout vertical">
+    <dom-module id="beacon-devices">
+      <template>
+
+        <style>
+         iron-list { height: 100%; }
+         .row { border: 1px outset #dadada; margin: 2px; background: #f7f7f7;}
+        </style>
+        <iron-ajax url="devices"
+                   auto
+                   last-response="{{response}}"></iron-ajax>
+        <iron-list items="[[response.devices]]"
+                   selection-enabled="true"
+                   selected-item="{{selected}}">
+          <template>
+            <div>
+              <div class="row"> {{item.addr}} {{item.name}} ({{item.recentCount}})</div>
+            </div>
+          </template>
+        </iron-list>
+      </template>
+      <script>
+       HTMLImports.whenReady(function () {
+           Polymer({
+               is: "beacon-devices",
+               properties: {
+                   response: { type: Object, notify: true },
+                   selected: { type: Object, notify: true },
+               }
+           });
+       });
+      </script>
+    </dom-module>
+
+    <script src="/lib/rickshaw/90852d8/vendor/d3.min.js"></script>
+    <script>
+     var hashCode = function(s){
+         var hash = 0;
+         if (s.length == 0) return hash;
+         for (var i = 0; i < s.length; i++) {
+             var character = s.charCodeAt(i);
+             hash = ((hash<<5)-hash)+character;
+             hash = hash & hash; // Convert to 32bit integer
+         }
+         return hash;
+     };
+     var colorForAddr = function(addr) {
+         var hue = hashCode(addr) % 360;
+         return d3.hsl(hue, 1, 0.5) + "";
+     };
+     var colorForSensor = function(from) {
+         var hue = hashCode(from) % 360;
+         return d3.hsl(hue, .7, 0.7) + "";
+     };
+    </script>
+    
+    <dom-module id="beacon-sensor-graph">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/graph.css">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/detail.css">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/legend.css">
+      
+      <template>
+        <iron-ajax id="get" url="sensor" params='{{params}}' auto last-response="{{response}}"></iron-ajax>
+        <div>{{sensor.from}}</div>
+        <div id="chart_container" on-click="onClick">
+	  <div id="chart"></div>
+        </div>
+
+      </template>
+      <script src="/lib/jquery-2.0.3.min.js"></script>
+      <script src="/lib/rickshaw/90852d8/vendor/d3.min.js"></script>
+      <script src="/lib/rickshaw/90852d8/rickshaw.min.js"></script>
+      <script>
+       HTMLImports.whenReady(function () {
+           Polymer({
+               is: "beacon-sensor-graph",
+               properties: {
+                   sensor: {type: Object},
+                   response: {type: Object, notify: true},
+                   params: {computed: '_params(sensor.from)'}
+               },
+               _params: function(from) {
+                   return {from: from, secs: 60*5};
+               },
+               observers: [
+                   'onResponse(response)'
+               ],
+               ready: function() {
+                   this.scopeSubtree(this.$.chart_container, true);
+
+               },
+               onClick: function() {
+                   this.$.get.generateRequest();
+               },
+               redraw: function() {
+                   var serieses = [];
+
+                   for (var addr of Object.keys(this.points)) {
+                       var pts = this.points[addr];
+                       var transformed = pts.map(function(p) {
+                           return {x: p[0] + this.startTime,
+                                   y: .5 * (p[1]-(-120)) / (-60+120)};
+                       }.bind(this));
+                       serieses.push({
+                           name: addr,
+                           data: transformed,
+                           color: colorForAddr(addr),
+                           });
+                   }
+                   
+                   this.$.chart.innerHTML = '';
+                   var graph = new Rickshaw.Graph( {
+	               element: this.$.chart,
+	               width: 400,
+	               height: 60,
+	               renderer: 'line',
+	               series: serieses,
+                   } );
+
+                   graph.render();
+
+                   var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+	               graph: graph
+                   } );
+                 
+                   var axes = new Rickshaw.Graph.Axis.Time( {
+	               graph: graph
+                   } );
+                   axes.render();
+
+                   
+                   var yAxis = new Rickshaw.Graph.Axis.Y( {
+	               graph: graph,
+	               tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                   } );
+
+                   yAxis.render();
+                   
+                   this.graph = graph;
+               },
+               onResponse: function(response) {
+                   this.points = response.points;
+                   this.startTime = response.startTime;
+                   this.redraw();
+
+               }
+           });
+       });
+      </script>
+    </dom-module>
+    
+    <dom-module id="beacon-device-graph">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/graph.css">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/detail.css">
+      <link rel="import" type="css" href="/lib/rickshaw/90852d8/src/css/legend.css">
+      <template>
+       
+        <div>{{addr}} (continuous update)</div>
+        <div id="chart_container" on-click="onClick">
+	  <div id="chart"></div>
+        </div>
+        <div>{{latest}}</div>
+      </template>
+      <script src="/lib/jquery-2.0.3.min.js"></script>
+      <script src="/lib/rickshaw/90852d8/vendor/d3.min.js"></script>
+      <script src="/lib/rickshaw/90852d8/rickshaw.min.js"></script>
+      <script>
+       HTMLImports.whenReady(function () {
+           Polymer({
+               is: "beacon-device-graph",
+               properties: {
+                   addr: {type: String, notify: true},
+                   params: {computed: '_params(addr)'}
+
+               },
+               _params: function(from) {
+                   return {addr: this.addr};
+               },
+               observers: [
+                   'onResponse(response)',
+                   'startEvents(addr)',
+               ],
+               ready: function() {
+                   this.scopeSubtree(this.$.chart_container, true);
+               },
+               startEvents: function(addr) {
+                   if (this.events) {
+                       this.events.close();
+                   }
+                   if (addr) {
+                       console.log('new es', addr);
+                       this.events = new EventSource('points?addr=' + encodeURIComponent(addr));
+                       this.events.addEventListener('message', function(e) {
+                           var body = JSON.parse(e.data);
+                           this.points = body.points;
+                           this.startTime = body.startTime;
+                           this.redraw();
+                       }.bind(this));
+                   }
+               },
+               
+               onClick: function() {
+                   this.$.get.generateRequest();
+               },
+               redraw: function() {
+                   var serieses = [];
+                   var latestForSensor = {};
+                   for (var row of this.points) {
+                       var transformed = row.points.map(function(p) {
+                           return {x: p[0] + this.startTime,
+                                   y: .5 * (p[1]-(-120)) / (-60+120)};
+                       }.bind(this));
+                       serieses.push({
+                           name: row.from,
+                           data: transformed,
+                           color: colorForSensor(row.from),
+                       });
+                       latestForSensor[row.from] = row.points[row.points.length - 1][1];
+                   }
+                   this.latest = JSON.stringify(latestForSensor);
+                   this.$.chart.innerHTML = '';
+                   var graph = new Rickshaw.Graph( {
+	               element: this.$.chart,
+	               width: 640,
+	               height: 300,
+	               renderer: 'line',
+	               series: serieses,
+                   } );
+
+                   graph.render();
+
+                   var hoverDetail = new Rickshaw.Graph.HoverDetail( {
+	               graph: graph
+                   } );
+                 
+                   var axes = new Rickshaw.Graph.Axis.Time( {
+	               graph: graph
+                   } );
+                   axes.render();
+                   
+                   var yAxis = new Rickshaw.Graph.Axis.Y( {
+	               graph: graph,
+	               tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                   } );
+
+                   yAxis.render();
+                   
+                   this.graph = graph;
+               },
+           
+           });
+       });
+      </script>
+    </dom-module>
+    
+    <dom-module id="beacon-page">
+      <template>
+        <link rel="import" href="/lib/polymer/1.0.9/iron-flex-layout/iron-flex-layout-classes.html">
+        <style is="custom-style" include="iron-flex iron-flex-alignment iron-flex-factors"></style>
+        <style>
+        </style>
+        <paper-header-panel class="flex">
+          <div class="paper-header">beacon map</div>
+          <div class="layout horizontal">
+
+            <beacon-devices style="height: 500px"
+                            class="layout justified flex-1"
+                            selected="{{sel}}"></beacon-devices>
+            <div class="layout vertical" style="flex-grow: 2">
+              <house-model position-estimates="{{positionEstimates}}" beacons="{{beacons}}"></house-model>
+              <beacon-device-graph addr="{{sel.addr}}"></beacon-device-graph>
+              <div>
+                save white levels:
+                <iron-ajax url="save"
+                           method="POST"
+                           id="save"
+                           verbose="true"
+                           handle-as="text"
+                           last-response="{{saveResponse}}"></iron-ajax>
+                  <button on-click="onSave" style="padding: 20px">save</button> {{saveResponse}}
+              </div>
+                
+              <div id="sensors">
+                <iron-ajax url="sensors"
+                           auto
+                           last-response="{{sensorsResponse}}"></iron-ajax>
+                <template is="dom-repeat" items="{{sensorsResponse.sensors}}">
+                  <beacon-sensor-graph sensor="{{item}}"></beacon-sensor-graph>
+                </template>
+              </div>
+              
+            <beacon-map class="flex-4" show="{{sel}}"></beacon-map>
+            </div>
+          </div> 
+        </paper-header-panel>
+        beacon page gets this
+
+      </template>
+      <script>
+       HTMLImports.whenReady(function () {
+           Polymer({
+               is: "beacon-page",
+               properties: {
+                   sel: { type: Object, notify: true },
+                   saveResponse: { type: String, notify: true},
+               },
+               onSave: function() {
+                   this.$.save.generateRequest();
+               },
+               ready: function() {
+
+this.sel = {addr: '00:ea:23:23:c6:c4'};
+                   
+                   var events = new EventSource('positionEstimates?addr=' +
+                                                encodeURIComponent('00:ea:23:23:c6:c4'));
+                   events.addEventListener('message', function(e) {
+                       var body = JSON.parse(e.data);
+                       this.positionEstimates = body.nearest;
+                       this.set('beacons', [{label: 'apollo', pos: body.weightedCoord}]);
+                   }.bind(this));
+               },
+           });
+       });
+
+      </script>
+    </dom-module>
+
+    <style>
+     .paper-header {
+         background-color: var(--paper-light-blue-500);
+     }
+    </style>
+    
+    <beacon-page class="layout fit"></beacon-page>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+<link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+<link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
+
+<dom-module id="beacon-map">
+  <template>
+    <style>
+     #map { }
+     canvas { border: 1px solid gray; }
+    </style>
+    <iron-ajax on-response="onPoints" needs="redo"
+               url="points"
+               params="{{pointsParams}}"
+               ></iron-ajax>
+    <canvas id="map" width="500" height="800"></canvas>
+  </template>
+  <script src="dat.gui.js"></script>
+
+  <script>
+   HTMLImports.whenReady(function () {
+       Polymer({
+           is: "beacon-map",
+           properties: {
+               show: { type: Object, notify: true },
+               pointsParams: { computed: '_pointsParams(show)' }
+           },
+           ready: function() {
+               this.scaleSum = 1;
+               //var gui = new dat.GUI();
+               //gui.add(this, 'scaleSum', .001, 3);
+               //gui.listen({updateDisplay: this.redraw.bind(this)});
+
+           },
+           _pointsParams: function(show) {
+               if (show) {
+                   return { addr: show.addr };
+               }
+           },
+           onPoints: function(ev) {
+               this.points = ev.detail.response.points;
+               this.redraw();
+           },
+           redraw: function() {
+               if (!this.points || this.points.length < 1) {
+                   return;
+               }
+               var ctx = this.$.map.getContext('2d');
+               var w = this.$.map.width, h = this.$.map.height;
+               
+               ctx.clearRect(0, 0, w, h);
+
+               ctx.font = "12px serif";
+
+               var pos = [
+                   [.2, .2],
+                   [.2, .7],
+                   [.8, .2],
+                   [.9, .6],
+                   [.8, .8],
+                   [.4, .5],
+                   [.7, .6],
+               ];
+               
+               
+               ctx.fillText("changing", pos[0][0] * 400, pos[0][1] * 400);
+               ctx.fillText("garage",   pos[1][0] * 400, pos[1][1] * 400);
+               ctx.fillText("bed",      pos[2][0] * 400, pos[2][1] * 400);
+               ctx.fillText("dash",     pos[3][0] * 400, pos[3][1] * 400);
+               ctx.fillText("bang",     pos[4][0] * 400, pos[4][1] * 400);
+               ctx.fillText("living",   pos[5][0] * 400, pos[5][1] * 400);
+               ctx.fillText("kitchen",  pos[6][0] * 400, pos[6][1] * 400);
+               
+               ctx.beginPath();
+               var first = true;
+               this.points.forEach(function(p) {
+                   if (!p.map) {
+                       return;
+                       }
+                   var weak = -95, strong = -60;
+                   var w = p.map(function(rssi) {
+                       return (rssi - weak) / (strong - weak);
+                   });
+                   
+                   var sum = w[0] + w[1] + w[2] + w[3] + w[4] + w[5] + w[6];
+                   sum *= this.scaleSum;
+                   w[0] /= sum;
+                   w[1] /= sum;
+                   w[2] /= sum;
+                   w[3] /= sum;
+                   w[4] /= sum;
+                   w[5] /= sum;
+                   w[6] /= sum;
+
+                   var x=0, y=0;
+                   for (var i=0; i<7; i++) {
+                       x += pos[i][0] * w[i];
+                       y += pos[i][1] * w[i];
+                   }
+
+                   x *= 400;
+                   y *= 400;
+                   if (first) {
+                       ctx.moveTo(x, y);
+                       first = false;
+                   } else {
+                       ctx.lineTo(x, y);
+                       
+                   }
+               });
+               ctx.stroke();
+           }
+       });
+   });
+  </script>
+</dom-module>
