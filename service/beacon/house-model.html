@@ -1,0 +1,218 @@
+<link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+
+<dom-module id="house-model">
+  <template>
+    <style>
+     #scene {
+         position: relative;
+         overflow: hidden;
+     }
+     .label {
+         position: absolute;
+         color: white;
+         font-family: sans-serif;
+         font-size: 10px;
+         font-weight: bold;
+         text-shadow: 0 0 1px black;
+     }
+    </style>
+    <div id="scene"></div>
+  </template>
+  <script src="/lib/threejs/r78/three.js"></script>
+  <script src="dat.gui.js"></script>
+
+  <script>
+
+   function Bar(sceneParent, domParent, pos) {
+       this.domParent = domParent;
+       this.mesh = new THREE.Mesh(Bar.geometry, Bar.material);
+       this.mesh.scale.set(.1, 1, .1);
+       this.mesh.translateX(pos.x);
+       this.mesh.translateZ(pos.z);
+       this.pos = pos;
+       
+       sceneParent.add(this.mesh);
+
+   }
+   Bar.material = new THREE.MeshLambertMaterial({
+       "color": 0xe314a3,
+       "emissive": 0x531251
+   });
+   Bar.geometry = new THREE.CylinderGeometry( 1, 1, 1, 32 );
+   Bar.prototype.setValue = function(value, label) {
+       this.value = value;
+       this.label = label;
+       this.mesh.position.setY(this.pos.y + value / 2);
+       this.mesh.scale.setY(value);
+       if (this.div) {
+           this.div.innerText = '' + label;
+       }
+   };
+   Bar.prototype.update2d = function(camera, screenSize) {
+       if (!this.div) {
+           this.div = document.createElement("div");
+           this.div.classList.add("label");
+           this.domParent.appendChild(this.div);
+       }
+       
+       var vector = this.mesh.position.clone().project(camera);
+       vector.x = (vector.x + 1) / 2 * screenSize.x;
+       vector.y = -(vector.y - 1) / 2 * screenSize.y;
+
+       this.div.style.left = vector.x + 'px';
+       this.div.style.top = vector.y + 'px';
+   };
+
+
+   
+   Polymer({
+       is: "house-model",
+       properties: {
+           positionEstimates: {type: Object, notify: true, observer: 'onPositionEstimates'},
+           beacons: {type: Array, notify: true, observer: 'onBeacons'},
+       },
+       addLights: function(scene) {
+           var addLight = function(color, pos) {
+               var light = new THREE.PointLight(color, 1, 0, 0);
+               light.position.set.apply(pos);
+               scene.add(light);
+               return light;
+           };
+           addLight(0xffafff, [0, 6, 0]);
+           addLight(0xffffaf, [-6, 6, 9]);
+           addLight(0xffcfaf, [5, 5, 0]);
+           addLight(0xefffef, [6, 4, 2]);
+       },
+       setMaterials: function(scene) {
+           this.wall = new THREE.MeshPhongMaterial({
+               color : 0x7c7c7c,
+               emissive: 0x303030,
+               name : "wall",
+               opacity : 0.34,
+               shininess : 1.3,
+               side : THREE.DoubleSide,
+               specular : 16777215,
+               transparent : true,
+               depthTest: true,
+               depthWrite: false,
+               alphaTest: 0.01,
+           });
+
+           
+           scene.children.forEach(function(obj) {
+               obj.material = this.wall;
+           }.bind(this));
+       },
+       ready: function() {
+           var container = this.$.scene;
+
+           this.renderer = new THREE.WebGLRenderer( { antialias: true } );
+           this.size = new THREE.Vector2(800, 500);
+           this.renderer.setSize(this.size.x, this.size.y);
+           container.appendChild( this.renderer.domElement );
+
+           this.config = {
+               camRotSpeed: 5,
+               camY: 8.5,
+               camDist: 11,
+               cursorX: 0, cursorY: 0, cursorZ: 0,
+           };
+           
+           var gui = new dat.GUI();
+           gui.add(this.config, 'camRotSpeed', -80, 80);
+           gui.add(this.config, 'camY', -2, 10);
+           gui.add(this.config, 'camDist', 1, 25);
+           gui.add(this.config, 'cursorX', -7, 7);
+           gui.add(this.config, 'cursorY', -7, 7);
+           gui.add(this.config, 'cursorZ', -7, 7);
+
+           this.bars = {}; // pos : Bar
+           this.scene = null;
+           
+           var loader = new THREE.ObjectLoader();
+           loader.load('house.json', function(scene) {             
+               window.scene = scene;
+               this.scene = scene;
+               this.addLights(scene);
+
+               this.setMaterials(scene);
+               
+               gui.add(this.wall, 'depthTest');
+               gui.add(this.wall, 'depthWrite');
+               gui.add(this.wall, 'transparent');
+               gui.add(this.wall, 'opacity', 0, 1);
+               gui.add(this.wall, 'shininess', 0, 3);
+               gui.add(this.wall, 'alphaTest', 0, 1);
+               gui.listen({updateDisplay: function() { this.wall.needsUpdate = true; }.bind(this)});
+
+               this.camera = new THREE.PerspectiveCamera( 45, this.size.x / this.size.y, .1, 100 );
+               scene.add(this.camera);
+
+               var geometry = new THREE.SphereGeometry( .3, 32, 32 );
+               var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+               this.cursor = new THREE.Mesh( geometry, material );
+               scene.add(this.cursor);
+
+               this.rotY = 0;
+               this.startAnimLoop();
+           }.bind(this));
+       },
+       startAnimLoop: function() {
+           var lastTime = Date.now();
+           requestAnimationFrame(function animate(){
+               var now = Date.now();
+               var dt = (now - lastTime) / 1000;
+               lastTime = now;
+               this.step(dt);
+               requestAnimationFrame(animate.bind(this));
+           }.bind(this))
+       },
+       step: function(dt) {
+           this.rotY += this.config.camRotSpeed * dt;
+           
+           var p = new THREE.Vector3(this.config.camDist, this.config.camY, 0);
+           p.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.rotY / 360 * 6.28);
+           this.camera.position.copy(p);
+
+           this.camera.lookAt(new THREE.Vector3(-1, 0, 0));
+
+           this.cursor.position.set(this.config.cursorX, this.config.cursorY, this.config.cursorZ);
+           for (var p of Object.keys(this.bars)) {
+               var b = this.bars[p];
+               b.update2d(this.camera, this.size);
+               b.setValue(b.value, b.label);
+           }
+           this.renderer.render(this.scene, this.camera); 
+       },
+       onPositionEstimates: function() {
+           if (!this.scene) {
+               return;
+           }
+
+           for (var p of Object.keys(this.bars)) {
+               var b = this.bars[p];
+               b.setValue(0.001, '');
+           }
+           this.positionEstimates.forEach(function(row) {
+               var posKey = (Math.round(row[1][0] * 100) + ' ' +
+                             Math.round(row[1][1] * 100) + ' ' +
+                             Math.round(row[1][2] * 100));
+               var b = this.bars[posKey];
+               if (!b) {
+                   b = new Bar(this.scene, this.$.scene,
+                               new THREE.Vector3(-row[1][0], row[1][2], row[1][1]));
+                   this.bars[posKey] = b;
+               }
+               b.setValue(10 / row[0], Math.round(row[0] * 100) / 100);
+           }.bind(this));
+       },
+       onBeacons: function() {
+           this.beacons.forEach(function(b) {
+               this.config.cursorX = -b.pos[0];
+               this.config.cursorY = b.pos[2];
+               this.config.cursorZ = b.pos[1];
+           }.bind(this));
+       }
+   });
+  </script>
+</dom-module>
