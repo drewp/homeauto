@@ -22,9 +22,7 @@ except ImportError:
             return None
 
 import devices
-
-# from /my/proj/room
-from carbondata import CarbonClient
+from export_to_influxdb import InfluxExporter
 
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
@@ -74,7 +72,7 @@ class Board(object):
         log.debug('found %s devices', len(self._devs))
         self._statementsFromInputs = {} # input device uri: latest statements
         self._lastPollTime = {} # input device uri: time()
-        self._carbon = CarbonClient(serverHost='bang')
+        self._influx = InfluxExporter(self.graph)
         for d in self._devs:
             self.syncMasterGraphToHostStatements(d)
             
@@ -99,7 +97,7 @@ class Board(object):
                 new = new['latest']
             else:
                 oneshot = None
-            prev = self._statementsFromInputs.get(i.uri, [])
+            prev = self._statementsFromInputs.get(i.uri, set())
 
             if new or prev:
                 self._statementsFromInputs[i.uri] = new
@@ -116,13 +114,13 @@ class Board(object):
             if oneshot:
                 self._sendOneshot(oneshot)
             self._lastPollTime[i.uri] = now
-        self._exportToGraphite()
+        self._influx.exportToInflux(
+            set.union(*[set(v) for v in self._statementsFromInputs.values()]))
 
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
-        bang = '[fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa]'
-        url = 'http://%s:9071/oneShot' % bang
+        url = 'http://[%s]:9071/oneShot' % bang6
         d = fetch(method='POST',
                   url=url,
                   headers={'Content-Type': ['text/n3']},
@@ -132,24 +130,6 @@ class Board(object):
             log.info('oneshot post to %r failed:  %s',
                      url, e.getErrorMessage())
         d.addErrback(err)
-
-    def _exportToGraphite(self):
-        # note this is writing way too often- graphite is storing at a lower res
-        now = time.time()
-        # 20 sec is not precise; just trying to reduce wifi traffic
-        if getattr(self, 'lastGraphiteExport', 0) + 20 > now:
-            return
-        self.lastGraphiteExport = now
-        log.debug('graphite export:')
-        # objects of these statements are suitable as graphite values.
-        graphitePredicates = {ROOM['temperatureF']}
-        # bug: one sensor can have temp and humid- this will be ambiguous
-        for s, graphiteName in self.graph.subject_objects(ROOM['graphiteName']):
-            for group in self._statementsFromInputs.values():
-                for stmt in group:
-                    if stmt[0] == s and stmt[1] in graphitePredicates:
-                        log.debug('  sending %s -> %s', stmt[0], graphiteName)
-                        self._carbon.send(graphiteName, stmt[2].toPython(), now)
 
     def outputStatements(self, stmts):
         unused = set(stmts)

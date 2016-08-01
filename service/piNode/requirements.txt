@@ -5,3 +5,8 @@ docopt
 python-dateutil
 w1thermsensor
 service_identity==16.0.0
+git+git://github.com/adafruit/Adafruit_Python_DHT#egg=DHT
+http://abyz.co.uk/rpi/pigpio/pigpio.zip
+git+git://github.com/adafruit/Adafruit_Nokia_LCD#egg=Nokia_LCD
+RPi.GPIO==0.6.2
+influxdb==3.0.0
