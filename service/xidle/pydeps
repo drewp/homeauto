@@ -1,6 +1,6 @@
-bottle==0.11.4
-gunicorn==0.17.2
 python-dateutil==2.1
 rdflib==3.2.3
 
 https://bebop.bigasterisk.com/python/PyXSS.tar.gz
+influxdb==3.0.0
+cyclone==1.1
