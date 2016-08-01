@@ -31,8 +31,8 @@ sys.path.append("/my/proj/light9")
 from light9.rdfdb.patch import Patch
 from light9.rdfdb.rdflibpatch import inContext
 
-sys.path.append("/my/proj/room")
-from carbondata import CarbonClient
+sys.path.append("../piNode")
+from export_to_influxdb import InfluxExporter
 
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)
@@ -87,7 +87,7 @@ class Board(object):
         
         self._statementsFromInputs = {} # input device uri: latest statements
         self._lastPollTime = {} # input device uri: time()
-        self._carbon = CarbonClient(serverHost='bang')
+        self._influx = InfluxExporter(self.configGraph)
         self.open()
         for d in self._devs:
             self.syncMasterGraphToHostStatements(d)
@@ -159,7 +159,9 @@ class Board(object):
         elapsed = time.time() - t1
         if elapsed > 1.0:
             log.warn('poll took %.1f seconds' % elapsed)
-        self._exportToGraphite()
+
+        self._influx.exportToInflux(
+            set.union([set(v) for v in self._statementsFromInputs.values()]))
 
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
@@ -169,24 +171,6 @@ class Board(object):
               url='http://[%s]:9071/oneShot' % bang6,
               headers={'Content-Type': ['text/n3']}, postdata=body,
               timeout=5)
-
-    def _exportToGraphite(self):
-        # note this is writing way too often- graphite is storing at a lower res
-        now = time.time()
-        # 20 sec is not precise; just trying to reduce wifi traffic
-        if getattr(self, 'lastGraphiteExport', 0) + 20 > now:
-            return
-        self.lastGraphiteExport = now
-        log.debug('graphite export:')
-        # objects of these statements are suitable as graphite values.
-        graphitePredicates = {ROOM['temperatureF']}
-        # bug: one sensor can have temp and humid- this will be ambiguous
-        for s, graphiteName in self.configGraph.subject_objects(ROOM['graphiteName']):
-            for group in self._statementsFromInputs.values():
-                for stmt in group:
-                    if stmt[0] == s and stmt[1] in graphitePredicates:
-                        log.debug('  sending %s -> %s', stmt[0], graphiteName)
-                        self._carbon.send(graphiteName, stmt[2].toPython(), now)
 
     def outputStatements(self, stmts):
         unused = set(stmts)
