@@ -26,7 +26,9 @@ sys.path.append("/my/proj/light9")
 from light9.rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
 from light9.rdfdb.rdflibpatch import patchQuads
+from light9.rdfdb.patch import Patch
 from rdflib_jsonld.serializer import from_rdf
+from rdflib.parser import StringInputSource
 from cycloneerr import PrettyErrorHandler
 
 log = logging.getLogger('patchablegraph')
@@ -51,11 +53,21 @@ def _graphFromQuads2(q):
         #g.store.add((s,p,o), c) # no effect on nquad output
     return g
 
-def patchAsJson(p):
+def jsonFromPatch(p):
     return json.dumps({'patch': {
         'adds': from_rdf(_graphFromQuads2(p.addQuads)),
         'deletes': from_rdf(_graphFromQuads2(p.delQuads)),
     }})
+patchAsJson = jsonFromPatch # deprecated name
+
+    
+def patchFromJson(j):
+    body = json.loads(j)['patch']
+    a = ConjunctiveGraph()
+    a.parse(StringInputSource(json.dumps(body['adds'])), format='json-ld')
+    d = ConjunctiveGraph()
+    d.parse(StringInputSource(json.dumps(body['deletes'])), format='json-ld')
+    return Patch(addGraph=a, delGraph=d)
 
 def graphAsJson(g):
     # This is not the same as g.serialize(format='json-ld')! That
