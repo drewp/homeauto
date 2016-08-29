@@ -12,8 +12,26 @@ config = {
     'streams': [
         {'id': 'home',
          'sources': [
-             #'http://bang:9059/graph/events',
-             'http://plus:9075/graph/events',     
+# should be from :reasoning :source ?s
+'http://garage:9059/graph/events', # "garage pi"
+'http://kitchen:9059/graph/events', # "kitchen pi"
+'http://living:9059/graph/events', # "living room pi"
+'http://slash:9059/graph/events', # "slash arduino"
+'http://bed:9059/graph/events', # "bed pi"
+'http://brace6:9059/graph/events', # "brace arduino"
+'http://changing:9059/graph/events', # "changing pi"
+'http://bang:9075/graph/events', # "env"
+'http://bang:9070/graph/events', # "wifi usage"
+'http://bang:9099/graph/events', # "trails"
+'http://dash:9095/graph/events', # "dash monitor"
+'http://dash:9107/graph/events', # "dash x idle"
+'http://brace6:9095/graph/events', # "brace monitor"
+'http://brace6:9107/graph/events', # "brace x idle"
+'http://slash:9095/graph/events', # "slash monitor"
+'http://slash:9107/graph/events', # "slash x idle" 
+
+
+
          ]
      },
     ]

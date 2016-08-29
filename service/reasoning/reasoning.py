@@ -16,6 +16,10 @@ with PSHB, that their graph has changed.
 """
 
 
+from crochet import no_setup
+no_setup()
+
+
 import json, time, traceback, sys
 from logging import getLogger, DEBUG, WARN
 
@@ -44,14 +48,11 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 NS = {'': ROOM, 'dev': DEV}
 
 STATS = scales.collection('/web',
-                          scales.PmfStat('poll'),
                           scales.PmfStat('graphChanged'))
 
 class Reasoning(object):
     def __init__(self):
         self.prevGraph = None
-        self.lastPollTime = 0
-        self.lastError = ""
 
         self.actions = Actions(sendToLiveClients)
 
@@ -60,17 +61,6 @@ class Reasoning(object):
 
         self.inputGraph = InputGraph([], self.graphChanged)      
         self.inputGraph.updateFileData()
-
-    @inlineCallbacks
-    @STATS.poll.time()
-    def poll(self):
-        try:
-            yield self.inputGraph.updateRemoteData()
-            self.lastPollTime = time.time()
-        except Exception, e:
-            log.error(traceback.format_exc())
-            self.lastError = str(e)
-
 
     def updateRules(self):
         rulesPath = 'rules.n3'
@@ -154,19 +144,10 @@ class Reasoning(object):
         
 class Index(cyclone.web.RequestHandler):
     def get(self):
-
-        # make sure GET / fails if our poll loop died
-        ago = time.time() - self.settings.reasoning.lastPollTime
-        if ago > 15:
-            self.set_status(500)
-            self.finish("last poll was %s sec ago. last error: %s" %
-                        (ago, self.settings.reasoning.lastError))
-            return
         self.set_header("Content-Type", "text/html")
         self.write(open('index.html').read())
 
 class ImmediateUpdate(cyclone.web.RequestHandler):
-    @inlineCallbacks
     def put(self):
         """
         request an immediate load of the remote graphs; the thing we
@@ -178,10 +159,9 @@ class ImmediateUpdate(cyclone.web.RequestHandler):
         todo: this should do the right thing when many requests come
         in very quickly
         """
-        log.info("immediateUpdate from %s %s",
+        log.warn("immediateUpdate from %s %s - ignored",
                  self.request.headers.get('User-Agent', '?'),
                  self.request.headers['Host'])
-        yield r.poll()
         self.set_status(202)
 
 class OneShot(cyclone.web.RequestHandler):
@@ -316,7 +296,7 @@ if __name__ == '__main__':
     arg = docopt("""
     Usage: reasoning.py [options]
 
-    -i                Verbose log on the input phase (and slow down the polling)
+    -i                Verbose log on the input phase
     -r                Verbose log on the reasoning phase and web stuff
     -o                Verbose log on the actions/output phase
     --source=<substr> Limit sources to those with this string.
@@ -324,6 +304,5 @@ if __name__ == '__main__':
     
     r = Reasoning()
     configLogging(arg)
-    task.LoopingCall(r.poll).start(1.0 if not arg['-i'] else 10)
     reactor.listenTCP(9071, Application(r), interface='::')
     reactor.run()
