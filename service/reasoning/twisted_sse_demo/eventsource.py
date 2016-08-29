@@ -6,7 +6,7 @@ from twisted.web.http_headers import Headers
 
 from sse_client import EventSourceProtocol
 
-#setup()
+setup()
 
 
 class EventSource(object):
@@ -20,7 +20,7 @@ class EventSource(object):
         self.stashedError = None
         self.connect()
 
-    #@run_in_reactor
+    @run_in_reactor
     def connect(self):
         """
         Connect to the event source URL
