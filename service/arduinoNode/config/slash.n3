@@ -41,7 +41,10 @@ shopOw: a :OneWire;
   :connectedTo shopOw:dev-28bf08d101000026 .
 shopOw:dev-28bf08d101000026 a :TemperatureSensor;
   :position :workshop;
-  :graphiteName "system.house.temp.workshop" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "slash"], [:key "location"; :value "workshop"]].
 
 shopPwm:roomLights a :PwmBoard;
   :scl shopPwm:scl;

@@ -286,6 +286,7 @@ class OneWire(DeviceType):
     DS18S20 pin 1: ground, pin 2: data and pull-up with 4.7k.
     """
     deviceType = ROOM['OneWire']
+    pollPeriod = 2
     def hostStateInit(self):
         # eliminate this as part of removing watchPrefixes
         self._knownTempSubjects = set()
@@ -343,6 +344,12 @@ void initSensors() {
             addr = struct.unpack('>Q', read(8))[0]
             tempF = struct.unpack('<f', read(4))[0]
             sensorUri = URIRef(os.path.join(self.uri, 'dev-%s' % hex(addr)[2:]))
+            if tempF > 180:
+                stmts.extend([
+                    (self.uri, ROOM['connectedTo'], sensorUri),
+                    (sensorUri, RDF.type, ROOM['FailingTemperatureReading']),
+                    ])
+                continue
             stmts.extend([
                 (self.uri, ROOM['connectedTo'], sensorUri),
                 # rounding may be working around a bug where the

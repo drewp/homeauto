@@ -68,6 +68,12 @@ ha:board2 a :ArduinoBoard;
     
 board2pin:d3 :pinNumber 3; :connectedTo sensor:motionAriDesk .
 sensor:motionAriDesk a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "brace"],
+    [:key "sensor"; :value "motion"],
+    [:key "location"; :value "ariDesk"]];
   :sees houseLoc:ariDesk .
 
 board2pin:d4 :pinNumber 4; :connectedTo sensor:buttonAriBed .
@@ -79,7 +85,11 @@ board2ow: a :OneWire;
   :connectedTo board2ow:dev-2813bea50300003d .
 board2ow:dev-2813bea50300003d a :TemperatureSensor;
   :position houseLoc:ariUnderBed;
-  :graphiteName "system.house.temp.ariUnderBed" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "brace"], [:key "location"; :value "ariUnderBed"]] .
+
 
 board2pin:d6 :pinNumber 6; :connectedTo :starTrekLight .
 :starTrekLight a :LedOutput;
@@ -87,4 +97,10 @@ board2pin:d6 :pinNumber 6; :connectedTo :starTrekLight .
 
 board2pin:d7 :pinNumber 7; :connectedTo sensor:motionAriBed .
 sensor:motionAriBed a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "brace"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "ariBed"]];
   :sees houseLoc:ariBed .

@@ -28,8 +28,14 @@ board0pin:d7 :pinNumber 7 .
 board0pin:d8 :pinNumber 8 .
 
 
-board0pin:d3 :connectedTo sensor:motion0 .
-sensor:motion0 a :MotionSensor;
+board0pin:d3 :connectedTo sensor:motionStorage .
+sensor:motionStorage a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "bang"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "storage"]];
   :sees houseLoc:storage .
 
 board0pin:d4 :connectedTo :heater .
@@ -46,7 +52,10 @@ board0ow: a :OneWire;
   :connectedTo board0ow:dev-1052790f02080086 .
 board0ow:dev-1052790f02080086 a :TemperatureSensor;
   :position :storage;
-  :graphiteName "system.house.temp.storage" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "bang"], [:key "location"; :value "storage"]] .
 
 
 ha:boardTest a :ArduinoBoard;
