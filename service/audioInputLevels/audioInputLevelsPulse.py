@@ -1,9 +1,9 @@
 # based on http://freshfoo.com/blog/pulseaudio_monitoring
 from __future__ import division
-import socket, argparse
+import socket, argparse, time
 from Queue import Queue
 from ctypes import POINTER, c_ubyte, c_void_p, c_ulong, cast
-import galena
+from influxdb import InfluxDBClient
 
 # From https://github.com/Valodim/python-pulseaudio
 from pulseaudio import lib_pulseaudio as P
@@ -102,13 +102,21 @@ def main():
 
     args = parser.parse_args()
 
-    
-    out = galena.Galena(host='bang')
-    prefix = 'system.house.audio.%s' % socket.gethostname()
+    def ipv6Init(self, host="localhost", port=2003):
+        self._addr = (host, port, 0, 0)
+        self._sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self._sock.connect(self._addr)
+
+    influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
+
+    hostname = socket.gethostname()
     monitor = PeakMonitor(args.source, METER_RATE)
     for sample in monitor:
         #print ' %3d %s' % (sample, '>' * sample)
-        out.send(prefix + ".max", sample / 128)
+        influx.write_points([{'measurement': 'audioLevel',
+                              "tags": dict(stat='max', location=hostname),
+                              "fields": {"value": sample /  128},
+                              "time": int(time.time())}], time_precision='s')
         
 if __name__ == '__main__':
     main()
