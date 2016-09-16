@@ -1,3 +1,6 @@
+"""
+https://github.com/juniorug/libsensorPy is a similar project
+"""
 from __future__ import division
 
 import time, logging, os
@@ -140,9 +143,10 @@ class MotionSensorInput(DeviceType):
     # which is a bit fancier
     deviceType = ROOM['MotionSensor']
 
-    def setup(self):
-        self.pi.set_mode(17, pigpio.INPUT)
-        self.pi.set_pull_up_down(17, pigpio.PUD_DOWN)
+    def __init__(self, graph, uri, pi, pinNumber):
+        super(MotionSensorInput, self).__init__(graph, uri, pi, pinNumber)
+        self.pi.set_mode(pinNumber, pigpio.INPUT)
+        self.pi.set_pull_up_down(pinNumber, pigpio.PUD_DOWN)
 
     def hostStateInit(self):
         self.lastRead = None
@@ -150,7 +154,7 @@ class MotionSensorInput(DeviceType):
         self.lastMotionStart90 = 0
 
     def poll(self):
-        motion = self.pi.read(17)
+        motion = self.pi.read(self.pinNumber)
         now  = time.time()
         
         oneshot = []
@@ -255,16 +259,20 @@ class RgbStrip(DeviceType):
 @register
 class TempHumidSensor(DeviceType):
     deviceType = ROOM['TempHumidSensor']
+    pollPeriod = 5
 
     def __init__(self, *a, **kw):
         DeviceType.__init__(self, *a, **kw)
-        sys.path.append('/opt/pigpio/EXAMPLES/Python/DHT22_AM2302_SENSOR')
-        import DHT22
-        self.sensor = DHT22.sensor(self.pi, self.pinNumber)
+        import Adafruit_DHT
+        self.mod = Adafruit_DHT
     
     def poll(self):
-        self.sensor.trigger()
-        humid, tempC = self.sensor.humidity(), self.sensor.temperature()
+        for tries in range(1):
+            # fails a lot, but I don't want to add too much delay in
+            # here- the next poll is coming soon
+            humid, tempC = self.mod.read(self.mod.DHT22, self.pinNumber)
+            if humid and tempC:
+                break
 
         stmts = set()
         if humid is not None:
@@ -335,6 +343,7 @@ class OneWire(DeviceType):
     use for onewire. The pin number in this config is currently ignored.
     """
     deviceType = ROOM['OneWire']
+    pollPeriod = 2
     # deliberately written like arduinoNode's one for an easier merge.
     def __init__(self,  *a, **kw):
         DeviceType.__init__(self, *a, **kw)
@@ -416,7 +425,15 @@ class LedOutput(DeviceType):
 
     def hostStateInit(self):
         self.value = 0
-        self.fv = FilteredValue(self._setPwm)
+        if (self.uri, ROOM['fade'], None) in self.graph:
+            # incomplete- the object could be fade settings
+            self.fv = FilteredValue(self._setPwm)
+        else:
+            _setPwm = self._setPwm
+            class Instant(object):
+                def set(self, goal):
+                    _setPwm(goal)
+            self.fv = Instant()
         self.gamma = float(self.graph.value(self.uri, ROOM['gamma'], default=1))
     
     def setup(self):
@@ -533,6 +550,71 @@ class RgbPixels(DeviceType):
             'subj': px,
             'pred': ROOM['color'],
         } for px in self.pixelUris]
+
+@register
+class Lcd8544(DeviceType):
+    """PCD8544 lcd (nokia 5110)"""
+    deviceType = ROOM['RgbStrip']
+    
+    @classmethod
+    def findInstances(cls, graph, board, pi):
+        for row in graph.query("""
+      SELECT DISTINCT ?dev ?din ?clk ?dc ?rst  WHERE {
+        ?dev a :Lcd8544 .
+        ?board :hasPin ?dinPin . ?dev :din ?dinPin . ?dinPin :gpioNumber ?din .
+        ?board :hasPin ?clkPin . ?dev :clk ?clkPin . ?clkPin :gpioNumber ?clk .
+        ?board :hasPin ?dcPin .  ?dev :dc ?dcPin .   ?dcPin :gpioNumber ?dc .
+        ?board :hasPin ?rstPin . ?dev :rst ?rstPin . ?rstPin :gpioNumber ?rst .
+      } ORDER BY ?dev""",
+                               initBindings=dict(board=board),
+                               initNs={'': ROOM}):
+            log.debug('found lcd %r', row)
+            yield cls(graph, row.dev, pi,
+                      int(row.din), int(row.clk),
+                      int(row.dc), int(row.rst))
+
+    def __init__(self, graph, uri, pi, din, clk, dc, rst):
+        super(Lcd8544, self).__init__(graph, uri, pi, None)
+
+
+        import RPi.GPIO
+        import Adafruit_Nokia_LCD
+        import Adafruit_GPIO.SPI
+        self.lcd = Adafruit_Nokia_LCD.PCD8544(
+            dc=8, rst=7,
+            spi=Adafruit_GPIO.SPI.BitBang(
+                Adafruit_Nokia_LCD.GPIO.RPiGPIOAdapter(RPi.GPIO),
+                sclk=clk,
+                mosi=din))
+        self.lcd.begin(contrast=60)
+            
+    def hostStatements(self):
+        return []
+        return [(self.uri, ROOM['color'], Literal(self.value))]
+        
+    def outputPatterns(self):
+        return []
+        return [(self.uri, ROOM['color'], None)]
+
+    def sendOutput(self, statements):
+        return
+        assert len(statements) == 1
+        assert statements[0][:2] == (self.uri, ROOM['color'])
+
+        rgb = self._rgbFromHex(statements[0][2])
+        self.value = statements[0][2]
+
+        for (i, v) in zip(self.rgb, rgb):
+            self.pi.set_PWM_dutycycle(i, v)
+        
+    def outputWidgets(self):
+        return []
+        return [{
+            'element': 'output-rgb',
+            'subj': self.uri,
+            'pred': ROOM['color'],
+        }]
+
 
         
 def makeDevices(graph, board, pi):

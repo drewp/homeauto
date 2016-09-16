@@ -20,8 +20,6 @@ class InfluxExporter(object):
         graph = self.graph
         now = int(time.time())
       
-        log.debug('influxdb export:')
-
         points = []
         for stmt in currentStatements:
             if (stmt[0], stmt[1]) in self.measurements:
@@ -49,9 +47,9 @@ class InfluxExporter(object):
             self.influx.write_points(points, time_precision='s')
 
     def influxValue(self, rdfValue):
-        if rdfValue == ROOM['motion']:
+        if rdfValue in [ROOM['motion'], ROOM['pressed']]:
             value = 1
-        elif rdfValue == ROOM['noMotion']:
+        elif rdfValue in [ROOM['noMotion'], ROOM['notPressed']]:
             value = 0
         else:
             value = rdfValue.toPython()

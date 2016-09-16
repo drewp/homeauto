@@ -86,12 +86,14 @@ class Board(object):
             log.exception("During poll:")
             
     def _pollMaybeError(self):
+        pollTime = {} # uri: sec
         for i in self._devs:
             now = time.time()
             if (hasattr(i, 'pollPeriod') and
                 self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
                 continue
             new = i.poll()
+            pollTime[i.uri] = time.time() - now
             if isinstance(new, dict): # new style
                 oneshot = new['oneshot']
                 new = new['latest']
@@ -114,6 +116,11 @@ class Board(object):
             if oneshot:
                 self._sendOneshot(oneshot)
             self._lastPollTime[i.uri] = now
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug('poll times:')
+            for u, s in sorted(pollTime.items()):
+                log.debug("  %.4f ms %s", s * 1000, u)
+            log.debug('total poll time: %f ms', sum(pollTime.values()) * 1000)
         self._influx.exportToInflux(
             set.union(*[set(v) for v in self._statementsFromInputs.values()]))
 
