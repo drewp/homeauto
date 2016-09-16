@@ -20,7 +20,7 @@ from dateutil import tz
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import docopt
-
+from influxdb import InfluxDBClient
 from pymongo import Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef
 sys.path.append("/my/site/magma")
@@ -152,6 +152,7 @@ class Poller(object):
     def poll(self):
 
         connectedField = 'connected'
+        now = int(time.time())
         
         # UVA mode:
         addDhcpData = lambda *args: None
@@ -163,15 +164,25 @@ class Poller(object):
             newWithSignal = [a for a in newAddrs if a.get('connected')]
 
             actions = self.computeActions(newWithSignal)
+            points = []
             for action in actions:
                 log.info("action: %s", action)
                 action['created'] = datetime.datetime.now(tz.gettz('UTC'))
                 mongo.save(action)
+                points.append(
+                    self.influxPoint(now, action['address'].lower(),
+                                     1 if action['action'] == 'arrive' else 0))
                 try:
                     self.doEntranceMusic(action)
                 except Exception, e:
                     log.error("entrancemusic error: %r", e)
 
+            if now // 3600 > self.lastPollTime // 3600:
+                log.info('hourly writes')
+                for addr in newWithSignal:
+                    points.append(self.influxPoint(now, addr['mac'].lower(), 1))
+                    
+            influx.write_points(points, time_precision='s')
             self.lastWithSignal = newWithSignal
             if actions: # this doesn't currently include signal strength changes
                 fetch(reasoning + "immediateUpdate",
@@ -179,10 +190,18 @@ class Poller(object):
                       timeout=2,
                       headers={'user-agent': ['tomatoWifi']}).addErrback(log.warn)
             self.lastAddrs = newAddrs
-            self.lastPollTime = time.time()
+            self.lastPollTime = now
         except Exception, e:
             log.error("poll error: %r\n%s", e, traceback.format_exc())
 
+    def influxPoint(self, now, address, value):
+        return {
+            'measurement': 'presence',
+            'tags': {'sensor': 'wifi', 'address': address,},
+            'fields': {'value': value},
+            'time': now,
+        }
+        
     def computeActions(self, newWithSignal):
         actions = []
 
@@ -253,6 +272,7 @@ Options:
         log.setLevel(logging.DEBUG)
 
     mongo = Connection('bang', 27017, tz_aware=True)['visitor']['visitor']
+    influx = InfluxDBClient('bang', 9060, 'root', 'root', 'main')
 
     wifi = Wifi()
     poller = Poller(wifi, mongo)
