@@ -21,7 +21,11 @@ ha:node2 a :PiBoard;
     board2pin:GPIO23 
     .
 
-ha:bedroomPiTemp a :OnboardTemperature .
+ha:bedroomPiTemp a :OnboardTemperature;
+ :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "bed"], [:key "location"; :value "bedPi"]] .
 
 board2pin:GPIO2 :gpioNumber 2 .
 board2pin:GPIO3 :gpioNumber 3 .
@@ -38,6 +42,12 @@ bed:redButton a :Pushbutton .
 
 board2pin:GPIO17 :connectedTo sensor:motionBed .
 sensor:motionBed a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "bed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "bed"]];
   :sees houseLoc:bed .
 
 :bedLedStrip a :RgbStrip;
@@ -46,7 +56,7 @@ sensor:motionBed a :MotionSensor;
   :blueChannel board2pin:GPIO4 .
     
 board2pin:GPIO27 :connectedTo :headboardWhite .
-:headboardWhite a :LedOutput ; :gamma 2 .
+:headboardWhite a :LedOutput ; :gamma 2; :fade "yes" .
   
 #board2pin:b29 :connectedTo board2ow: .
 #board2ow: a :OneWire;
@@ -65,18 +75,28 @@ ha:node3 a :PiBoard;
     board3pin:GPIO17
     .
     
-ha:kitchenPiTemp a :OnboardTemperature .
+ha:kitchenPiTemp a :OnboardTemperature;
+   :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenPi"]] .
 
 board3pin:GPIO4 :gpioNumber 4; :connectedTo sensor:tempHumidKitchen .
 sensor:tempHumidKitchen a :TempHumidSensor;
   :sees houseLoc:kitchenCounter;
-  :graphiteName "system.house.temp.kitchenCounter" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]] .
 
 board3pin:GPIO17 :gpioNumber 17; :connectedTo board3ow: .
 board3ow: a :OneWire; :connectedTo board3ow:dev-000003a5a94c .
 board3ow:dev-000003a5a94c a :TemperatureSensor;
   :position houseLoc:kitchenCounter;
-  :graphiteName "system.house.temp.kitchenCounter_ds_test" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter_ds_test"]] .
 
 @prefix board4pin: <http://bigasterisk.com/homeauto/board4/pin/> .
 
@@ -86,6 +106,7 @@ ha:node4 a :PiBoard;
   :onboardDevice ha:livingPiTemp;
   :hasPin
     board4pin:GPIO17,
+    board4pin:GPIO18,
     board4pin:GPIO4,
     board4pin:GPIO27,
     board4pin:GPIO22 .
@@ -95,10 +116,30 @@ board4pin:GPIO4 :gpioNumber 4; :connectedTo :livingRoomLamp1 .
 board4pin:GPIO27 :gpioNumber 27; :connectedTo :livingRoomLamp2 .
 board4pin:GPIO22 :gpioNumber 22; :connectedTo :bookSwitch .
 
-ha:livingPiTemp a :OnboardTemperature .
+
+board4pin:GPIO18 :gpioNumber 18; :connectedTo :livingRgb .
+:livingRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixels (:livingRgb0 :livingRgb1 :livingRgb2 :livingRgb3) .
+
+
+ha:livingPiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingPi"]] .
+
+
 sensor:tempHumidLivingRoomCeiling a :TempHumidSensor;
   :sees houseLoc:livingRoomCeiling;
-  :graphiteName "system.house.temp.livingRoomCeiling" .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingRoomCeiling"]], [
+    :measurement "humidity";
+    :predicate :humidity;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingRoomCeiling"]] .
+
 :livingRoomLamp1 a :LedOutput .
 :livingRoomLamp2 a :LedOutput .
 :bookSwitch a :Pushbutton; :style :inverted .
@@ -114,17 +155,27 @@ ha:node5 a :PiBoard;
     board5pin:GPIO17,
     board5pin:GPIO18 .
 
-ha:changingPiTemp a :OnboardTemperature .
+ha:changingPiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "changing"], [:key "location"; :value "changingPi"]] .
 
 board5pin:GPIO4 :gpioNumber 4 .
 board5pin:GPIO17 :gpioNumber 17 .
 board5pin:GPIO18 :gpioNumber 18 .
 
 board5pin:GPIO4 :connectedTo :changingWhite .
-:changingWhite a :LedOutput .
+:changingWhite a :LedOutput; :fade "yes" .
 
 board5pin:GPIO17 :connectedTo sensor:motionChanging .
 sensor:motionChanging a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "changing"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "changing"]];
   :sees :changing .
 
 board5pin:GPIO18 :connectedTo :changingRgb .
@@ -145,3 +196,107 @@ board5:rgb3 rdfs:label "rgb3" .
 board5:rgb4 rdfs:label "rgb4" .
 board5:rgb5 rdfs:label "rgb5" .
 
+
+
+@prefix board6pin: <http://bigasterisk.com/homeauto/board6/pin/> .
+@prefix board6ow: <http://bigasterisk.com/homeauto/board6/oneWire/> .
+
+ha:node6 a :PiBoard;
+  :hostname "garage";
+  :onboardDevice ha:garagePiTemp;
+  :hasPin
+    board6pin:GPIO4,
+    board6pin:GPIO17,
+    board6pin:GPIO7,
+    board6pin:GPIO8,
+    board6pin:GPIO15,
+    board6pin:GPIO18,
+    board6pin:GPIO24,
+    board6pin:GPIO25 .
+ha:garagePiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "garage"], [:key "location"; :value "garagePi"]] .
+
+board6pin:GPIO4 :gpioNumber 4; :connectedTo sensor:motionGarageDoorInside .
+sensor:motionGarageDoorInside a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "garage"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "garageDoorInside"]];
+  :sees :garage .
+
+board6pin:GPIO17 :gpioNumber 17; :connectedTo board6ow: .
+board6ow: a :OneWire; :connectedTo board6ow:dev-000003a5c0fb .
+board6ow:dev-000003a5c0fb a :TemperatureSensor;
+  :position houseLoc:garage;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "garage"], [:key "location"; :value "garage"]] .
+
+board6pin:GPIO15 :gpioNumber 15; :connectedTo :garageOverhead .
+:garageOverhead a :LedOutput .
+
+board6pin:GPIO18 :gpioNumber 18; :connectedTo :garageRgb .
+:garageRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixels (:garageRgb0 :garageRgb1 :garageRgb2 :garageRgb3) .
+
+
+board6pin:GPIO25 :gpioNumber 25 .
+board6pin:GPIO24 :gpioNumber 24 .
+board6pin:GPIO8 :gpioNumber 8 .
+board6pin:GPIO7 :gpioNumber 7 .
+
+:garageLcd a :Lcd8544;
+  :din board6pin:GPIO25;
+  :clk board6pin:GPIO24;
+  :dc board6pin:GPIO8;
+  :rst board6pin:GPIO7 .
+  
+    
+
+
+
+
+@prefix board7pin: <http://bigasterisk.com/homeauto/board7/pin/> .
+
+ha:node7 a :PiBoard;
+  :hostname "downbath";
+  :onboardDevice ha:downbathPiTemp;
+  :hasPin
+    board7pin:GPIO17,
+    board7pin:GPIO4,
+    board7pin:GPIO27,
+    board7pin:GPIO22 .
+
+ha:downbathPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "downBathPi"] .
+
+
+
+@prefix board8pin: <http://bigasterisk.com/homeauto/board8/pin/> .
+
+ha:node8 a :PiBoard;
+  :hostname "frontdoor";
+  :onboardDevice ha:frontdoorPiTemp;
+  :hasPin
+    board8pin:GPIO4 .
+
+ha:frontdoorPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "downBathPi"] .
+
+board8pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
+:frontdoorOpenSwitch a :Pushbutton; :style :inverted;
+:influxMeasurement [
+    :measurement "state";
+    :predicate :buttonState;
+    :tag [:key "host"; :value "frontdoor"],
+      [:key "sensor"; :value "open"],
+      [:key "location"; :value "frontDoor"]];.
