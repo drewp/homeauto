@@ -17,7 +17,6 @@
     <style is="custom-style" include="iron-flex iron-flex-alignment iron-positioning"></style>
    
     <script src="dat.gui.min.js"></script>
-    <link rel="import" href="beacon-map.html">
     <link rel="import" href="house-model.html">
   </head>
   <body class="fullbleed layout vertical">
@@ -27,16 +26,21 @@
         <style>
          iron-list { height: 100%; }
          .row { border: 1px outset #dadada; margin: 2px; background: #f7f7f7;}
+         .selected {
+background: #9191ff;
+             }
         </style>
         <iron-ajax url="devices"
                    auto
                    last-response="{{response}}"></iron-ajax>
         <iron-list items="[[response.devices]]"
                    selection-enabled="true"
-                   selected-item="{{selected}}">
+                   selected-item="{{selected}}"
+                   selected-as="isSelected"
+        >
           <template>
-            <div>
-              <div class="row"> {{item.addr}} {{item.name}} ({{item.recentCount}})</div>
+            <div class$="row {{rowClass(isSelected)}}">
+               {{item.addr}} {{item.name}}
             </div>
           </template>
         </iron-list>
@@ -48,6 +52,9 @@
                properties: {
                    response: { type: Object, notify: true },
                    selected: { type: Object, notify: true },
+               },
+               rowClass: function (isSelected) {
+                   return isSelected ? 'selected' : '';
                }
            });
        });
@@ -286,7 +293,7 @@
           <div class="layout horizontal">
 
             <beacon-devices style="height: 500px"
-                            class="layout justified flex-1"
+                            class="layout justified flex-2"
                             selected="{{sel}}"></beacon-devices>
             <div class="layout vertical" style="flex-grow: 2">
               <house-model position-estimates="{{positionEstimates}}" beacons="{{beacons}}"></house-model>
@@ -307,11 +314,10 @@
                            auto
                            last-response="{{sensorsResponse}}"></iron-ajax>
                 <template is="dom-repeat" items="{{sensorsResponse.sensors}}">
-                  <beacon-sensor-graph sensor="{{item}}"></beacon-sensor-graph>
+                  <div>sensor detail {{item}}</div>
                 </template>
               </div>
-              
-            <beacon-map class="flex-4" show="{{sel}}"></beacon-map>
+
             </div>
           </div> 
         </paper-header-panel>
