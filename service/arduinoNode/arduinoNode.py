@@ -160,8 +160,10 @@ class Board(object):
         if elapsed > 1.0:
             log.warn('poll took %.1f seconds' % elapsed)
 
-        self._influx.exportToInflux(
-            set.union([set(v) for v in self._statementsFromInputs.values()]))
+        stmts = set()
+        for v in self._statementsFromInputs.values():
+            stmts.update(v)
+        self._influx.exportToInflux(stmts)
 
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
