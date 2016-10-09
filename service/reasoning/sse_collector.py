@@ -278,9 +278,13 @@ class GraphClients(object):
                 
     def addSseHandler(self, handler):
         log.info('addSseHandler %r %r', handler, handler.streamId)
+
+        # fail early if id doesn't match
+        sources = self._sourcesForHandler(handler)
+
         self.handlers.add(handler)
         
-        for source in self._sourcesForHandler(handler):
+        for source in sources:
             if source not in self.clients and source != COLLECTOR:
                 self._localStatements.setSourceState(source, ROOM['connect'])
                 self.clients[source] = ReconnectingPatchSource(
@@ -354,6 +358,10 @@ class Stats(cyclone.web.RequestHandler):
             raise
         
         self.write(json.dumps({'graphClients': stats}, indent=2))
+
+class Root(cyclone.web.RequestHandler):
+    def get(self):
+        self.write('<html><body>sse_collector</body></html>')
         
 if __name__ == '__main__':
 
@@ -375,6 +383,7 @@ if __name__ == '__main__':
         9072,
         cyclone.web.Application(
             handlers=[
+                (r'/', Root),
                 (r'/stats', Stats),
                 (r'/graph/(.*)', SomeGraph),
             ],
