@@ -1,4 +1,4 @@
-import sys
+import sys, logging
 import traceback
 from twisted.internet import reactor, defer
 from twisted_sse_demo.eventsource import EventSource
@@ -6,12 +6,12 @@ from rdflib import ConjunctiveGraph
 from rdflib.parser import StringInputSource
 
 sys.path.append("../../lib")
-from logsetup import log
 from patchablegraph import patchFromJson
 
 sys.path.append("/my/proj/light9")
 from light9.rdfdb.patch import Patch
 
+log = logging.getLogger('fetch')
 
 class PatchSource(object):
     """wrap EventSource so it emits Patch objects and has an explicit stop method."""
@@ -25,6 +25,8 @@ class PatchSource(object):
         
         self._listeners = set()
         log.info('start read from %s', url)
+        # note: fullGraphReceived isn't guaranteed- the stream could
+        # start with patches
         self._fullGraphReceived = False
         self._eventSource = EventSource(url.toPython().encode('utf8'))
         self._eventSource.protocol.delimiter = '\n'

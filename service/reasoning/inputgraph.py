@@ -91,12 +91,16 @@ class InputGraph(object):
         anywhere; it needs to be processed only once
         """
         self.inputDirs = inputDirs
-        self.onChange = onChange
+        self._onChange = onChange
         self._fileGraph = Graph()
-        self._remoteData = RemoteData(lambda: self.onChange(self))
+        self._remoteData = RemoteData(lambda: self.onChangeLocal())
         self._combinedGraph = None
         self._oneShotAdditionGraph = None
 
+    def onChangeLocal(self, oneShot=False, oneShotGraph=None):
+        self._combinedGraph = None
+        self._onChange(self, oneShot=oneShot, oneShotGraph=oneShotGraph)
+        
     def updateFileData(self):
         """
         make sure we contain the correct data from the files in inputDirs
@@ -115,7 +119,7 @@ class InputGraph(object):
             self._fileGraph.parse(fp.open(), format="n3")
             self._combinedGraph = None
 
-        self.onChange(self)
+        self.onChangeLocal()
 
     def addOneShot(self, g):
         """
