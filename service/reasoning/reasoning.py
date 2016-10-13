@@ -93,10 +93,7 @@ class Reasoning(object):
         statements are already in inputGraph.getGraph().
         """
         log.info("----------------------")
-        log.info("graphChanged:")
-        if oneShot:
-            for s in oneShotGraph:
-                log.debug("  oneshot stmt %r", s)
+        log.info("graphChanged (oneShot=%s):", oneShot)
         t1 = time.time()
         oldInferred = self.inferred
         try:

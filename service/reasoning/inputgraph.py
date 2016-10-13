@@ -129,7 +129,7 @@ class InputGraph(object):
         self._oneShotAdditionGraph = g
         self._combinedGraph = None
         try:
-            self.onChange(self, oneShot=True, oneShotGraph=g)
+            self.onChangeLocal(oneShot=True, oneShotGraph=g)
         finally:
             self._oneShotAdditionGraph = None
             self._combinedGraph = None
