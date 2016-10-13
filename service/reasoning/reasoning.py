@@ -178,6 +178,7 @@ class OneShot(cyclone.web.RequestHandler):
                 self.request.body, self.request.headers['content-type'])
             self.set_header('x-graph-ms', str(1000 * dt))
         except Exception as e:
+            traceback.print_exc()
             log.error(e)
             raise
             
