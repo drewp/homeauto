@@ -3,11 +3,16 @@ from twisted.protocols.basic import LineReceiver
 
 class EventSourceProtocol(LineReceiver):
     def __init__(self):
+        self.MAX_LENGTH = 16384 * 8
         self.callbacks = {}
         self.finished = None
         # Initialize the event and data buffers
         self.event = 'message'
         self.data = ''
+
+    def lineLengthExceeded(self, line):
+        print "line too long"
+        raise NotImplementedError
 
     def setFinishedDeferred(self, d):
         self.finished = d

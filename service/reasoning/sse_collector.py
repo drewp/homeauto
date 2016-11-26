@@ -274,6 +274,10 @@ class GraphClients(object):
             p = self.statements.makeSyncPatch(h, self._sourcesForHandler(h))
             if not p.isNoop():
                 log.debug("send patch %s to %s", p.shortSummary(), h)
+                # This can be a giant line, which was a problem once. Might be 
+                # nice for this service to try to break it up into multiple sends,
+                # although there's no guarantee at all since any single stmt 
+                # could be any length.
                 h.sendEvent(message=jsonFromPatch(p), event='patch')
                 
     def addSseHandler(self, handler):
