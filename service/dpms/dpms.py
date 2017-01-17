@@ -21,8 +21,10 @@ eval xauth add `sudo xauth -f /run/gdm/auth-for-gdm-iQoCDZ/database list :0`
 
 """
 
-from bottle import run, get, put, request, response
-import subprocess, sys, socket
+from twisted.internet import reactor, task
+import cyclone.web
+from influxdb import InfluxDBClient
+import subprocess, sys, socket, time, os
 from rdflib import Namespace, URIRef
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
@@ -32,51 +34,84 @@ from stategraph import StateGraph
 sys.path.append("../../lib")
 from localdisplay import setDisplayToLocalX
 
+influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
+
 def getMonitorState():
     out = subprocess.check_output(['xset', 'q'])
     for line in out.splitlines():
         line = line.strip()
         if line == 'Monitor is On':
-            response.set_header('content-type', 'text/plain')
             return 'on'
         elif line in ['Monitor is Off', 'Monitor is in Suspend', 'Monitor is in Standby']:
-            response.set_header('content-type', 'text/plain')
             return 'off'
     raise NotImplementedError("no matching monitor line in xset output")
 
-@get("/")
-def index():
-    getMonitorState() # to make it fail if xset isn't working
-    return '''
-      Get and put the <a href="monitor">monitor power</a> with dpms.
-      <a href="graph">rdf graph</a> available.'''
+class Root(cyclone.web.RequestHandler):
+    def get(self):
+        getMonitorState() # to make it fail if xset isn't working
+        self.write('''
+          Get and put the <a href="monitor">monitor power</a> with dpms.
+          <a href="graph">rdf graph</a> available.''')
     
-@get("/monitor")
-def monitor():
-    return getMonitorState()
+class Monitor(cyclone.web.RequestHandler):
+    def get(self):
+        self.set_header('content-type', 'text/plain')
+        self.write(getMonitorState())
+        
+    def put(self):
+        body = self.request.body.strip()
+        if body in ['on', 'off']:
+            subprocess.check_call(['xset', 'dpms', 'force', body])
+            self.set_status(204)
+        else:
+            raise NotImplementedError("body must be 'on' or 'off'")
 
-@put("/monitor")
-def putMonitor():
-    body = request.body.read().strip()
-    if body in ['on', 'off']:
-        subprocess.check_call(['xset', 'dpms', 'force', body])
-        response.status = 204
-    else:
-        raise NotImplementedError("body must be 'on' or 'off'")
-    return ''
 
-@get("/graph")
-def graph():
-    host = socket.gethostname()
-    g = StateGraph(ctx=DEV['dpms/%s' % host])
-    g.add((URIRef("http://bigasterisk.com/host/%s/monitor" % host),
-           ROOM['powerStateMeasured'],
-           ROOM[getMonitorState()]))
-    
-    response.set_header('Content-type', 'application/x-trig')
-    return g.asTrig()
+class Graph(cyclone.web.RequestHandler):
+    def get(self):
+        host = socket.gethostname()
+        g = StateGraph(ctx=DEV['dpms/%s' % host])
+        g.add((URIRef("http://bigasterisk.com/host/%s/monitor" % host),
+               ROOM['powerStateMeasured'],
+               ROOM[getMonitorState()]))
+
+        self.set_header('Content-type', 'application/x-trig')
+        self.write(g.asTrig())
+
+
+class Poller(object):
+    def __init__(self):
+        self.lastSent = None
+        self.lastSentTime = 0
+        task.LoopingCall(self.poll).start(5)
+        
+    def poll(self):
+        now = int(time.time())
+        try:
+            state = getMonitorState()
+        except subprocess.CalledProcessError, e:
+            print repr(e)
+            os.abort()
+        if state != self.lastSent or (now > self.lastSentTime + 3600):
+            influx.write_points([
+                {'measurement': 'power',
+                 'tags': {'device': '%sMonitor' % socket.gethostname()},
+                 'fields': {'value': 1 if state == 'on' else 0},
+                 'time': now
+                 }], time_precision='s')
+            
+            self.lastSent = state
+            self.lastSentTime = now
 
 setDisplayToLocalX()
+poller = Poller()
+            
+reactor.listenTCP(9095, cyclone.web.Application([
+    (r'/', Root),
+    (r'/monitor', Monitor),
+    (r'/graph', Graph),
+]), interface='::')
 
-run(host="[::]", server='gunicorn', port=9095, quiet=True)
+reactor.run()
+
 
