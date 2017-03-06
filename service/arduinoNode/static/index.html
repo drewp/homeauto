@@ -5,14 +5,31 @@
     <meta name=viewport content="width=device-width, initial-scale=1">
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="/lib/require/require-2.3.3.js"></script>
+    <script>
+     requirejs.config({
+         paths: {
+             "streamed-graph": "/rdf/streamed-graph",
+             "quadstore": "/rdf/quadstore",
+             "async-module": "/lib/async/80f1793/async",
+             "async": "/lib/async/80f1793/async",
+             "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
+             "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
+             "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
+             "moment": "/lib/moment.min",
+             "underscore": "/lib/underscore-1.5.2.min",
+         }
+     });
+    </script>
+
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
     <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
     <link rel="import" href="/lib/polymer/1.0.9/iron-flex-layout/iron-flex-layout.html">
     <link rel="import" href="/lib/polymer/1.0.9/paper-button/paper-button.html">
     <link rel="import" href="/rdf/rdf-oneshot.html">
     <link rel="import" href="/rdf/rdf-uri.html">
-    <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/rdf/graph-view.html">
+    <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="static/output-widgets.html">
     <style>
      body {
