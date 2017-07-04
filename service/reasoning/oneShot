@@ -7,9 +7,10 @@ import sys, restkit, time
 s, p, o = sys.argv[1:]
 
 prefixes = {
-'room' : 'http://projects.bigasterisk.com/room/',
-'shuttle': 'http://bigasterisk.com/room/livingRoom/shuttlepro/',
-    }
+    'room' : 'http://projects.bigasterisk.com/room/',
+    'shuttle': 'http://bigasterisk.com/room/livingRoom/shuttlepro/',
+    'sensor': 'http://bigasterisk.com/homeauto/sensor/',
+}
 
 def expand(term):
     if ':' not in term or term.startswith(('<', '"', "'")):

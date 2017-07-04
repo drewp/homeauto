@@ -11,6 +11,8 @@
 @prefix dash: <http://bigasterisk.com/host/dash/> .
 @prefix slash: <http://bigasterisk.com/host/slash/> .
 
+@prefix sensor: <http://bigasterisk.com/homeauto/sensor/> .
+
 { ?d :deviceName "drew-phone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 { ?d :deviceName "Kelsis-iPhone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 
@@ -119,25 +121,26 @@
 { shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
 { shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/noMotion> . } => {
-  :storageCeilingLedCross :brightness 0 .
-  :storageCeilingLedLong :brightness 0 .
-} .
+#{ sensor:motionStorage :seesRecently :noMotion . } => {
+#  :storageCeilingLedCross :brightness 0 .
+#  :storageCeilingLedLong :brightness 0 .
+#} .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion0> :seesRecently <http://projects.bigasterisk.com/room/motion> . } => {
+{ sensor:motionStorage :seesRecently :motion . } => {
   :storageCeilingLedCross :brightness 1 .
   :storageCeilingLedLong :brightness 1 .
 } .
 
-{ <http://bigasterisk.com/homeauto/sensor/motion0> :sees <http://projects.bigasterisk.com/room/motionStart> . } => {
-  :storageCeilingLedCross :brightness 1 .
-  :storageCeilingLedLong :brightness 1 .
-} .
+#{ sensor:motionStorage :sees :motionStart . } => {
+#  :storageCeilingLedCross :brightness 1 .
+#  :storageCeilingLedLong :brightness 1 .
+#} .
 
 @prefix bed: <http://bigasterisk.com/homeauto/sensor/bed/> .
 
 { bed:greenButton :buttonState :press } => {
   :headboardWhite :brightness 0.0 .
+  :anim1 :position :end .
 } .
 
 { bed:redButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
@@ -161,8 +164,12 @@
   :changingWhite :brightness 0.3 .
 } .
 
-{ sensor:motionChanging :sees :motionStart90 } => {
-  :changingCam :grab <http://bang:9057/changing.jpg> .
+{ sensor:motionChanging :sees :motionStart90 . dev:calendar :twilight :daytime .} => {
+  :changingCam :grab <http://bang:9057/changing-day.jpg> .
+  } .
+
+{ sensor:motionChanging :sees :motionStart90 . dev:calendar :twilight :withinTwilight .} => {
+  :changingCam :grab <http://bang:9057/changing-night.jpg> .
   } .
 
 { :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 0.0 . } => {
@@ -174,4 +181,15 @@
   :livingRoomLamp2 :brightness 0 .
 } .
 
+
+
+{ <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :noMotion . } => {
+  :garageOverhead :brightness 0 .
+} .
+
+{ <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :motion . } => {
+  :garageOverhead :brightness 1 .
+} .
+
+{ sensor:motionBed :sees :motion . } => { :anim1 :playback :start . } .
 
