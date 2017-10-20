@@ -12,10 +12,7 @@ try:
 except ImportError:
     pigpio = None
 import w1thermsensor
-try:
-    import neopixel
-except ImportError:
-    neopixel = None
+import rpi_ws281x
 
 def setupPwm(pi, pinNumber, hz=8000):
     pi.set_mode(pinNumber, pigpio.OUTPUT)
@@ -510,7 +507,7 @@ class RgbPixels(DeviceType):
                         'ledType': 'WS2812',
                         'colorOrder': colorOrder
         }
-        self.neo = neopixel.Adafruit_NeoPixel(len(self.values), pin=18, strip_type=stripType)
+        self.neo = rpi_ws281x.Adafruit_NeoPixel(len(self.values), pin=18)
         self.neo.begin()
 
     def getColorOrder(self, graph, uri):
@@ -519,7 +516,7 @@ class RgbPixels(DeviceType):
         head, tail = str(colorOrder).rsplit('/', 1)
         if head != str(ROOM['ledColorOrder']):
             raise NotImplementedError('%r colorOrder %r' % (uri, colorOrder))
-        stripType = getattr(neopixel.ws, 'WS2811_STRIP_%s' % tail)
+        stripType = None
         return colorOrder, stripType
         
     def _rgbFromHex(self, h):
