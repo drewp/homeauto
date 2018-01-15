@@ -53,7 +53,7 @@ class Config(object):
         self.graph = ConjunctiveGraph()
         log.info('read config')
         for f in os.listdir('config'):
-            if f.startswith('.'): continue
+            if f.startswith('.') or not f.endswith('.n3'): continue
             self.graph.parse('config/%s' % f, format='n3')
             log.info('  parsed %s', f)
         self.graph.bind('', ROOM)
