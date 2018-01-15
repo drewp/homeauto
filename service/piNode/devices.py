@@ -446,7 +446,7 @@ class LedOutput(DeviceType):
         self.fv.set(self.value)
 
     def _setPwm(self, x):
-        v = int((x ** self.gamma)* 255)
+        v = max(0, min(255, int((x ** self.gamma)* 255)))
         self.pi.set_PWM_dutycycle(self.pinNumber, v)
 
     def hostStatements(self):
