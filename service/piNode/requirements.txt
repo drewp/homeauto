@@ -1,5 +1,5 @@
 cryptography==1.8.2
-rdflib==4.2.1
+rdflib==4.2.2
 rdflib-jsonld==0.3
 cyclone
 docopt
@@ -11,4 +11,6 @@ http://abyz.co.uk/rpi/pigpio/pigpio.zip
 git+git://github.com/adafruit/Adafruit_Nokia_LCD#egg=Nokia_LCD
 RPi.GPIO==0.6.2
 influxdb==3.0.0
-rpi_ws281x==3.0.3
+rpi_ws281x==3.0.4
+pyOpenSSL==16.2.0
+
