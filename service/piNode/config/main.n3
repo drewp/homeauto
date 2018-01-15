@@ -286,11 +286,14 @@ ha:node8 a :PiBoard;
   :hostname "frontdoor";
   :onboardDevice ha:frontdoorPiTemp;
   :hasPin
-    board8pin:GPIO4 .
+    board8pin:GPIO4, # open
+    board8pin:GPIO11, # motion
+    board8pin:GPIO17, # OW temp
+    board8pin:GPIO18 .   # rgb
 
 ha:frontdoorPiTemp a :OnboardTemperature;
   :influxMeasurement "temperatureF";
-  :influxTag [:key "location"; :value "downBathPi"] .
+  :influxTag [:key "location"; :value "frontdoorPi"] .
 
 board8pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
 :frontdoorOpenSwitch a :Pushbutton; :style :inverted;
@@ -300,3 +303,92 @@ board8pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
     :tag [:key "host"; :value "frontdoor"],
       [:key "sensor"; :value "open"],
       [:key "location"; :value "frontDoor"]];.
+
+
+board8pin:GPIO11 :gpioNumber 11; :connectedTo sensor:motionFrontdoorInside .
+sensor:motionFrontdoorInside a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontdoor"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "frontdoorInside"]];
+  :sees :entryway .
+# 17 5V
+# 23 GPIO11 through 100R, and signal->220R->LED->gnd
+# 25 gnd
+
+board8pin:GPIO18 :gpioNumber 18; :connectedTo :frontdoorRgb .
+:frontdoorRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixels (:frontdoorRgb0 :frontdoorRgb1 :frontdoorRgb2) .
+
+
+
+@prefix board9pin: <http://bigasterisk.com/homeauto/board9/pin/> .
+@prefix board9ow: <http://bigasterisk.com/homeauto/board9/oneWire/> .
+
+ha:node9 a :PiBoard;
+  :hostname "frontbed";
+  :onboardDevice ha:frontbedPiTemp;
+  :hasPin
+    board9pin:GPIO17,
+    board9pin:GPIO18,
+    board9pin:GPIO19,
+    board9pin:GPIO23,
+    board9pin:GPIO26
+    .
+
+ha:frontbedPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "downBathPi"] .
+
+# pin number ignored; see /boot/config.txt
+board9pin:GPIO17 :gpioNumber 17; :connectedTo board9ow: .
+board9ow: a :OneWire; :connectedTo board9ow:dev-000003a5be13 .
+board9ow:dev-000003a5be13 a :TemperatureSensor;
+  :position houseLoc:frontbed;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "frontbed"], [:key "location"; :value "frontbedUnderDesk"]] .
+
+
+board9pin:GPIO4 :gpioNumber 4; :connectedTo :frontbedOpenSwitch ;
+:influxMeasurement [
+    :measurement "state";
+    :predicate :buttonState;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "open"],
+      [:key "location"; :value "frontbed"]].
+
+board9pin:GPIO23 :gpioNumber 23; :connectedTo :starTrekLight .
+:starTrekLight a :LedOutput .
+
+board9pin:GPIO26 :gpioNumber 26; :connectedTo sensor:motionLoftDesk .
+sensor:motionLoftDesk a :MotionSensor;
+  :xxinfluxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "loftbed"]];
+  :sees :loftDesk .
+
+board9pin:GPIO19 :gpioNumber 19; :connectedTo sensor:motionLoftbed .
+sensor:motionLoftbed a :MotionSensor;
+  :xxinfluxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "loftbed"]];
+  :sees :loftbed .
+
+board9pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
+:frontbedRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixels (:frontbedRgb0 :frontbedRgb1 :frontbedRgb2
+  :frontbedRgb3
+:frontbedRgb4) .
+
