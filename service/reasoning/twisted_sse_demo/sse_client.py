@@ -3,7 +3,7 @@ from twisted.protocols.basic import LineReceiver
 
 class EventSourceProtocol(LineReceiver):
     def __init__(self):
-        self.MAX_LENGTH = 16384 * 8
+        self.MAX_LENGTH = 1 << 20
         self.callbacks = {}
         self.finished = None
         # Initialize the event and data buffers
