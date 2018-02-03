@@ -7,6 +7,7 @@ import sys, restkit, time
 s, p, o = sys.argv[1:]
 
 prefixes = {
+    '': 'http://projects.bigasterisk.com/room/',
     'room' : 'http://projects.bigasterisk.com/room/',
     'shuttle': 'http://bigasterisk.com/room/livingRoom/shuttlepro/',
     'sensor': 'http://bigasterisk.com/homeauto/sensor/',
