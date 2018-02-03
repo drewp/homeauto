@@ -88,6 +88,7 @@ class Actions(object):
             p = deviceGraph.value(osp, ROOM['predicate'])
             if s is None or p is None:
                 continue
+            log.info("checking for %s %s", s, p)
             for postTarget in inferred.objects(s, p):
                 log.info("post target %r", postTarget)
                 # this packet ought to have 'oneShot' in it somewhere

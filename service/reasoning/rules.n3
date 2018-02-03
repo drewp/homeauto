@@ -8,6 +8,7 @@
 @prefix math: <http://www.w3.org/2000/10/swap/math#> .
 
 @prefix star: <http://bigasterisk.com/host/star/> .
+@prefix bang: <http://bigasterisk.com/host/bang/> .
 @prefix dash: <http://bigasterisk.com/host/dash/> .
 @prefix slash: <http://bigasterisk.com/host/slash/> .
 
@@ -193,3 +194,12 @@
 
 { sensor:motionBed :sees :motion . } => { :anim1 :playback :start . } .
 
+
+{ sensor:motionFrontdoorInside :seesRecently30 :motion } => {
+  <http://bigasterisk.com/host/frontdoor/monitor> :powerState :on .
+} .
+
+{ <http://projects.bigasterisk.com/room/remoteButton/KEY_POWER> :state :press } => {
+#star:slideshow :postAction <http://dash:9049/effects/question> .
+bang: :postAction <http://10.2.0.62/rpc/motor> .
+} .
