@@ -1,7 +1,11 @@
 from __future__ import division
-import itertools, logging, struct, os
+
+import itertools, logging, struct, os, sys
 from rdflib import Namespace, RDF, URIRef, Literal
 import time
+
+sys.path.append('../../lib')
+from devices_shared import RgbPixelsAnimation
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 XSD = Namespace('http://www.w3.org/2001/XMLSchema#')

@@ -8,7 +8,8 @@ from twisted.internet import reactor, task
 from docopt import docopt
 
 logging.basicConfig(level=logging.DEBUG)
-sys.path.append("/opt/homeauto_lib")
+
+sys.path.append("../../lib")
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from light9.rdfdb.rdflibpatch import inContext
 from light9.rdfdb.patch import Patch
@@ -31,8 +32,8 @@ ROOM = Namespace('http://projects.bigasterisk.com/room/')
 HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 hostname = socket.gethostname()
-
 CTX = ROOM['pi/%s' % hostname]
+bang6 = 'fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa'
 
 def patchRandid():
     """
