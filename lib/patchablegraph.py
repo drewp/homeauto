@@ -22,11 +22,11 @@ differences between RDF graphs
 """
 import sys, json, logging
 import cyclone.sse
-sys.path.append("/my/proj/light9")
-from light9.rdfdb.grapheditapi import GraphEditApi
+sys.path.append("/my/proj/rdfdb")
+from rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
-from light9.rdfdb.rdflibpatch import patchQuads
-from light9.rdfdb.patch import Patch
+from rdfdb.rdflibpatch import patchQuads
+from rdfdb.patch import Patch
 from rdflib_jsonld.serializer import from_rdf
 from rdflib.parser import StringInputSource
 from cycloneerr import PrettyErrorHandler

@@ -26,13 +26,12 @@ from loggingserial import LoggingSerial
 
 sys.path.append("../../lib")
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
-
-sys.path.append("/my/proj/light9")
-from light9.rdfdb.patch import Patch
-from light9.rdfdb.rdflibpatch import inContext
-
-sys.path.append("../piNode")
 from export_to_influxdb import InfluxExporter
+
+sys.path.append("/my/proj/rdfdb")
+from rdfdb.patch import Patch
+from rdfdb.rdflibpatch import inContext
+
 
 log = logging.getLogger()
 logging.getLogger('serial').setLevel(logging.WARN)

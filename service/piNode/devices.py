@@ -7,6 +7,13 @@ import time, logging, os
 from rdflib import Namespace, URIRef, Literal
 from twisted.internet import reactor
 
+from devices_shared import RgbPixelsAnimation
+
+log = logging.getLogger()
+ROOM = Namespace('http://projects.bigasterisk.com/room/')
+XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
+RDFS = Namespace('http://www.w3.org/2000/01/rdf-schema#')
+
 try:
     import pigpio
 except ImportError:
@@ -23,12 +30,6 @@ def setupPwm(pi, pinNumber, hz=8000):
         raise ValueError('pwm actual=%s' % actual)
     pi.set_PWM_dutycycle(pinNumber, 0)
 
-import sys
-
-log = logging.getLogger()
-ROOM = Namespace('http://projects.bigasterisk.com/room/')
-XSD = Namespace('http://www.w3.org/2001/XMLSchema#')
-RDFS = Namespace('http://www.w3.org/2000/01/rdf-schema#')
 
 class DeviceType(object):
     deviceType = NotImplementedError
