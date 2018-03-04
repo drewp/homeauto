@@ -1,6 +1,6 @@
 # based on http://freshfoo.com/blog/pulseaudio_monitoring
 from __future__ import division
-import socket, argparse, time
+import socket, argparse, time, logging, os
 from Queue import Queue
 from ctypes import POINTER, c_ubyte, c_void_p, c_ulong, cast
 from influxdb import InfluxDBClient
@@ -8,8 +8,10 @@ from influxdb import InfluxDBClient
 # From https://github.com/Valodim/python-pulseaudio
 from pulseaudio import lib_pulseaudio as P
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger()
+
 METER_RATE = 1
-MAX_SAMPLE_VALUE = 127
 
 class PeakMonitor(object):
 
@@ -44,17 +46,22 @@ class PeakMonitor(object):
         state = P.pa_context_get_state(context)
 
         if state == P.PA_CONTEXT_READY:
-            print "Pulseaudio connection ready..."
+            log.info("Pulseaudio connection ready...")
             # Connected to Pulseaudio. Now request that source_info_cb
             # be called with information about the available sources.
             o = P.pa_context_get_source_info_list(context, self._source_info_cb, None)
             P.pa_operation_unref(o)
 
         elif state == P.PA_CONTEXT_FAILED :
-            print "Connection failed"
+            log.error("Connection failed")
+            os.abort()
 
         elif state == P.PA_CONTEXT_TERMINATED:
-            print "Connection terminated"
+            log.error("Connection terminated")
+            os.abort()
+
+        else:
+            log.info('context_notify_cb state=%r', state)
 
     def source_info_cb(self, context, source_info_p, _, __):
         if not source_info_p:
@@ -65,14 +72,15 @@ class PeakMonitor(object):
         if source_info.name == self.source_name:
             # Found the source we want to monitor for peak levels.
             # Tell PA to call stream_read_cb with peak samples.
-            print 'setting up peak recording using', source_info.name
-            print 'description:', source_info.description
+            log.info('setting up peak recording using %s', source_info.name)
+            log.info('description: %r', source_info.description)
+            
             samplespec = P.pa_sample_spec()
             samplespec.channels = 1
             samplespec.format = P.PA_SAMPLE_U8
             samplespec.rate = self.rate
-
-            pa_stream = P.pa_stream_new(context, "peak detect demo", samplespec, None)
+            pa_stream = P.pa_stream_new(context, "audioInputLevels", samplespec, None)
+            
             P.pa_stream_set_read_callback(pa_stream,
                                           self._stream_read_cb,
                                           source_info.index)
@@ -85,16 +93,19 @@ class PeakMonitor(object):
         data = c_void_p()
         P.pa_stream_peek(stream, data, c_ulong(length))
         data = cast(data, POINTER(c_ubyte))
-        for i in xrange(length):
-            # When PA_SAMPLE_U8 is used, samples values range from 128
-            # to 255 because the underlying audio data is signed but
-            # it doesn't make sense to return signed peaks.
-            self._samples.put(data[i] - 128)
+        try:
+            for i in xrange(length):
+                # When PA_SAMPLE_U8 is used, samples values range from 128
+                # to 255 because the underlying audio data is signed but
+                # it doesn't make sense to return signed peaks.
+                self._samples.put(data[i] - 128)
+        except ValueError:
+            # "data will be NULL and nbytes will contain the length of the hole"
+            log.info("skipping hole of length %s" % length)
+            # This seems to happen at startup for a while.
         P.pa_stream_drop(stream)
 
 def main():
-
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--source', required=True,
@@ -102,20 +113,15 @@ def main():
 
     args = parser.parse_args()
 
-    def ipv6Init(self, host="localhost", port=2003):
-        self._addr = (host, port, 0, 0)
-        self._sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        self._sock.connect(self._addr)
-
     influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
     hostname = socket.gethostname()
     monitor = PeakMonitor(args.source, METER_RATE)
     for sample in monitor:
-        #print ' %3d %s' % (sample, '>' * sample)
+        log.debug(' %3d %s', sample, '>' * sample)
         influx.write_points([{'measurement': 'audioLevel',
                               "tags": dict(stat='max', location=hostname),
-                              "fields": {"value": sample /  128},
+                              "fields": {"value": sample / 128},
                               "time": int(time.time())}], time_precision='s')
         
 if __name__ == '__main__':
