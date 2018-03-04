@@ -11,9 +11,10 @@ logging.basicConfig(level=logging.DEBUG)
 
 sys.path.append("../../lib")
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
-from light9.rdfdb.rdflibpatch import inContext
-from light9.rdfdb.patch import Patch
-sys.path.append('/opt/pigpio')
+
+from rdfdb.rdflibpatch import inContext
+from rdfdb.patch import Patch
+
 try:
     import pigpio
 except ImportError:
@@ -122,8 +123,10 @@ class Board(object):
             for u, s in sorted(pollTime.items()):
                 log.debug("  %.4f ms %s", s * 1000, u)
             log.debug('total poll time: %f ms', sum(pollTime.values()) * 1000)
-        self._influx.exportToInflux(
-            set.union(*[set(v) for v in self._statementsFromInputs.values()]))
+            
+        pollResults = map(set, self._statementsFromInputs.values())
+        if pollResults:
+            self._influx.exportToInflux(set.union(*pollResults))
 
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
@@ -252,8 +255,8 @@ def main():
     
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
-            "path": "../arduinoNode/static", "default_filename": "index.html"}),
-        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "../arduinoNode/static"}),
+            "path": "static", "default_filename": "index.html"}),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
         (r'/boards', Boards),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),

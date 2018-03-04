@@ -14,6 +14,6 @@ influxdb==3.0.0
 rpi_ws281x==3.0.4
 pyOpenSSL
 numpy==1.13.3
-pillow==5.0.0
+pillow
 imageio==2.2.0
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
