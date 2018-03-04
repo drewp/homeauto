@@ -200,6 +200,12 @@ class Board(object):
         byte = self.ser.read(1)
         if byte != 'x':
             raise ValueError("after poll, got %x instead of 'x'" % byte)
+        for i in self._devs:
+            if i.wantIdleOutput():
+                self.ser.write("\x60" + chr(self._devCommandNum[i.uri]))
+                i.outputIdle(self.ser.write)
+                if self.ser.read(1) != 'k':
+                    raise ValueError('no ack after outputIdle')
         elapsed = time.time() - t1
         if elapsed > 1.0:
             log.warn('poll took %.1f seconds' % elapsed)
