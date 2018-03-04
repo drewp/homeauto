@@ -1,10 +1,5 @@
-"""
-depends on packages:
- arduino-mk
- indent
-"""
 from __future__ import division
-import glob, sys, logging, subprocess, socket, os, hashlib, time, tempfile
+import glob, sys, logging, subprocess, socket, hashlib, time, tempfile
 import shutil, json
 import serial
 import cyclone.web
@@ -12,7 +7,10 @@ from cyclone.httpclient import fetch
 from rdflib import Graph, Namespace, URIRef, Literal, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
+from twisted.internet.defer import inlineCallbacks
+from twisted.internet.threads import deferToThread
 from docopt import docopt
+import etcd3
 
 import devices
 import write_arduino_code
@@ -43,25 +41,72 @@ ACTION_BASE = 10 # higher than any of the fixed command numbers
 
 hostname = socket.gethostname()
 CTX = ROOM['arduinosOn%s' % hostname]
+etcd = etcd3.client(host='bang6')
 
 class Config(object):
-    def __init__(self, masterGraph):
-        self.graph = ConjunctiveGraph()
+    def __init__(self, masterGraph, slowMode=False):
+        self.masterGraph = masterGraph
+        self.slowMode = slowMode
+        self.configGraph = ConjunctiveGraph()
+
+        self.etcPrefix = 'arduino/'
+        
+        self.boards = []
+        self.reread()
+
+        self.rereadLater = None
+        deferToThread(self.watchEtcd)
+
+    def watchEtcd(self):
+        events, cancel = etcd.watch_prefix(self.etcPrefix)
+        reactor.addSystemEventTrigger('before', 'shutdown', cancel)
+        for ev in events:
+            log.info('%s changed', ev.key)
+            reactor.callFromThread(self.configChanged)
+
+    def configChanged(self):
+        if self.rereadLater:
+            self.rereadLater.cancel()
+        self.rereadLater = reactor.callLater(.1, self.reread)
+
+    def reread(self):
+        self.rereadLater = None
         log.info('read config')
-        for f in os.listdir('config'):
-            if f.startswith('.'): continue
-            self.graph.parse('config/%s' % f, format='n3')
-        self.graph.bind('', ROOM) # not working
-        self.graph.bind('rdf', RDF)
+        self.configGraph = ConjunctiveGraph()
+        for v, md in etcd.get_prefix(self.etcPrefix):
+            log.info('  read file %r', md.key)
+            self.configGraph.parse(StringInputSource(v), format='n3')
+        self.configGraph.bind('', ROOM) # not working
+        self.configGraph.bind('rdf', RDF)
         # config graph is too noisy; maybe make it a separate resource
-        #masterGraph.patch(Patch(addGraph=self.graph))
+        #masterGraph.patch(Patch(addGraph=self.configGraph))
+        self.setupBoards()
 
     def serialDevices(self):
-        return dict([(row.dev, row.board) for row in self.graph.query(
+        return dict([(row.dev, row.board) for row in self.configGraph.query(
             """SELECT ?board ?dev WHERE {
                  ?board :device ?dev;
                  a :ArduinoBoard .
                }""", initNs={'': ROOM})])
+
+    def setupBoards(self):
+        current = currentSerialDevices()
+
+        self.boards = []
+        for dev, board in self.serialDevices().items():
+            if str(dev) not in current:
+                continue
+            log.info("we have board %s connected at %s" % (board, dev))
+            b = Board(dev, self.configGraph, self.masterGraph, board)
+            self.boards.append(b)
+
+        for b in self.boards:
+            b.deployToArduino()
+
+        log.info('open boards')
+        for b in self.boards:
+            b.startPolling(period=.1 if not self.slowMode else 10)
+
         
 class Board(object):
     """an arduino connected to this computer"""
@@ -167,9 +212,8 @@ class Board(object):
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
-        bang6 = 'fcb8:4119:fb46:96f8:8b07:1260:0f50:fcfa'
         fetch(method='POST',
-              url='http://[%s]:9071/oneShot' % bang6,
+              url='http://bang6:9071/oneShot',
               headers={'Content-Type': ['text/n3']}, postdata=body,
               timeout=5)
 
@@ -287,12 +331,12 @@ class Board(object):
 class Dot(cyclone.web.RequestHandler):
     def get(self):
         configGraph = self.settings.config.graph
-        dot = dotrender.render(configGraph, self.settings.boards)
+        dot = dotrender.render(configGraph, self.settings.config.boards)
         self.write(dot)
         
 class ArduinoCode(cyclone.web.RequestHandler):
     def get(self):
-        board = [b for b in self.settings.boards if
+        board = [b for b in self.settings.config.boards if
                  b.uri == URIRef(self.get_argument('board'))][0]
         self.set_header('Content-Type', 'text/plain')
         code, cksum = board.generateArduinoCode()
@@ -307,7 +351,7 @@ class OutputPage(cyclone.web.RequestHandler):
     def post(self):
         # for old ui; use PUT instead
         stmts = list(rdfGraphBody(self.request.body, self.request.headers))
-        for b in self.settings.boards:
+        for b in self.settings.config.boards:
             b.outputStatements(stmts)
             
     def put(self):
@@ -321,7 +365,7 @@ class OutputPage(cyclone.web.RequestHandler):
             obj = Literal(turtleLiteral)
 
         stmt = (subj, pred, obj)
-        for b in self.settings.boards:
+        for b in self.settings.config.boards:
             b.outputStatements([stmt])
         
         
@@ -330,7 +374,7 @@ class Boards(cyclone.web.RequestHandler):
         self.set_header('Content-type', 'application/json')
         self.write(json.dumps({
             'host': hostname,
-            'boards': [b.description() for b in self.settings.boards]
+            'boards': [b.description() for b in self.settings.config.boards]
         }, indent=2))
             
 def currentSerialDevices():
@@ -342,6 +386,8 @@ def main():
     Usage: arduinoNode.py [options]
 
     -v   Verbose
+    -s   serial logging
+    -l   slow polling
     """)
     log.setLevel(logging.WARN)
     if arg['-v']:
@@ -349,26 +395,11 @@ def main():
         twlog.startLogging(sys.stdout)
 
         log.setLevel(logging.DEBUG)
+    if arg['-s']:
+        logging.getLogger('serial').setLevel(logging.INFO)
 
     masterGraph = PatchableGraph()
-    config = Config(masterGraph)
-    current = currentSerialDevices()
-
-    boards = []
-    for dev, board in config.serialDevices().items():
-        if str(dev) not in current:
-            continue
-        log.info("we have board %s connected at %s" % (board, dev))
-        b = Board(dev, config.graph, masterGraph, board)
-        boards.append(b)
-
-    for b in boards:
-        b.deployToArduino()
-
-    log.info('open boards')
-    for b in boards:
-        b.startPolling(period=.1 if not arg['-v'] else 10)
-
+    config = Config(masterGraph, slowMode=arg['-l'])
 
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
@@ -380,7 +411,7 @@ def main():
         (r'/output', OutputPage),
         (r'/arduinoCode', ArduinoCode),
         (r'/dot', Dot),
-        ], config=config, boards=boards), interface='::')
+        ], config=config), interface='::')
     reactor.run()
 
 main()
