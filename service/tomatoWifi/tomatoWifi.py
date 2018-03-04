@@ -22,10 +22,14 @@ from twisted.internet.defer import inlineCallbacks
 import docopt
 from influxdb import InfluxDBClient
 from pymongo import Connection, DESCENDING
-from rdflib import Namespace, Literal, URIRef
+from rdflib import Namespace, Literal, URIRef, ConjunctiveGraph
 sys.path.append("/my/site/magma")
 from stategraph import StateGraph
 from wifi import Wifi
+sys.path.append("/my/proj/homeauto/lib")
+from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
+sys.path.append("/my/proj/rdfdb")
+from rdfdb.patch import Patch
 
 sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
@@ -99,43 +103,6 @@ class Json(PrettyErrorHandler, cyclone.web.RequestHandler):
         self.write(json.dumps({"wifi" : self.settings.poller.lastAddrs,
                                      "dataAge" : age}))
 
-class GraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
-    def get(self):
-        g = StateGraph(ctx=DEV['wifi'])
-
-        # someday i may also record specific AP and their strength,
-        # for positioning. But many users just want to know that the
-        # device is connected to some bigasterisk AP.
-        aps = URIRef("http://bigasterisk.com/wifiAccessPoints")
-        age = time.time() - self.settings.poller.lastPollTime
-        if age > 10:
-            raise ValueError("poll data is stale. age=%s" % age)
-
-        for dev in self.settings.poller.lastAddrs:
-            if not dev.get('connected'):
-                continue
-            uri = URIRef("http://bigasterisk.com/mac/%s" % dev['mac'].lower())
-            g.add((uri, ROOM['macAddress'], Literal(dev['mac'].lower())))
-            
-            g.add((uri, ROOM['connected'], aps))
-            if 'clientHostname' in dev:
-                g.add((uri, ROOM['wifiNetworkName'], Literal(dev['clientHostname'])))
-            if 'name' in dev:
-                g.add((uri, ROOM['deviceName'], Literal(dev['name'])))
-            if 'signal' in dev:
-                g.add((uri, ROOM['signalStrength'], Literal(dev['signal'])))
-            try:
-                conn = whenConnected(self.settings.mongo, dev['mac'])
-            except ValueError:
-                pass
-            else:
-                g.add((uri, ROOM['connectedAgo'],
-                       Literal(connectedAgoString(conn))))
-                g.add((uri, ROOM['connected'], Literal(conn)))
-
-        self.set_header('Content-type', 'application/x-trig')
-        self.write(g.asTrig())
-
 class Poller(object):
     def __init__(self, wifi, mongo):
         self.wifi = wifi
@@ -149,8 +116,7 @@ class Poller(object):
         assert dt < 10, "last poll was %s sec ago" % dt
 
     @inlineCallbacks
-    def poll(self):
-
+    def poll(self):     
         connectedField = 'connected'
         now = int(time.time())
         
@@ -191,6 +157,8 @@ class Poller(object):
                       headers={'user-agent': ['tomatoWifi']}).addErrback(log.warn)
             self.lastAddrs = newAddrs
             self.lastPollTime = now
+
+            self.updateGraph(masterGraph)
         except Exception, e:
             log.error("poll error: %r\n%s", e, traceback.format_exc())
 
@@ -254,6 +222,48 @@ class Poller(object):
         last = results[0]['created'].replace(tzinfo=tz.gettz('UTC'))
         return now - last
 
+    def updateGraph(self, masterGraph):
+
+        g = ConjunctiveGraph()
+        ctx = DEV['wifi']
+
+        # someday i may also record specific AP and their strength,
+        # for positioning. But many users just want to know that the
+        # device is connected to some bigasterisk AP.
+        age = time.time() - self.lastPollTime
+        if age > 10:
+            raise ValueError("poll data is stale. age=%s" % age)
+
+        for dev in self.lastAddrs:
+            if not dev.get('connected'):
+                continue
+            uri = URIRef("http://bigasterisk.com/mac/%s" % dev['mac'].lower())
+            g.add((uri, ROOM['macAddress'], Literal(dev['mac'].lower()), ctx))
+
+            g.add((uri, ROOM['connected'], {
+                'wireless': URIRef("http://bigasterisk.com/wifiAccessPoints"),
+                '2.4G': URIRef("http://bigasterisk.com/wifiAccessPoints"),
+                '5G':  URIRef("http://bigasterisk.com/wifiAccessPoints"),
+                'wired': URIRef("http://bigasterisk.com/houseOpenNet")}[dev['contype']], ctx))
+            if 'clientHostname' in dev and dev['clientHostname']:
+                g.add((uri, ROOM['wifiNetworkName'], Literal(dev['clientHostname']), ctx))
+            if 'name' in dev and dev['name']:
+                g.add((uri, ROOM['deviceName'], Literal(dev['name']), ctx))
+            if 'signal' in dev:
+                g.add((uri, ROOM['signalStrength'], Literal(dev['signal']), ctx))
+            if 'model' in dev:
+                g.add((uri, ROOM['networkModel'], Literal(dev['model']), ctx))
+            try:
+                conn = whenConnected(mongo, dev['mac'])
+            except ValueError:
+                traceback.print_exc()
+                pass
+            else:
+                g.add((uri, ROOM['connectedAgo'],
+                       Literal(connectedAgoString(conn)), ctx))
+                g.add((uri, ROOM['connected'], Literal(conn), ctx))
+        masterGraph.setToGraph(g)
+
 
 if __name__ == '__main__':
     args = docopt.docopt('''
@@ -274,6 +284,7 @@ Options:
     mongo = Connection('bang', 27017, tz_aware=True)['visitor']['visitor']
     influx = InfluxDBClient('bang', 9060, 'root', 'root', 'main')
 
+    masterGraph = PatchableGraph()
     wifi = Wifi()
     poller = Poller(wifi, mongo)
     task.LoopingCall(poller.poll).start(1/float(args['--poll']))
@@ -283,7 +294,8 @@ Options:
                           [
                               (r"/", Index),
                               (r'/json', Json),
-                              (r'/graph', GraphHandler),
+                              (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
+                              (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
                               (r'/table', Table),
                               #(r'/activity', Activity),
                           ],
