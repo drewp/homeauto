@@ -641,11 +641,10 @@ class RgbPixels(DeviceType):
 
     def __init__(self, graph, uri, pinNumber):
         super(RgbPixels, self).__init__(graph, uri, pinNumber)
-        px = graph.value(self.uri, ROOM['pixels'])
-        self.pixelUris = list(graph.items(px))
-        self.values = dict((uri, Literal('#000000')) for uri in self.pixelUris)
+        self.anim = RgbPixelsAnimation(graph, uri, self.updateOutput)
+        
         self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
-                        'ledCount': len(self.pixelUris),
+                        'ledCount': self.anim.maxIndex() - 1,
                         'pin': self.pinNumber,
                         'ledType': 'WS2812',
         }
@@ -667,34 +666,42 @@ class RgbPixels(DeviceType):
     def generateSetupCode(self):
         return 'FastLED.addLeds<{ledType}, {pin}>({ledArray}, {ledCount});'.format(**self.replace)
     
-    def _rgbFromHex(self, h):
-        rrggbb = h.lstrip('#')
-        return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
-    
     def sendOutput(self, statements, write, read):
-        px, pred, color = statements[0]
-        if pred != ROOM['color']:
-            raise ValueError(pred)
-        rgb = self._rgbFromHex(color)
-        if px not in self.values:
-            raise ValueError(px)
-        self.values[px] = Literal(color)
-        write(chr(self.pixelUris.index(px)) +
-              chr(rgb[1]) + # my WS2812 need these flipped
-              chr(rgb[0]) +
-              chr(rgb[2]))
+        log.info('sendOutput start')
+        self.write = write
+        self.anim.onStatements(statements)
+        self.anim.updateOutput()
+        log.info('sendOutput end')
 
+    def updateOutput(self):
+        write = self.write
+        write(chr(self.anim.maxIndex() + 1))
+        for idx, (r, g, b) in self.anim.currentColors():
+            # my WS2812 need these flipped
+            write(chr(idx) + chr(g) + chr(r) + chr(b))
+
+    def wantIdleOutput(self):
+        return True
+            
+    def outputIdle(self, write):
+        self.write = write
+        self.updateOutput()        
+            
     def hostStatements(self):
-        return [(uri, ROOM['color'], hexCol)
-                for uri, hexCol in self.values.items()]
+        return self.anim.hostStatements()
         
     def outputPatterns(self):
-        return [(px, ROOM['color'], None) for px in self.pixelUris]
+        return self.anim.outputPatterns()
+
+    def outputWidgets(self):
+        return self.anim.outputWidgets()
 
     def generateActionCode(self):
-        
+        # not yet combining updates- may be slow
         return '''
-
+        while(Serial.available() < 1) NULL;
+byte count = Serial.read();
+       for (byte elt=0; elt<count; ++elt) {{
           while(Serial.available() < 1) NULL;
           byte id = Serial.read();
 
@@ -707,16 +714,11 @@ class RgbPixels(DeviceType):
           while(Serial.available() < 1) NULL;
           byte b = Serial.read();
           
-        {ledArray}[id] = CRGB(r, g, b); FastLED.show();
+        {ledArray}[id] = CRGB(r, g, b);
+        }}
+        FastLED.show();
 
         '''.format(**self.replace)
-    
-    def outputWidgets(self):
-        return [{
-            'element': 'output-rgb',
-            'subj': px,
-            'pred': ROOM['color'],
-        } for px in self.pixelUris]
     
 def makeDevices(graph, board):
     out = []

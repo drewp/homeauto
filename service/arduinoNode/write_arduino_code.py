@@ -40,7 +40,9 @@ def writeCode(baudrate, devs, devCommandNum):
                 code = dev.generateActionCode()
                 if code:
                     gen = '''else if (cmd == %(cmdNum)s) {
-                               %(code)s
+                               {
+                                 %(code)s
+                               }
                                Serial.write('k');
                              }
                           ''' % dict(cmdNum=devCommandNum[dev.uri],
