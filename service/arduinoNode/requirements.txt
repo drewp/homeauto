@@ -1,0 +1,15 @@
+cryptography
+cyclone
+docopt
+numpy
+pyOpenSSL
+python-dateutil
+service_identity
+pillow>=5
+rdflib==4.2.2
+rdflib-jsonld==0.3
+influxdb==3.0.0
+imageio==2.2.0
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
+pyserial
+etcd3
