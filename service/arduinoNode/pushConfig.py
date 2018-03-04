@@ -1,29 +1,25 @@
 from __future__ import division
 
-from twisted.internet import reactor
-from twisted.internet.task import react
-from twisted.internet.defer import inlineCallbacks, returnValue
+import etcd3
+
 from twisted.python.filepath import FilePath
 
-import txaioetcd
-etcd = txaioetcd.Client(reactor, u'http://bang6:2379')
+etcd = etcd3.client(host='bang6')
 
-@inlineCallbacks
-def main(*a):
+def main():
     prefix = b'arduino/'
-    existing = set(row.key for row in
-                   (yield etcd.get(txaioetcd.KeySet(prefix, prefix=True))).kvs)
+    existing = set(md.key for v, md in etcd.get_prefix(prefix))
     written = set()
     root = FilePath('config')
     for f in root.walk():
         if f.isfile() and f.path.endswith('.n3'):
             n3 = f.getContent()
             key = prefix + b'/'.join(f.segmentsFrom(root))
-            yield etcd.set(key, n3)
+            etcd.put(key, n3)
             written.add(key)
             print 'wrote %s' % key
     for k in existing - written:
-        yield etcd.delete(k)
+        etcd.delete(k)
         print 'removed %s' % k
 
-react(main)
+main()

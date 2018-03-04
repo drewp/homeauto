@@ -70,6 +70,12 @@ class DeviceType(object):
         """
         raise NotImplementedError('readFromPoll in %s' % self.__class__)
 
+    def wantIdleOutput(self):
+        return False
+        
+    def outputIdle(self, write):
+        return
+        
     def hostStatements(self):
         """
         Like readFromPoll but these statements come from the host-side
