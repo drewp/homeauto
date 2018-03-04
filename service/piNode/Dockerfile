@@ -1,21 +1,16 @@
-FROM arm32v6/python:2-alpine3.7
-
-
-WORKDIR /opt
-RUN apk add --no-cache git gcc linux-headers musl-dev libffi-dev py2-numpy openssl-dev jpeg-dev py2-cffi py2-cryptography py2-numpy py2-numpy-f2py
+FROM bang6:5000/pi_base
 
 COPY requirements.txt ./
-RUN pip download --cache-dir /tmp/pip-cache -r requirements.txt
 
-RUN pip install --cache-dir /tmp/pip-cache -r requirements.txt
+RUN pip install -r requirements.txt
 
 ADD https://projects.bigasterisk.com/rdfdb/more.tgz ./
 RUN tar xvzf more.tgz
 
+ADD https://projects.bigasterisk.com/rdfdb/more2.tgz ./
+RUN tar xvzf more2.tgz
+
 COPY *.py ./
 COPY config/ ./config/
-
-# merge this with above
-RUN apk add --no-cache libc6-compat
 
 CMD [ "python", "./piNode.py" ]

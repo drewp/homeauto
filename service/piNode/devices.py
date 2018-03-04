@@ -18,8 +18,14 @@ try:
     import pigpio
 except ImportError:
     pigpio = None
-import w1thermsensor
-import rpi_ws281x
+try:
+    import w1thermsensor
+except Exception:
+    w1thermsensor = None
+try:
+    import rpi_ws281x
+except ImportError:
+    rpi_ws281x = None
 
 def setupPwm(pi, pinNumber, hz=8000):
     pi.set_mode(pinNumber, pigpio.OUTPUT)
@@ -498,56 +504,38 @@ class RgbPixels(DeviceType):
     deviceType = ROOM['RgbPixels']
 
     def hostStateInit(self):
-        px = self.graph.value(self.uri, ROOM['pixels'])
-        self.pixelUris = list(self.graph.items(px))
-        self.values = dict((uri, Literal('#000000')) for uri in self.pixelUris)
-        colorOrder, stripType = self.getColorOrder(self.graph, self.uri)
-        self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
-                        'ledCount': len(self.pixelUris),
-                        'pin': self.pinNumber,
-                        'ledType': 'WS2812',
-                        'colorOrder': colorOrder
-        }
-        self.neo = rpi_ws281x.Adafruit_NeoPixel(len(self.values), pin=18)
+        self.anim = RgbPixelsAnimation(self.graph, self.uri, self.updateOutput)
+        self.neo = rpi_ws281x.Adafruit_NeoPixel(self.anim.maxIndex() - 1, pin=18)
         self.neo.begin()
-
-    def getColorOrder(self, graph, uri):
-        colorOrder = graph.value(uri, ROOM['colorOrder'],
-                                 default=ROOM['ledColorOrder/RGB'])
-        head, tail = str(colorOrder).rsplit('/', 1)
-        if head != str(ROOM['ledColorOrder']):
-            raise NotImplementedError('%r colorOrder %r' % (uri, colorOrder))
-        stripType = None
-        return colorOrder, stripType
         
-    def _rgbFromHex(self, h):
-        rrggbb = h.lstrip('#')
-        return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
-    
+        colorOrder, stripType = self.anim.getColorOrder(self.graph, self.uri)
+      
     def sendOutput(self, statements):
-        px, pred, color = statements[0]
-        if pred != ROOM['color']:
-            raise ValueError(pred)
-        rgb = self._rgbFromHex(color)
-        if px not in self.values:
-            raise ValueError(px)
-        self.values[px] = Literal(color)
-        self.neo.setPixelColorRGB(self.pixelUris.index(px), rgb[0], rgb[1], rgb[2])
+        self.anim.onStatements(statements)
+
+    def updateOutput(self):
+        if 0:
+            for _, _, sg in self.anim.groups.values():
+                print sg.uri, sg.current
+            print list(self.anim.currentColors())
+            return
+        
+        for idx, (r, g, b) in self.anim.currentColors():
+            self.neo.setPixelColorRGB(idx, r, g, b)
         self.neo.show()
 
+    def poll(self):
+        self.anim.step()
+        return []
+
     def hostStatements(self):
-        return [(uri, ROOM['color'], hexCol)
-                for uri, hexCol in self.values.items()]
+        return self.anim.hostStatements()
         
     def outputPatterns(self):
-        return [(px, ROOM['color'], None) for px in self.pixelUris]
+        return self.anim.outputPatterns()
 
     def outputWidgets(self):
-        return [{
-            'element': 'output-rgb',
-            'subj': px,
-            'pred': ROOM['color'],
-        } for px in self.pixelUris]
+        return self.anim.outputWidgets()
 
 @register
 class Lcd8544(DeviceType):
