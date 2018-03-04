@@ -60,7 +60,7 @@ class Wifi(object):
     @inlineCallbacks
     def getPresentMacAddrs(self):
         self.rereadConfig()
-        rows = yield loadUvaData()
+        rows = yield loadOrbiData()
         for row in rows:
             if 'clientHostname' in row:
                 row['name'] = row['clientHostname']
@@ -144,7 +144,27 @@ def loadCiscoData():
     resp = yield fetch('http://10.2.0.2/', headers=headers)
     print resp.body
     returnValue([])
-    
+
+@inlineCallbacks
+def loadOrbiData():
+    config = json.load(open("/my/proj/homeauto/service/tomatoWifi/priv-uva.json"))
+    headers = {'Authorization': ['Basic %s' % config['userPass'].encode('base64').strip()]}
+    resp = yield fetch('http://orbi.bigasterisk.com/DEV_device_info.htm', headers=headers)
+
+    if not resp.body.startswith(('device=', 'device_changed=0\ndevice=', 'device_changed=1\ndevice=')):
+        raise ValueError(resp.body)
+
+    ret = []
+    for row in json.loads(resp.body.split('device=', 1)[-1]):
+        ret.append(dict(
+            connected=True,
+            ipaddr=row['ip'],
+            mac=row['mac'].lower(),
+            contype=row['contype'],
+            model=row['model'],
+            clientHostname=row['name'] if row['name'] != 'Unknown' else None))
+    returnValue(ret)
+
             
 def jsValue(js, variableName):
     # using literal_eval instead of json parser to handle the trailing commas
