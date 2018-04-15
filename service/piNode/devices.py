@@ -267,30 +267,30 @@ class TempHumidSensor(DeviceType):
 
     def __init__(self, *a, **kw):
         DeviceType.__init__(self, *a, **kw)
-        import Adafruit_DHT
-        self.mod = Adafruit_DHT
+        import DHT22
+        self.sens = DHT22.sensor(self.pi, self.pinNumber)
     
     def poll(self):
-        for tries in range(1):
-            # fails a lot, but I don't want to add too much delay in
-            # here- the next poll is coming soon
-            humid, tempC = self.mod.read(self.mod.DHT22, self.pinNumber)
-            if humid and tempC:
-                break
-
         stmts = set()
-        if humid is not None:
-            stmts.add((self.uri, ROOM['humidity'], Literal(round(humid, 2))))
+
+        if self.sens.staleness() < self.pollPeriod * 2:
+            humid, tempC = self.sens.humidity(), self.sens.temperature()
+            if humid > -999:
+                stmts.add((self.uri, ROOM['humidity'], Literal(round(humid, 2))))
+            else:
+                stmts.add((self.uri, RDFS['comment'], Literal('No recent humidity measurement')))
+            if tempC > -999:
+                stmts.add((self.uri, ROOM['temperatureF'],
+                           # see round() note in arduinoNode/devices.py
+                           Literal(round(tempC * 9 / 5 + 32, 2))))
+            else:
+                stmts.add((self.uri, RDFS['comment'], Literal('No recent temperature measurement')))
         else:
             stmts.add((self.uri, RDFS['comment'],
-                       Literal('DHT read returned None')))
-        if tempC is not None:
-            stmts.add((self.uri, ROOM['temperatureF'],
-                       # see round() note in arduinoNode/devices.py
-                       Literal(round(tempC * 9 / 5 + 32, 2))))
-        else:
-            stmts.add((self.uri, RDFS['comment'],
-                       Literal('DHT read returned None')))
+                       Literal('No recent DHT response (%.02f sec old)' % self.sens.staleness())))
+            
+        self.sens.trigger()
+       
         return stmts
         
     def watchPrefixes(self):
