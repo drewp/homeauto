@@ -4,31 +4,31 @@
 @prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
 @prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
 
-@prefix board0: <http://bigasterisk.com/homeauto/board0/> .
-@prefix board0pin: <http://bigasterisk.com/homeauto/board0/pin/> .
-@prefix board0ow: <http://bigasterisk.com/homeauto/board0/oneWire/> .
+@prefix board: <http://bigasterisk.com/homeauto/boardBang/> .
+@prefix pin: <http://bigasterisk.com/homeauto/boardBang/pin/> .
+@prefix ow: <http://bigasterisk.com/homeauto/boardBang/oneWire/> .
 
-ha:board0 a :ArduinoBoard;
+ha:boardBang a :ArduinoBoard;
   :device "/dev/serial/by-id/usb-FTDI_FT232R_USB_UART_A900cepU-if00-port0"; 
   :boardTag "atmega328";
   :hasPin
-    board0pin:d3,
-    board0pin:d4,
-    board0pin:d5,
-    board0pin:d6,
-    board0pin:d7,
-    board0pin:d8
+    pin:d3,
+    pin:d4,
+    pin:d5,
+    pin:d6,
+    pin:d7,
+    pin:d8
     .
 
-board0pin:d3 :pinNumber 3 .
-board0pin:d4 :pinNumber 4 .
-board0pin:d5 :pinNumber 5 .
-board0pin:d6 :pinNumber 6 .
-board0pin:d7 :pinNumber 7 .
-board0pin:d8 :pinNumber 8 .
+pin:d3 :pinNumber 3 .
+pin:d4 :pinNumber 4 .
+pin:d5 :pinNumber 5 .
+pin:d6 :pinNumber 6 .
+pin:d7 :pinNumber 7 .
+pin:d8 :pinNumber 8 .
 
 
-board0pin:d3 :connectedTo sensor:motionStorage .
+pin:d3 :connectedTo sensor:motionStorage .
 sensor:motionStorage a :MotionSensor;
   :influxMeasurement [
     :measurement "presence";
@@ -38,24 +38,54 @@ sensor:motionStorage a :MotionSensor;
       [:key "location"; :value "storage"]];
   :sees houseLoc:storage .
 
-board0pin:d4 :connectedTo :heater .
+pin:d4 :connectedTo :heater .
 :heater a :DigitalOutput .
 
-board0pin:d5 :connectedTo :storageCeilingLedCross .
+pin:d5 :connectedTo :storageCeilingLedCross .
 :storageCeilingLedCross a :LedOutput .
 
-board0pin:d6 :connectedTo :storageCeilingLedLong .
+pin:d6 :connectedTo :storageCeilingLedLong .
 :storageCeilingLedLong a :LedOutput .
   
-board0pin:d7 :connectedTo board0ow: .
-board0ow: a :OneWire;
-  :connectedTo board0ow:dev-1052790f02080086 .
-board0ow:dev-1052790f02080086 a :TemperatureSensor;
+pin:d7 :connectedTo ow: .
+ow: a :OneWire;
+  :connectedTo ow:dev-1052790f02080086, ow:dev-2809b8a503000035 .
+ow:dev-1052790f02080086 a :TemperatureSensor;
   :position :storage;
   :influxMeasurement [
     :measurement "temperatureF";
     :predicate :temperatureF;
     :tag [:key "host"; :value "bang"], [:key "location"; :value "storage"]] .
+ow:dev-2809b8a503000035 a :TemperatureSensor;
+  :position :storage2 .
+  
+pin:d8 :connectedTo board:rgb2 .
+board:rgb2 a :RgbPixels;
+  :pixelGroup :speakersStrips .
+
+:speakersStrips
+  :startIndex 0;
+  :endIndex 11;
+  :src "rainbow.png";
+  :x 0;
+  :y 0;
+  :height 12;
+  :interpolate :slide;
+  :rate 30 . # px/sec
+
+board:rgb_left_top_0 rdfs:label "rgb_left_top_0" .
+board:rgb_left_top_1 rdfs:label "rgb_left_top_1" .
+board:rgb_left_top_2 rdfs:label "rgb_left_top_2" .
+board:rgb_left_bottom_0 rdfs:label "rgb_left_bottom_0" .
+board:rgb_left_bottom_1 rdfs:label "rgb_left_bottom_1" .
+board:rgb_left_bottom_2 rdfs:label "rgb_left_bottom_2" .
+board:rgb_right_top_0 rdfs:label "rgb_right_top_0" .
+board:rgb_right_top_1 rdfs:label "rgb_right_top_1" .
+board:rgb_right_top_2 rdfs:label "rgb_right_top_2" .
+board:rgb_right_bottom_0 rdfs:label "rgb_right_bottom_0" .
+board:rgb_right_bottom_1 rdfs:label "rgb_right_bottom_1" .
+board:rgb_right_bottom_2 rdfs:label "rgb_right_bottom_2" .
+
 
 
 ha:boardTest a :ArduinoBoard;
@@ -64,33 +94,3 @@ ha:boardTest a :ArduinoBoard;
   :hasPin :bt8 .
 
 :bt8 :pinNumber 8 .
-  
-board0pin:d8 :connectedTo board0:rgb .
-board0:rgb a :RgbPixels;
-  :pixels (
-  board0:rgb_left_top_0
-  board0:rgb_left_top_1
-  board0:rgb_left_top_2
-  board0:rgb_left_bottom_0
-  board0:rgb_left_bottom_1
-  board0:rgb_left_bottom_2
-  board0:rgb_right_top_0
-  board0:rgb_right_top_1
-  board0:rgb_right_top_2
-  board0:rgb_right_bottom_0
-  board0:rgb_right_bottom_1
-  board0:rgb_right_bottom_2
-  ).
-
-board0:rgb_left_top_0 rdfs:label "rgb_left_top_0" .
-board0:rgb_left_top_1 rdfs:label "rgb_left_top_1" .
-board0:rgb_left_top_2 rdfs:label "rgb_left_top_2" .
-board0:rgb_left_bottom_0 rdfs:label "rgb_left_bottom_0" .
-board0:rgb_left_bottom_1 rdfs:label "rgb_left_bottom_1" .
-board0:rgb_left_bottom_2 rdfs:label "rgb_left_bottom_2" .
-board0:rgb_right_top_0 rdfs:label "rgb_right_top_0" .
-board0:rgb_right_top_1 rdfs:label "rgb_right_top_1" .
-board0:rgb_right_top_2 rdfs:label "rgb_right_top_2" .
-board0:rgb_right_bottom_0 rdfs:label "rgb_right_bottom_0" .
-board0:rgb_right_bottom_1 rdfs:label "rgb_right_bottom_1" .
-board0:rgb_right_bottom_2 rdfs:label "rgb_right_bottom_2" .
