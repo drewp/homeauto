@@ -31,9 +31,12 @@ class InfluxExporter(object):
                     tags[k] = graph.value(t, ROOM['value']).toPython()
 
                 value = self.influxValue(stmt[2])
+                pale = 3600
+                if graph.value(meas, ROOM['pointsAtLeastEvery'], default=None):
+                    pale = graph.value(meas, ROOM['pointsAtLeastEvery']).toPython()
                     
                 if not self.shouldSendNewPoint(now, stmt[0], measurementName,
-                                               tags, value):
+                                               tags, value, pointsAtLeastEvery=pale):
                     continue
                     
                 points.append({
@@ -57,11 +60,11 @@ class InfluxExporter(object):
                 raise NotImplementedError('value=%r' % value)
         return value
             
-    def shouldSendNewPoint(self, now, subj, measurementName, tags, value):
+    def shouldSendNewPoint(self, now, subj, measurementName, tags, value, pointsAtLeastEvery):
         key = (subj, measurementName, tuple(sorted(tags.items())))
         if key in self.lastSent:
             lastTime, lastValue = self.lastSent[key]
-            if lastValue == value and lastTime > now - 3600:
+            if lastValue == value and lastTime > now - pointsAtLeastEvery:
                 log.debug('skip influx point %r', key)
                 return False
 
