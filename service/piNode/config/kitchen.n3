@@ -28,6 +28,7 @@ sensor:tempHumidKitchen a :TempHumidSensor;
   :influxMeasurement [
     :measurement "temperatureF";
     :predicate :temperatureF;
+    :pointsAtLeastEvery 10;
     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]], [
     :measurement "humidity";
     :predicate :humidity;
