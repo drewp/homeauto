@@ -11,3 +11,7 @@ shell:
 
 local_run:
 	docker run -it -p 9059:9059 bang6:5000/pi_node python ./piNode.py -v
+
+
+push_config:
+	bin/python ../arduinoNode/pushConfig.py pi/
