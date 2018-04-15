@@ -1,0 +1,62 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/board4/pin/> .
+
+# pinout: https://www.raspberrypi.org/documentation/usage/gpio-plus-and-raspi2/
+ha:piLiving a :PiBoard;
+  :hostname "living";
+  :onboardDevice ha:livingPiTemp;
+  :hasPin
+    pin:GPIO17,
+    pin:GPIO18,
+    pin:GPIO4,
+    pin:GPIO27,
+    pin:GPIO22 .
+
+pin:GPIO17 :gpioNumber 17; :connectedTo sensor:tempHumidLivingRoomCeiling .
+pin:GPIO4  :gpioNumber 4;  :connectedTo :livingRoomLamp1 .
+pin:GPIO27 :gpioNumber 27; :connectedTo :livingRoomLamp2 .
+pin:GPIO22 :gpioNumber 22; :connectedTo :bookSwitch .
+
+
+pin:GPIO18 :gpioNumber 18; :connectedTo :livingRgb .
+:livingRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :livingCeilingCorner .
+
+:livingCeilingCorner
+  :startIndex 0;
+  :endIndex 3;
+  :src "rainbow.png";
+  :x 0;
+  :y 0;
+  :height 4;
+  :interpolate :slide;
+  :rate 30 . # px/sec
+
+
+ha:livingPiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingPi"]] .
+
+
+sensor:tempHumidLivingRoomCeiling a :TempHumidSensor;
+  :sees houseLoc:livingRoomCeiling;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingRoomCeiling"]], [
+    :measurement "humidity";
+    :predicate :humidity;
+    :tag [:key "host"; :value "living"], [:key "location"; :value "livingRoomCeiling"]] .
+
+:livingRoomLamp1 a :LedOutput .
+:livingRoomLamp2 a :LedOutput .
+:bookSwitch a :Pushbutton; :style :inverted .

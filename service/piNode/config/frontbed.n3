@@ -1,0 +1,90 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piFrontbed/pin/> .
+@prefix ow: <http://bigasterisk.com/homeauto/piFrontbed/oneWire/> .
+
+ha:piFrontbed a :PiBoard;
+  :hostname "frontbed";
+  :onboardDevice ha:frontbedPiTemp;
+  :hasPin
+    pin:GPIO17,
+    pin:GPIO18,
+    pin:GPIO19,
+    pin:GPIO23,
+    pin:GPIO26
+    .
+
+ha:frontbedPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "downBathPi"] .
+
+# pin number ignored; see /boot/config.txt
+pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
+ow: a :OneWire; :connectedTo ow:dev-000003a5be13 .
+ow:dev-000003a5be13 a :TemperatureSensor;
+  :position houseLoc:frontbed;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "frontbed"], [:key "location"; :value "frontbedUnderDesk"]] .
+
+
+pin:GPIO4 :gpioNumber 4; :connectedTo :frontbedOpenSwitch ;
+:influxMeasurement [
+    :measurement "state";
+    :predicate :buttonState;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "open"],
+      [:key "location"; :value "frontbed"]].
+
+pin:GPIO23 :gpioNumber 23; :connectedTo :starTrekLight .
+:starTrekLight a :LedOutput .
+
+pin:GPIO26 :gpioNumber 26; :connectedTo sensor:motionLoftDesk .
+sensor:motionLoftDesk a :MotionSensor;
+  :xxinfluxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "loftbed"]];
+  :sees :loftDesk .
+
+pin:GPIO19 :gpioNumber 19; :connectedTo sensor:motionLoftbed .
+sensor:motionLoftbed a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontbed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "loftbed"]];
+  :sees :loftbed .
+
+pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
+:frontbedRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :loftDeskStatus, :loftDeskStrip .
+
+:loftDeskStatus
+  :startIndex 0;
+  :endIndex 0;
+  :src "rainbow.png";
+  :x 199;
+  :y 0;
+  :height 1;
+  :interpolate :slide;
+  :rate 30 . # px/sec
+:loftDeskStrip
+  :startIndex 1;
+  :endIndex 50;
+  :src "rainbow.png";
+  :x 0;
+  :y 0;
+  :height 50;
+  :interpolate :slide .
+

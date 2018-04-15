@@ -1,0 +1,65 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piBed/pin/> .
+@prefix ow:  <http://bigasterisk.com/homeauto/piBed/oneWire/> .
+
+ha:piBed a :PiBoard;
+  :hostname "bed";
+  :onboardDevice ha:bedroomPiTemp;
+  :hasPin
+    pin:GPIO2,
+    pin:GPIO3,
+    pin:GPIO4,
+    pin:GPIO17,
+    pin:GPIO27,
+    pin:GPIO18,
+    pin:GPIO23 
+    .
+
+ha:bedPiTemp a :OnboardTemperature;
+ :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "bed"], [:key "location"; :value "bedPi"]] .
+
+pin:GPIO2 :gpioNumber 2 .
+pin:GPIO3 :gpioNumber 3 .
+pin:GPIO4 :gpioNumber 4 .
+pin:GPIO17 :gpioNumber 17 .
+pin:GPIO27 :gpioNumber 27 .
+pin:GPIO18 :gpioNumber 18 .
+pin:GPIO23 :gpioNumber 23 .
+
+pin:GPIO18 :connectedTo sensor:bedGreenButton .
+pin:GPIO23 :connectedTo sensor:bedRedButton .
+sensor:bedGreenButton a :Pushbutton .
+sensor:bedRedButton a :Pushbutton .
+
+pin:GPIO17 :connectedTo sensor:bedMotionBed .
+sensor:bedMotionBed a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "bed"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "bed"]];
+  :sees houseLoc:bed .
+
+:bedLedStrip a :RgbStrip;
+  :redChannel pin:GPIO2;
+  :greenChannel pin:GPIO3;
+  :blueChannel pin:GPIO4 .
+    
+pin:GPIO27 :connectedTo :headboardWhite .
+:headboardWhite a :LedOutput ; :gamma 2; :fade "yes" .
+  
+#pin:b29 :connectedTo ow: .
+#ow: a :OneWire;
+#  :connectedTo ow:temperatureSensor .
+#ow:temperatureSensor a :TemperatureSensor;
+#  :position :bed .
