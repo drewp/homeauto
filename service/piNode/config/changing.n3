@@ -1,0 +1,56 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piChanging/pin/> .
+
+ha:piChanging a :PiBoard;
+  :hostname "changing";
+  :onboardDevice ha:changingPiTemp;
+  :hasPin
+    pin:GPIO4,
+    pin:GPIO17,
+    pin:GPIO18 .
+
+ha:changingPiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "changing"], [:key "location"; :value "changingPi"]] .
+
+pin:GPIO4 :gpioNumber 4 .
+pin:GPIO17 :gpioNumber 17 .
+pin:GPIO18 :gpioNumber 18 .
+
+pin:GPIO4 :connectedTo :changingWhite .
+:changingWhite a :LedOutput; :fade "yes" .
+
+pin:GPIO17 :connectedTo sensor:motionChanging .
+sensor:motionChanging a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "changing"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "changing"]];
+  :sees :changing .
+
+pin:GPIO18 :connectedTo :changingRgb .
+:changingRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :changingStrip .
+
+:changingStrip
+  :startIndex 0;
+  :endIndex 5 .
+  
+:changingStrip
+  :src "rainbow.png";
+  :x 199;
+  :y 0;
+  :height 6;
+  :interpolate :slide;
+  :rate 30 . # px/sec

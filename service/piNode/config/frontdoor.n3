@@ -1,0 +1,59 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piFrontdoor/pin/> .
+
+ha:piFrontdoor a :PiBoard;
+  :hostname "frontdoor";
+  :onboardDevice ha:frontdoorPiTemp;
+  :hasPin
+    pin:GPIO4, # open
+    pin:GPIO11, # motion
+    pin:GPIO17, # OW temp
+    pin:GPIO18 .   # rgb
+
+ha:frontdoorPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "frontdoorPi"] .
+
+pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
+:frontdoorOpenSwitch a :Pushbutton; :style :inverted;
+:influxMeasurement [
+    :measurement "state";
+    :predicate :buttonState;
+    :tag [:key "host"; :value "frontdoor"],
+      [:key "sensor"; :value "open"],
+      [:key "location"; :value "frontDoor"]];.
+
+
+pin:GPIO11 :gpioNumber 11; :connectedTo sensor:motionFrontdoorInside .
+sensor:motionFrontdoorInside a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "frontdoor"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "frontdoorInside"]];
+  :sees :entryway .
+# 17 5V
+# 23 GPIO11 through 100R, and signal->220R->LED->gnd
+# 25 gnd
+
+pin:GPIO18 :gpioNumber 18; :connectedTo :frontdoorRgb .
+:frontdoorRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :frontdoorRgb .
+
+:frontdoorRgb
+  :startIndex 0;
+  :endIndex 2;
+  :src "rainbow.png";
+  :x 199;
+  :y 0;
+  :height 3;
+  :interpolate :slide;
+  :rate 30 . # px/sec

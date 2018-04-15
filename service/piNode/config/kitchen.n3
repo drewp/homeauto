@@ -1,0 +1,43 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piKitchen/pin/> .
+@prefix ow: <http://bigasterisk.com/homeauto/piKitchen/oneWire/> .
+
+ha:piKitchen a :PiBoard;
+  :hostname "kitchen";
+  :onboardDevice ha:kitchenPiTemp;
+  :hasPin
+    pin:GPIO4,
+    pin:GPIO17
+    .
+    
+ha:kitchenPiTemp a :OnboardTemperature;
+   :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenPi"]] .
+
+pin:GPIO4 :gpioNumber 4; :connectedTo sensor:tempHumidKitchen .
+sensor:tempHumidKitchen a :TempHumidSensor;
+  :sees houseLoc:kitchenCounter;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]], [
+    :measurement "humidity";
+    :predicate :humidity;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]].
+
+pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
+ow: a :OneWire; :connectedTo ow:dev-000003a5a94c .
+ow:dev-000003a5a94c a :TemperatureSensor;
+  :position houseLoc:kitchenCounter;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter_ds_test"]] .

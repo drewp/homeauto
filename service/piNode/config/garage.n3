@@ -1,0 +1,81 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piGarage/pin/> .
+@prefix ow: <http://bigasterisk.com/homeauto/piGarage/oneWire/> .
+
+ha:piGarage a :PiBoard;
+  :hostname "garage";
+  :onboardDevice ha:garagePiTemp;
+  :hasPin
+    pin:GPIO4,
+    pin:GPIO17,
+    pin:GPIO7,
+    pin:GPIO8,
+    pin:GPIO15,
+    pin:GPIO18,
+    pin:GPIO24,
+    pin:GPIO25 .
+ha:garagePiTemp a :OnboardTemperature;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "garage"], [:key "location"; :value "garagePi"]] .
+
+pin:GPIO4 :gpioNumber 4; :connectedTo sensor:motionGarageDoorInside .
+sensor:motionGarageDoorInside a :MotionSensor;
+  :influxMeasurement [
+    :measurement "presence";
+    :predicate :sees;
+    :tag [:key "host"; :value "garage"],
+      [:key "sensor"; :value "motion"],
+      [:key "location"; :value "garageDoorInside"]];
+  :sees :garage .
+
+pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
+ow: a :OneWire; :connectedTo ow:dev-000003a5c0fb .
+ow:dev-000003a5c0fb a :TemperatureSensor;
+  :position houseLoc:garage;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "garage"], [:key "location"; :value "garage"]] .
+
+pin:GPIO15 :gpioNumber 15; :connectedTo :garageOverhead .
+:garageOverhead a :LedOutput .
+
+pin:GPIO18 :gpioNumber 18; :connectedTo :garageRgb .
+:garageRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :garageLedStack .
+
+:garageLedStack
+  :startIndex 0;
+  :endIndex 3 .
+
+# this should not be in config
+:garageLedStack
+  :src "rainbow.png";
+  :x 0;
+  :y 0;
+  :height 4;
+   :interpolate :slide;
+  :rate 30 . # px/sec
+
+
+pin:GPIO25 :gpioNumber 25 .
+pin:GPIO24 :gpioNumber 24 .
+pin:GPIO8 :gpioNumber 8 .
+pin:GPIO7 :gpioNumber 7 .
+
+:garageLcd a :Lcd8544;
+  :din pin:GPIO25;
+  :clk pin:GPIO24;
+  :dc pin:GPIO8;
+  :rst pin:GPIO7 .
+  
+    
