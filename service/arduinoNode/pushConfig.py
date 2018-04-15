@@ -1,13 +1,14 @@
 from __future__ import division
-
+import sys
 import etcd3
 
 from twisted.python.filepath import FilePath
 
 etcd = etcd3.client(host='bang6')
 
+prefix, = sys.argv[1:]
+
 def main():
-    prefix = b'arduino/'
     existing = set(md.key for v, md in etcd.get_prefix(prefix))
     written = set()
     root = FilePath('config')

@@ -54,7 +54,6 @@ class Config(object):
         self.boards = []
         self.reread()
 
-        self.rereadLater = None
         deferToThread(self.watchEtcd)
 
     def watchEtcd(self):
@@ -65,12 +64,16 @@ class Config(object):
             reactor.callFromThread(self.configChanged)
 
     def configChanged(self):
-        if self.rereadLater:
-            self.rereadLater.cancel()
+        self.cancelRead()
         self.rereadLater = reactor.callLater(.1, self.reread)
 
-    def reread(self):
+    def cancelRead(self):
+        if getattr(self, 'rereadLater', None):
+            self.rereadLater.cancel()
         self.rereadLater = None
+        
+    def reread(self):
+        self.cancelRead()
         log.info('read config')
         self.configGraph = ConjunctiveGraph()
         for v, md in etcd.get_prefix(self.etcPrefix):
