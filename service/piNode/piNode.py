@@ -115,7 +115,7 @@ class Board(object):
     def __init__(self, graph, masterGraph, uri):
         self.graph, self.uri = graph, uri
         self.masterGraph = masterGraph
-        self.masterGraph.patch(Patch(addQuads=self.staticStmts()))
+        self.masterGraph.setToGraph(self.staticStmts())
         self.pi = pigpio.pi()
         self._devs = devices.makeDevices(graph, self.uri, self.pi)
         log.debug('found %s devices', len(self._devs))
@@ -148,19 +148,8 @@ class Board(object):
                 new = new['latest']
             else:
                 oneshot = None
-            prev = self._statementsFromInputs.get(i.uri, set())
 
-            if new or prev:
-                self._statementsFromInputs[i.uri] = new
-                # it's important that quads from different devices
-                # don't clash, since that can lead to inconsistent
-                # patches (e.g.
-                #   dev1 changes value from 1 to 2;
-                #   dev2 changes value from 2 to 3;
-                #   dev1 changes from 2 to 4 but this patch will
-                #     fail since the '2' statement is gone)
-                self.masterGraph.patch(Patch.fromDiff(inContext(prev, i.uri),
-                                                      inContext(new, i.uri)))
+            self._updateMasterWithNewPollStatements(i.uri, new)
 
             if oneshot:
                 self._sendOneshot(oneshot)
@@ -175,6 +164,20 @@ class Board(object):
         if pollResults:
             self._influx.exportToInflux(set.union(*pollResults))
 
+    def _updateMasterWithNewPollStatements(self, dev, new):
+        prev = self._statementsFromInputs.get(dev, set())
+
+        # it's important that quads from different devices
+        # don't clash, since that can lead to inconsistent
+        # patches (e.g.
+        #   dev1 changes value from 1 to 2;
+        #   dev2 changes value from 2 to 3;
+        #   dev1 changes from 2 to 4 but this patch will
+        #     fail since the '2' statement is gone)
+        self.masterGraph.patch(Patch.fromDiff(inContext(prev, dev),
+                                              inContext(new, dev)))
+        self._statementsFromInputs[dev] = new
+            
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
