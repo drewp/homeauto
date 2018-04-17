@@ -107,6 +107,9 @@ class PatchableGraph(GraphEditApi):
             self._observers.remove(onPatch)
         except ValueError:
             pass
+
+    def setToGraph(self, newGraph):
+        self.patch(Patch.fromDiff(self._graph, newGraph))
         
 
 class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
