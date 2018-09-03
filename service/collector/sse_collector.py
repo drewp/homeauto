@@ -308,7 +308,6 @@ class SomeGraph(cyclone.sse.SSEHandler):
         return '<Handler #%s>' % self._serial
 
     def stats(self):
-        print self.__dict__
         return {
             'created': self.created,
             'ageHours': (time.time() - self.created) / 3600,
@@ -348,7 +347,7 @@ if __name__ == '__main__':
     if arg['-v']:
         import twisted.python.log
         twisted.python.log.startLogging(sys.stdout)
-        log.setLevel(logging.DEBUG)
+        log.setLevel(logging.INFO)
 
 
     graphClients = GraphClients()
