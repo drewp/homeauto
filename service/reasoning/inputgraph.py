@@ -12,8 +12,8 @@ from graphop import graphEqual
 
 from patchsource import ReconnectingPatchSource
 
-sys.path.append("/my/proj/light9")
-from light9.rdfdb.rdflibpatch import patchQuads
+sys.path.append("/my/proj/rdfdb")
+from rdfdb.rdflibpatch import patchQuads
 
 log = logging.getLogger('fetch')
 

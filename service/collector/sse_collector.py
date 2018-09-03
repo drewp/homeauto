@@ -8,36 +8,6 @@ Future:
 - filter out unneeded stmts from the sources
 - give a time resolution and concatenate any patches that come faster than that res
 """
-
-config = {
-    'streams': [
-        {'id': 'home',
-         'sources': [
-# should be from :reasoning :source ?s
-'http://garage:9059/graph/events', # "garage pi"
-'http://kitchen:9059/graph/events', # "kitchen pi"
-'http://living:9059/graph/events', # "living room pi"
-'http://slash:9059/graph/events', # "slash arduino"
-'http://bed:9059/graph/events', # "bed pi"
-'http://brace6:9059/graph/events', # "brace arduino"
-'http://changing:9059/graph/events', # "changing pi"
-'http://bang:9075/graph/events', # "env"
-'http://bang:9070/graph/events', # "wifi usage"
-'http://bang:9099/graph/events', # "trails"
-'http://dash:9095/graph/events', # "dash monitor"
-'http://dash:9107/graph/events', # "dash x idle"
-'http://brace6:9095/graph/events', # "brace monitor"
-'http://brace6:9107/graph/events', # "brace x idle"
-'http://slash:9095/graph/events', # "slash monitor"
-'http://slash:9107/graph/events', # "slash x idle" 
-
-
-
-         ]
-     },
-    ]
-}
-
 from crochet import no_setup
 no_setup()
 
@@ -47,18 +17,18 @@ import cyclone.web, cyclone.sse
 from rdflib import URIRef, Namespace
 from docopt import docopt
 
-
-sys.path.append("../../lib")
+sys.path.append('/opt') # docker is putting ../../lib/ here
 from logsetup import log
 from patchablegraph import jsonFromPatch
 
-sys.path.append("/my/proj/light9")
-from light9.rdfdb.patch import Patch
+from rdfdb.patch import Patch
 
 from patchsource import ReconnectingPatchSource
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 COLLECTOR = URIRef('http://bigasterisk.com/sse_collector/')
+
+from sse_collector_config import config
 
 class LocalStatements(object):
     """
