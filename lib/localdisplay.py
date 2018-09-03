@@ -10,13 +10,25 @@ def setDisplayToLocalX():
     for pid in psutil.get_pid_list():
         try:
             proc = psutil.Process(pid)
-            if proc.exe not in ['/usr/bin/Xorg', '/usr/bin/X', '/usr/bin/X11/X']:
+            if proc.exe not in ['/usr/bin/Xorg', '/usr/bin/X', '/usr/bin/X11/X', '/usr/lib/xorg/Xorg']:
                 continue
         except (psutil.error.AccessDenied, psutil.error.NoSuchProcess):
             continue
-        display = [arg for arg in proc.cmdline if not arg.startswith('-')][1]
-        if display == 'tcp': # ??
-            display = ":0.0"
+        argIter = iter(proc.cmdline)
+        while True:
+            arg = argIter.next()
+            if arg in ['-background']:
+                argIter.next()
+                continue
+            if arg in ['-nolisten']:
+                continue
+            if arg.startswith(':'):
+                display = arg
+                break
+            if arg == 'tcp':
+                display = ':0.0'
+                break
+
         assert display.startswith(':'), display
         os.environ['DISPLAY'] = display
         os.environ['XAUTHORITY'] = os.path.expanduser('~/.Xauthority')
