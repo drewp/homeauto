@@ -20,3 +20,11 @@ local_run:
           --net=host \
           ${TAG} \
           python /mnt/sse_collector.py -v
+
+local_run_strace:
+	docker run --rm -it -p ${PORT}:${PORT} \
+          -v `pwd`:/mnt \
+          --net=host \
+          --cap-add SYS_PTRACE \
+          ${TAG} \
+          strace -f -tts 200 python /mnt/sse_collector.py -v
