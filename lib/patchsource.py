@@ -8,8 +8,8 @@ from rdflib.parser import StringInputSource
 sys.path.append("../../lib")
 from patchablegraph import patchFromJson
 
-sys.path.append("/my/proj/light9")
-from light9.rdfdb.patch import Patch
+sys.path.append("/my/proj/rdfdb")
+from rdfdb.patch import Patch
 
 log = logging.getLogger('fetch')
 

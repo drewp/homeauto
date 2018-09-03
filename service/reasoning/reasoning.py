@@ -14,14 +14,12 @@ unlock the door when the door's motion sensor is activated'
 When do we gather? The services should be able to trigger us, perhaps
 with PSHB, that their graph has changed.
 """
-
-
 from crochet import no_setup
 no_setup()
 
-
 import json, time, traceback, sys
 from logging import getLogger, DEBUG, WARN
+sys.path.append('/opt') # docker is putting lib/ here
 
 from colorlog import ColoredFormatter
 from docopt import docopt
@@ -38,7 +36,6 @@ from actions import Actions
 from inputgraph import InputGraph
 from escapeoutputstatements import unquoteOutputStatements
 
-sys.path.append("../../lib")
 from logsetup import log
 
 

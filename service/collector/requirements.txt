@@ -1,4 +1,3 @@
-colorlog==2.6.0
 crochet==1.5.0
 cyclone
 docopt
@@ -6,8 +5,12 @@ ipdb
 service_identity
 twisted
 
-rdflib==4.2.2
-rdflib_jsonld==0.4.0
+#rdflib==4.2.2
+git+http://github.com/drewp/rdflib.git@5fa18be1231a5e4dfc86ec28f2f754158c6f6f0b#egg=rdflib
+
+#rdflib-jsonld==0.4.0
+git+http://github.com/RDFLib/rdflib-jsonld@cc5f005b222105724cd59c6069df9982fbd28c98#egg=rdflib_jsonld
+
 git+http://github.com/drewp/FuXi.git@003fb48984e9813808a23ba152798c125718f0e7#egg=FuXi
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
