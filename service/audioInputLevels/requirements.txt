@@ -1,3 +1,2 @@
-# upstream is missing
-#libpulseaudio==1.1
+git+http://github.com/dvarrazzo/python-pulseaudio.git@53f10e5cf9ac3d7b49d7859af6006850d63b6d6a#egg=python-pulseaudio
 influxdb==3.0.0
