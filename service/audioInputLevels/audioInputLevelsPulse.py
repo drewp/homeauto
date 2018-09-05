@@ -1,18 +1,19 @@
 # based on http://freshfoo.com/blog/pulseaudio_monitoring
+#
+# https://github.com/swharden/Python-GUI-examples/blob/master/2016-07-37_qt_audio_monitor/SWHear.py is similar
 from __future__ import division
 import socket, time, logging, os
 from Queue import Queue
-from ctypes import POINTER, c_ubyte, c_void_p, c_ulong, cast
+from ctypes import c_void_p, c_ulong, string_at
 from docopt import docopt
 from influxdb import InfluxDBClient
+import numpy
 
-# From https://github.com/Valodim/python-pulseaudio
 from pulseaudio import lib_pulseaudio as P
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger()
 
-METER_RATE = 1
 
 class PeakMonitor(object):
 
@@ -20,6 +21,9 @@ class PeakMonitor(object):
         self.source_name = source_name
         self.rate = rate
 
+        self.bufs = []
+        self.buf_samples = 0
+        
         # Wrap callback methods in appropriate ctypefunc instances so
         # that the Pulseaudio C API can call them
         self._context_notify_cb = P.pa_context_notify_cb_t(self.context_notify_cb)
@@ -78,7 +82,7 @@ class PeakMonitor(object):
             
             samplespec = P.pa_sample_spec()
             samplespec.channels = 1
-            samplespec.format = P.PA_SAMPLE_U8
+            samplespec.format = P.PA_SAMPLE_S32LE
             samplespec.rate = self.rate
             pa_stream = P.pa_stream_new(context, "audioInputLevels", samplespec, None)
             
@@ -93,18 +97,73 @@ class PeakMonitor(object):
     def stream_read_cb(self, stream, length, index_incr):
         data = c_void_p()
         P.pa_stream_peek(stream, data, c_ulong(length))
-        data = cast(data, POINTER(c_ubyte))
         try:
-            for i in xrange(length):
-                # When PA_SAMPLE_U8 is used, samples values range from 128
-                # to 255 because the underlying audio data is signed but
-                # it doesn't make sense to return signed peaks.
-                self._samples.put(data[i] - 128)
-        except ValueError:
-            # "data will be NULL and nbytes will contain the length of the hole"
-            log.info("skipping hole of length %s" % length)
-            # This seems to happen at startup for a while.
-        P.pa_stream_drop(stream)
+            buf = string_at(data, length)
+            arr = numpy.fromstring(buf, dtype=numpy.dtype('<i4'))
+            self.bufs.append(arr)
+            self.buf_samples += arr.shape[0]
+
+            if self.buf_samples > self.rate * 1.0:
+                self.onChunk(numpy.concatenate(self.bufs))
+                self.bufs = []
+                self.buf_samples = 0
+        finally:
+            P.pa_stream_drop(stream)
+
+    def fft(self, arr):
+        t1 = time.time()
+        # if this is slow, try
+        # https://hgomersall.github.io/pyFFTW/sphinx/tutorial.html#the-workhorse-pyfftw-fftw-class
+        # . But, it seems to take 1-10ms per second of audio, so who
+        # cares.
+        mags = numpy.abs(numpy.fft.fft(arr))
+        ft = time.time() - t1
+        return mags, ft
+
+    def timeSinceLastChunk(self):
+        now = time.time()
+        if hasattr(self, 'lastRead'):
+            dt = now - self.lastRead
+        else:
+            dt = 1
+        self.lastRead = now
+        return dt
+        
+    def onChunk(self, arr):
+        dt = self.timeSinceLastChunk()
+        
+        n = 8192
+
+        mags, ft = self.fft(arr[:n])
+        freqs = numpy.fft.fftfreq(n, d=1.0/self.rate)
+
+        def freq_range(lo, hi):
+            mask = (lo < freqs) & (freqs < hi)
+            return numpy.sum(mags * mask) / numpy.count_nonzero(mask)
+
+        scl = 1000000000
+        bands = {'hi': freq_range(500, 8192) / scl,
+                 'mid': freq_range(300, 500) / scl,
+                 'lo': freq_range(90, 300) / scl,
+                 'value': freq_range(90, 8192) / scl,
+                 }
+        log.debug('%r', bands)
+        #import ipdb;ipdb.set_trace()
+        
+        if log.isEnabledFor(logging.DEBUG):
+            self.dumpFreqs(n, dt, ft, scl, arr, freqs, mags)
+        self._samples.put(bands)
+
+    def dumpFreqs(self, n, dt, ft, scl, arr, freqs, mags):
+        log.debug(
+            'new chunk of %s samples, dt ~%.4f; ~%.1f hz; max %.1f; fft took %.2fms',
+            n, dt, n / dt, arr.max() / scl, ft * 1000,
+        )
+        rows = zip(freqs, mags)
+        for fr,v in rows[1:8] + rows[8:n//8:30]:
+            log.debug('%6.1f %6.3f %s',
+                      fr, v / scl, '*' * int(min(80, 80 * int(v) / scl)))
+        
 
 def main():
     arg = docopt("""
@@ -119,13 +178,15 @@ def main():
     influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
     hostname = socket.gethostname()
+    METER_RATE = 8192
     monitor = PeakMonitor(arg['--source'], METER_RATE)
     for sample in monitor:
-        log.debug(' %3d %s', sample, '>' * sample)
+        log.debug(' %6.3f %s', sample['value'], '>' * int(min(80, sample['value'] * 80)))
         influx.write_points([{'measurement': 'audioLevel',
-                              "tags": dict(stat='max', location=hostname),
-                              "fields": {"value": sample / 128},
-                              "time": int(time.time())}], time_precision='s')
+                              "fields": sample,
+                              "time": int(time.time())}],
+                            tags=dict(location=hostname),
+                            time_precision='s')
         
 if __name__ == '__main__':
     main()

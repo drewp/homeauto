@@ -19,3 +19,5 @@ local_run:
           bang6:5000/audio_input_levels_x86:latest \
           python /mnt/audioInputLevelsPulse.py --source alsa_input.pci-0000_00_1f.3.analog-stereo -v
 
+local_run_pi:
+	docker run --rm -it  -v /etc/pulse:/etc/pulse  -v /tmp/pulseaudio:/tmp/pulseaudio --net=host  bang6:5000/audio_input_levels_pi:latest python ./audioInputLevelsPulse.py --source alsa_input.usb-C-Media_Electronics_Inc._USB_PnP_Sound_Device-00.analog-mono -v
