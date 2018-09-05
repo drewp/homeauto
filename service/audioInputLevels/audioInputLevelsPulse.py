@@ -1,8 +1,9 @@
 # based on http://freshfoo.com/blog/pulseaudio_monitoring
 from __future__ import division
-import socket, argparse, time, logging, os
+import socket, time, logging, os
 from Queue import Queue
 from ctypes import POINTER, c_ubyte, c_void_p, c_ulong, cast
+from docopt import docopt
 from influxdb import InfluxDBClient
 
 # From https://github.com/Valodim/python-pulseaudio
@@ -106,17 +107,19 @@ class PeakMonitor(object):
         P.pa_stream_drop(stream)
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--source', required=True,
-        help='pulseaudio source name (use `pactl list sources | grep Name`)')
+    arg = docopt("""
+    Usage: audioInputLevelsPulse.py [-v] --source=<name>
 
-    args = parser.parse_args()
+    --source=<name>   pulseaudio source name (use `pactl list sources | grep Name`)
+    -v                Verbose
+    """)
+
+    log.setLevel(logging.DEBUG if arg['-v'] else logging.INFO)
 
     influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
     hostname = socket.gethostname()
-    monitor = PeakMonitor(args.source, METER_RATE)
+    monitor = PeakMonitor(arg['--source'], METER_RATE)
     for sample in monitor:
         log.debug(' %3d %s', sample, '>' * sample)
         influx.write_points([{'measurement': 'audioLevel',

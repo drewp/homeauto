@@ -17,5 +17,5 @@ local_run:
           -v `pwd`:/mnt \
           --net=host \
           bang6:5000/audio_input_levels_x86:latest \
-          python /mnt/audioInputLevelsPulse.py --source alsa_input.pci-0000_00_1f.3.analog-stereo
+          python /mnt/audioInputLevelsPulse.py --source alsa_input.pci-0000_00_1f.3.analog-stereo -v
 
