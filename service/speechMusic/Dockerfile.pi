@@ -1,0 +1,16 @@
+FROM bang6:5000/base_pi
+
+WORKDIR /opt
+
+RUN apt-get install --yes libopenal1 libogg0 pulseaudio-utils python-pygame festival sox
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+COPY sound sound
+COPY *.py req* *.jade ./
+COPY pulse-client.conf /etc/pulse/client.conf
+
+ENV PULSE_SERVER /tmp/pulseaudio
+EXPOSE 9049
+
+CMD [ "python", "./speechMusic.py" ]
