@@ -29,9 +29,13 @@ from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGra
 host = socket.gethostname()
 client = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
+os.environ['DISPLAY'] = ':0.0'
+
+actmon.get_idle_time() # fail if we can't get the display or something
+
 class Root(cyclone.web.RequestHandler):
     def get(self):
-        xss.get_info() # fail if we can't get the display or something
+        actmon.get_idle_time() # fail if we can't get the display or something
         self.write('''
       Get the <a href="idle">X idle time</a> on %s.
       <a href="graph">rdf graph</a> available.''' % host)
@@ -39,21 +43,8 @@ class Root(cyclone.web.RequestHandler):
 class Idle(cyclone.web.RequestHandler):
     def get(self):
         self.set_header('Content-type', 'application/json')
-        self.write(json.dumps({"idleMs" : xss.get_info().idle}))
+        self.write(json.dumps({"idleMs" : actmon.get_idle_time()}))
         
-class Graph(cyclone.web.RequestHandler):
-    def get(self):
-        self.set_header('Content-type', 'application/x-trig')
-
-        g = StateGraph(ctx=DEV['xidle/%s' % host])
-
-        ms = xss.get_info().idle
-        subj = URIRef("http://bigasterisk.com/host/%s/xidle" % host)
-        g.add((subj, ROOM['idleTimeMs'], Literal(ms)))
-        g.add((subj, ROOM['idleTimeMinutes'], Literal(ms / 1000 / 60)))
-
-        self.write(g.asTrig())
-
 class Poller(object):
     def __init__(self):
         self.points = []
@@ -62,7 +53,13 @@ class Poller(object):
         task.LoopingCall(self.poll).start(5)
         
     def poll(self):
-        ms = xss.get_info().idle
+        ms = actmon.get_idle_time()
+        ctx = DEV['xidle/%s' % host]
+        subj = URIRef("http://bigasterisk.com/host/%s/xidle" % host)
+        masterGraph.patchObject(ctx, subj, ROOM['idleTimeMs'], Literal(ms))
+        masterGraph.patchObject(ctx, subj, ROOM['idleTimeMinutes'],
+                                Literal(ms / 1000 / 60))
+        
         lastMinActive = ms < 60 * 1000
         now = int(time.time())
         if self.lastSent != lastMinActive or now > self.lastSentTime + 3600:
@@ -73,15 +70,22 @@ class Poller(object):
             self.lastSent = lastMinActive
             self.lastSentTime = now
 
-            client.write_points(self.points, time_precision='s')
+            try:
+                client.write_points(self.points, time_precision='s')
+            except influxdb.exceptions.InfluxDBServerError as e:
+                print repr(e)
+                reactor.crash()
             self.points = []
 
+            
+masterGraph = PatchableGraph()
 poller = Poller()
             
 reactor.listenTCP(9107, cyclone.web.Application([
     (r'/', Root),
     (r'/idle', Idle),
-    (r'/graph', Graph),
+    (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
+    (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
 ]), interface='::')
 
 reactor.run()
