@@ -2,24 +2,29 @@
 from __future__ import division
 """
 X server idle time is now available over http!
+
+Note: HD-4110 webcams stop X from going idle by sending events
+constantly. Run this to fix:
+
+    xinput disable "HP Webcam HD-4110"
 """
 
 import time
-import sys, socket, json
+import sys, socket, json, os
 from rdflib import Namespace, URIRef, Literal
 from influxdb import InfluxDBClient
+import influxdb.exceptions
 import cyclone.web
 from twisted.internet import reactor, task
 
-# from http://bebop.bigasterisk.com/python/
-import xss
+import actmon
 # another option: http://thp.io/2007/09/x11-idle-time-and-focused-window-in.html
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
-sys.path.append("/my/site/magma")
-from stategraph import StateGraph
+sys.path.append('../../lib')
+from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
 
 host = socket.gethostname()
 client = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
