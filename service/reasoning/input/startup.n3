@@ -6,24 +6,29 @@
 # oneshot was just a sequence of updates and not a reverse-direction
 # request).
 
-<http://bang:9059/graph>     is :source of :reasoning; rdfs:label "bang arduino" .
-<http://kitchen:9059/graph>  is :source of :reasoning; rdfs:label "kitchen pi" .
-<http://living:9059/graph>   is :source of :reasoning; rdfs:label "living room pi" .
-<http://slash:9059/graph>    is :source of :reasoning; rdfs:label "slash arduino" .
-<http://bed:9059/graph>      is :source of :reasoning; rdfs:label "bed pi" .
-<http://brace6:9059/graph>   is :source of :reasoning; rdfs:label "brace arduino" .
-<http://changing:9059/graph> is :source of :reasoning; rdfs:label "changing pi" .
-<http://bang:9075/graph>     is :source of :reasoning; rdfs:label "env" .
+# UNUSED- see sse_collector
+<http://bang:9059/graph>       is :source of :reasoning; rdfs:label "bang arduino" .
+<http://garage:9059/graph>     is :source of :reasoning; rdfs:label "garage pi" .
+<http://kitchen:9059/graph>    is :source of :reasoning; rdfs:label "kitchen pi" .
+<http://living:9059/graph>     is :source of :reasoning; rdfs:label "living room pi" .
+<http://slash:9059/graph>      is :source of :reasoning; rdfs:label "slash arduino" .
+<http://bed:9059/graph>        is :source of :reasoning; rdfs:label "bed pi" .
+<http://brace6:9059/graph>     is :source of :reasoning; rdfs:label "brace arduino" .
+<http://changing:9059/graph>   is :source of :reasoning; rdfs:label "changing pi" .
+<http://frontdoor6:9059/graph> is :source of :reasoning; rdfs:label "frontdoor pi" .
+<http://bang:9075/graph>       is :source of :reasoning; rdfs:label "env" .
 
-<http://bang:9070/graph>     is :source of :reasoning; rdfs:label "wifi usage" .
-<http://bang:9099/graph>     is :source of :reasoning; rdfs:label "trails" .
+<http://bang:9070/graph>       is :source of :reasoning; rdfs:label "wifi usage" .
+<http://bang:9099/graph>       is :source of :reasoning; rdfs:label "trails" .
 
-<http://dash:9095/graph>     is :source of :reasoning; rdfs:label "dash monitor" .
-<http://dash:9107/graph>     is :source of :reasoning; rdfs:label "dash x idle" .
-<http://brace6:9095/graph>   is :source of :reasoning; rdfs:label "brace monitor" .
-<http://brace6:9107/graph>   is :source of :reasoning; rdfs:label "brace x idle" .
-<http://slash:9095/graph>    is :source of :reasoning; rdfs:label "slash monitor" .
-<http://slash:9107/graph>    is :source of :reasoning; rdfs:label "slash x idle" .#
+<http://dash:9095/graph>       is :source of :reasoning; rdfs:label "dash monitor" .
+<http://dash:9107/graph>       is :source of :reasoning; rdfs:label "dash x idle" .
+<http://brace6:9095/graph>     is :source of :reasoning; rdfs:label "brace monitor" .
+<http://brace6:9107/graph>     is :source of :reasoning; rdfs:label "brace x idle" .
+<http://slash:9095/graph>      is :source of :reasoning; rdfs:label "slash monitor" .
+<http://slash:9107/graph>      is :source of :reasoning; rdfs:label "slash x idle" .#
+<http://frontdoor6:9095/graph> is :source of :reasoning; rdfs:label "frontdoor monitor" .
+<http://frontdoor6:9107/graph> is :source of :reasoning; rdfs:label "frontdoor x idle" .
 
 
 # not built yet
