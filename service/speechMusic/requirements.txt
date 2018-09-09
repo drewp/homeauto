@@ -1,0 +1,8 @@
+Jinja2==2.7
+klein==17.10.0
+Mako==0.8.1
+MarkupSafe==0.18
+mock==1.0.1
+pyjade==2.0.2
+Twisted
+pygame

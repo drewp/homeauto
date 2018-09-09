@@ -3,21 +3,17 @@
 play sounds according to POST requests.
 """
 from __future__ import division
-import sys, tempfile, logging, pyjade
+import sys, tempfile
 from pyjade.ext.mako import preprocessor as mako_preprocessor
-from mako.template import Template
 from mako.lookup import TemplateLookup
-sys.path.append("python-openal")
-import openal
 from twisted.internet import reactor
-sys.path.append("/my/proj/csigen")
+sys.path.append("/opt")
 from generator import tts
 import xml.etree.ElementTree as ET
 from klein import Klein
 from twisted.web.static import File
-logging.basicConfig(level=logging.INFO,
-                    format="%(created)f %(asctime)s %(levelname)s %(message)s")
-log = logging.getLogger()
+from logsetup import log
+import pygame.mixer
 
 templates = TemplateLookup(directories=['.'],
                            preprocessor=mako_preprocessor,
@@ -35,26 +31,24 @@ def makeSpeech(speech, fast=False):
         div.text = sentence
 
     speechSecs = tts(root, speechWav.name)
-    return openal.Buffer(speechWav.name), speechSecs
+    return pygame.mixer.Sound(speechWav.name), speechSecs
 
 class SoundEffects(object):
     def __init__(self):
-        # for names to pass to this, see alcGetString with ALC_ALL_DEVICES_SPECIFIER
-        device = openal.Device()
-        self.contextlistener = device.ContextListener()
 
         # also '/my/music/entrance/%s.wav' then speak "Neew %s. %s" % (sensorWords[data['sensor']], data['name']),
 
-        print "loading"
+        log.info("loading")
         self.buffers = {
-            'leave': openal.Buffer('/my/music/entrance/leave.wav'),
-            'highlight' : openal.Buffer('/my/music/snd/Oxygen/KDE-Im-Highlight-Msg-44100.wav'),
-            'question' : openal.Buffer('/my/music/snd/angel_ogg/angel_question.wav'),
-            'jazztrumpet': openal.Buffer('/my/music/snd/sampleswap/MELODIC SAMPLES and LOOPS/Acid Jazz Trumpet Lines/acid-jazz-trumpet-11.wav'),
-            'beep1': openal.Buffer('/my/music/snd/bxfr/beep1.wav'),
-            'beep2': openal.Buffer('/my/music/snd/bxfr/beep2.wav'),
+            'leave': pygame.mixer.Sound('sound/leave.wav'),
+            'highlight' : pygame.mixer.Sound('sound/KDE-Im-Highlight-Msg-44100.wav'),
+            'question' : pygame.mixer.Sound('sound/angel_question.wav'),
+            'jazztrumpet': pygame.mixer.Sound('sound/acid-jazz-trumpet-11.wav'),
+            'troyandabed': pygame.mixer.Sound('sound/troy_and_abed_in_the_morning.wav'),
+            'beep1': pygame.mixer.Sound('sound/beep1.wav'),
+            'beep2': pygame.mixer.Sound('sound/beep2.wav'),
         }
-        print "loaded sounds"
+        log.info("loaded sounds")
         self.playingSources = []
         self.queued = []
 
@@ -78,13 +72,11 @@ class SoundEffects(object):
         self.queued.append(reactor.callLater(t, self.playBuffer, buf))
             
     def playBuffer(self, buf):
-        src = self.contextlistener.get_source()
-        src.buffer = buf
-        src.play()
+        buf.play()
 
-        secs = buf.size / (buf.frequency * buf.channels * buf.bits / 8)
-        self.playingSources.append(src)
-        reactor.callLater(secs + .1, self.done, src)
+        secs = buf.get_length()
+        self.playingSources.append(buf)
+        reactor.callLater(secs + .1, self.done, buf)
         return secs
 
     def done(self, src):
@@ -129,8 +121,9 @@ class Server(object):
     def stopAll(self, request):
         self.sfx.stopAll()
         return "ok"
-        
+
+pygame.mixer.init()
 sfx = SoundEffects()
 
 server = Server(sfx)
-server.app.run("::", 9049)
+server.app.run(endpoint_description=r"tcp6:port=9049:interface=\:\:")
