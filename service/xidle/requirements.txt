@@ -1,0 +1,9 @@
+python-dateutil
+rdflib==4.2.2
+
+influxdb==4.1.1
+cyclone
+service_identity
+actmon
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
+rdflib-jsonld==0.3
