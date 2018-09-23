@@ -177,8 +177,8 @@ def main():
     
     reactor.listenTCP(10009, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
-            "path": "../arduinoNode/static", "default_filename": "index.html"}),
-        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "../arduinoNode/static"}),
+            "path": "/opt/static", "default_filename": "index.html"}),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "/opt/static"}),
         (r'/boards', Boards),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),

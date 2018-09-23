@@ -7,6 +7,7 @@ RUN pip install -r requirements.txt
 
 COPY pytradfri pytradfri
 COPY libcoap libcoap
+COPY static static
 COPY *.py req* ./
 
 EXPOSE 10009
