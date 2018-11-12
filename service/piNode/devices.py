@@ -513,7 +513,8 @@ class RgbPixels(DeviceType):
 
     def hostStateInit(self):
         self.anim = RgbPixelsAnimation(self.graph, self.uri, self.updateOutput)
-        self.neo = rpi_ws281x.Adafruit_NeoPixel(self.anim.maxIndex() - 1, pin=18)
+        log.debug('%s maxIndex = %s', self.uri, self.anim.maxIndex())
+        self.neo = rpi_ws281x.Adafruit_NeoPixel(self.anim.maxIndex() + 1, pin=18)
         self.neo.begin()
         
         colorOrder, stripType = self.anim.getColorOrder(self.graph, self.uri)
@@ -529,6 +530,7 @@ class RgbPixels(DeviceType):
             return
         
         for idx, (r, g, b) in self.anim.currentColors():
+            log.debug('out color %s (%s,%s,%s)', idx, r, g, b)
             self.neo.setPixelColorRGB(idx, r, g, b)
         self.neo.show()
 
