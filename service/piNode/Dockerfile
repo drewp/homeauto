@@ -1,4 +1,4 @@
-FROM bang6:5000/pi_base
+FROM bang6:5000/base_pi
 
 COPY requirements.txt ./
 
