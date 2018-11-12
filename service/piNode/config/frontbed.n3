@@ -37,7 +37,7 @@ pin:GPIO16 :gpioNumber 16; :connectedTo :frontBedPostSwitch5 . :frontBedPostSwit
 
 ha:frontbedPiTemp a :OnboardTemperature;
   :influxMeasurement "temperatureF";
-  :influxTag [:key "location"; :value "downBathPi"] .
+  :influxTag [:key "location"; :value "frontbedPi"] .
 
 # pin number ignored; see /boot/config.txt
 pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
