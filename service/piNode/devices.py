@@ -18,10 +18,7 @@ try:
     import pigpio
 except ImportError:
     pigpio = None
-try:
-    import w1thermsensor
-except Exception:
-    w1thermsensor = None
+import w1thermsensor
 try:
     import rpi_ws281x
 except ImportError:
@@ -269,9 +266,15 @@ class TempHumidSensor(DeviceType):
         DeviceType.__init__(self, *a, **kw)
         import DHT22
         self.sens = DHT22.sensor(self.pi, self.pinNumber)
+        self.recentLowTemp = (0, None) # time, temp
+        self.recentPeriodSec = 30
     
     def poll(self):
         stmts = set()
+
+        now = time.time()
+        if self.recentLowTemp[0] < now - self.recentPeriodSec:
+            self.recentLowTemp = (0, None)
 
         if self.sens.staleness() < self.pollPeriod * 2:
             humid, tempC = self.sens.humidity(), self.sens.temperature()
@@ -280,14 +283,19 @@ class TempHumidSensor(DeviceType):
             else:
                 stmts.add((self.uri, RDFS['comment'], Literal('No recent humidity measurement')))
             if tempC > -999:
-                stmts.add((self.uri, ROOM['temperatureF'],
-                           # see round() note in arduinoNode/devices.py
-                           Literal(round(tempC * 9 / 5 + 32, 2))))
+                # see round() note in arduinoNode/devices.py
+                tempF = round(tempC * 9 / 5 + 32, 2)
+                stmts.add((self.uri, ROOM['temperatureF'], Literal(tempF)))
+                if self.recentLowTemp[1] is None or tempF < self.recentLowTemp[1]:
+                    self.recentLowTemp = (now, tempF)
             else:
                 stmts.add((self.uri, RDFS['comment'], Literal('No recent temperature measurement')))
         else:
             stmts.add((self.uri, RDFS['comment'],
                        Literal('No recent DHT response (%.02f sec old)' % self.sens.staleness())))
+
+        if self.recentLowTemp[1] is not None:
+            stmts.add((self.uri, ROOM['recentLowTemperatureF'], Literal(self.recentLowTemp[1])))
             
         self.sens.trigger()
        

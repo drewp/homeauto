@@ -13,8 +13,11 @@ ha:piKitchen a :PiBoard;
   :onboardDevice ha:kitchenPiTemp;
   :hasPin
     pin:GPIO4,
-    pin:GPIO17
+    pin:GPIO17,
+    pin:GPIO14
     .
+
+# pin 18 IR in
     
 ha:kitchenPiTemp a :OnboardTemperature;
    :influxMeasurement [
@@ -42,3 +45,6 @@ ow:dev-000003a5a94c a :TemperatureSensor;
     :measurement "temperatureF";
     :predicate :temperatureF;
     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter_ds_test"]] .
+
+pin:GPIO14 :gpioNumber 14; :connectedTo sensor:kitchenCounterButton1 .
+sensor:kitchenCounterButton1 a :Pushbutton .

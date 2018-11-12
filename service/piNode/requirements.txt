@@ -6,14 +6,13 @@ docopt
 python-dateutil
 w1thermsensor
 service_identity
-git+git://github.com/adafruit/Adafruit_Python_DHT
 http://abyz.co.uk/rpi/pigpio/pigpio.zip
 git+git://github.com/adafruit/Adafruit_Nokia_LCD
 RPi.GPIO==0.6.2
 influxdb==3.0.0
 rpi_ws281x==3.0.4
 pyOpenSSL
-numpy==1.13.3
+numpy
 pillow
 imageio==2.2.0
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
