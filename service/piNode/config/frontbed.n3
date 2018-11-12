@@ -12,12 +12,28 @@ ha:piFrontbed a :PiBoard;
   :hostname "frontbed";
   :onboardDevice ha:frontbedPiTemp;
   :hasPin
+    pin:GPIO5,
+    pin:GPIO6,
+    pin:GPIO12,
+    pin:GPIO16,
     pin:GPIO17,
     pin:GPIO18,
     pin:GPIO19,
+    pin:GPIO20,
+    pin:GPIO21,
     pin:GPIO23,
     pin:GPIO26
     .
+
+pin:GPIO12 :gpioNumber 12; :connectedTo :frontBedPostGreenLight .
+:frontBedPostGreenLight a :LedOutput; :fade :yes .
+
+pin:GPIO5  :gpioNumber 5; :connectedTo  :frontBedPostSwitch1 . :frontBedPostSwitch1 a :Pushbutton .
+pin:GPIO21 :gpioNumber 21; :connectedTo :frontBedPostSwitch2 . :frontBedPostSwitch2 a :Pushbutton .
+pin:GPIO20 :gpioNumber 20; :connectedTo :frontBedPostSwitch3 . :frontBedPostSwitch3 a :Pushbutton .
+pin:GPIO6  :gpioNumber 6; :connectedTo  :frontBedPostSwitch4 . :frontBedPostSwitch4 a :Pushbutton .
+pin:GPIO16 :gpioNumber 16; :connectedTo :frontBedPostSwitch5 . :frontBedPostSwitch5 a :Pushbutton .
+
 
 ha:frontbedPiTemp a :OnboardTemperature;
   :influxMeasurement "temperatureF";
