@@ -1,17 +1,17 @@
-build_image:
+build_image: gather_image_files
+	docker build --network host -t bang6:5000/pi_node_pi:latest .
+	docker push bang6:5000/pi_node_pi:latest
+
+gather_image_files:
 	(cd /my/proj/homeauto/lib; tar czf /my/site/projects/rdfdb/more.tgz *.py)
 	(cd /my/proj/homeauto/service/arduinoNode; tar czf /my/site/projects/rdfdb/more2.tgz static)
-	ssh pi@garage6 mkdir -p /tmp/piNode/
-	rsync -av --exclude=lib --exclude=pi_base --delete ./ pi@garage6:/tmp/piNode/
-	ssh pi@garage6 docker build -t bang6:5000/pi_node /tmp/piNode/
-	ssh pi@garage6 docker push bang6:5000/pi_node
 
 shell:
-	docker run -it bang6:5000/pi_node  /bin/sh
+	docker run -it bang6:5000/pi_node_pi:latest  /bin/bash
 
 local_run:
-	docker run -it -p 9059:9059 bang6:5000/pi_node python ./piNode.py -v
+	docker run -it -p 9059:9059 bang6:5000/pi_node_pi:latest python ./piNode.py -v
 
 
 push_config:
-	bin/python ../arduinoNode/pushConfig.py pi/
+	docker run -it --net=host -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py pi/
