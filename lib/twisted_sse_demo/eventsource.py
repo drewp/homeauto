@@ -39,7 +39,9 @@ class EventSource(object):
         d.addCallback(self.cbRequest)
 
     def cbRequest(self, response):
-        if response.code != 200:
+        if response is None:
+            raise ValueError('no response for url %r' % self.url)
+        elif response.code != 200:
             self.callErrorHandler("non 200 response received: %d" %
                                   response.code)
         else:
