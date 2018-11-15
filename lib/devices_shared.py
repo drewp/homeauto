@@ -20,7 +20,9 @@ class PixelColumnsFromImages(object):
 
     def get(self, path, x, y, h):
         if self.lastImg[0] != path:
-            self.lastImg = path, imageio.imread('../piNode/config/' + path) # or etcd or http
+            fp = 'config/' + path
+            self.lastImg = path, imageio.imread(fp) # or etcd or http
+            log.debug('read image from %r', fp)
         img = self.lastImg[1]
 
         y = numpy.clip(y, 0, img.shape[0] - 1)
@@ -80,8 +82,9 @@ class ScanGroup(object):
                                           int(self.x.get()),
                                           int(self.y.get()),
                                           int(self.height.get()))
-        except IOError:
-            pass
+        except IOError as e:
+            log.warn('getPixelColumn %r', e)
+        log.debug('current = %r', self.current)
         
     def currentStatements(self):
         return []
