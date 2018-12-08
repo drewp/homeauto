@@ -1,0 +1,5 @@
+cyclone
+rdflib-jsonld==0.4.0
+rdflib==4.2.2
+twisted-mqtt==0.3.6
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
