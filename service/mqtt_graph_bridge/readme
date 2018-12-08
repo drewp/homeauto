@@ -1,0 +1,7 @@
+tail all changes:
+mosquitto_sub -v -t 004BD965/\# 
+
+bang(pts/8):~% mosquitto_pub -t 004BD965/w1/light/switch -m ON  
+bang(pts/8):~% mosquitto_pub -t 004BD965/w1/light/switch -m OFF
+
+
