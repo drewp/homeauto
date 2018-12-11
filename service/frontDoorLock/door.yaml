@@ -1,0 +1,30 @@
+esphomeyaml:
+  name: frontdoor
+  platform: ESP32
+  board: lolin32
+  build_path: .
+  arduino_version: espressif32@>=1.4.0
+  esphomelib_version:
+    repository: https://github.com/drewp/esphomelib.git
+    tag: dev
+
+switch:
+  - platform: gpio
+    pin: 2
+    name: "strike"
+
+
+wifi:
+  ssid: ''
+  password: ''
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 10010
+  username: ''
+  password: ''
+
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
