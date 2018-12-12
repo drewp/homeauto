@@ -1,16 +1,12 @@
 from docopt import docopt
-from mqtt.client.factory import MQTTFactory
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
-from twisted.application.internet import ClientService, backoffPolicy
 from twisted.internet import reactor
-from twisted.internet.defer import inlineCallbacks
-from twisted.internet.endpoints import clientFromString
 import cyclone.web
 import sys, logging
+from mqtt_client import MqttClient
 
-BROKER = "tcp:bang:1883"
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 devs = {
@@ -19,44 +15,6 @@ devs = {
 
 logging.basicConfig()
 log = logging.getLogger()
-
-
-class MQTTService(ClientService):
-
-    def __init(self, endpoint, factory):
-        ClientService.__init__(self, endpoint, factory, retryPolicy=backoffPolicy())
-
-    def startService(self):
-        self.whenConnected().addCallback(self.connectToBroker)
-        ClientService.startService(self)
-
-    @inlineCallbacks
-    def connectToBroker(self, protocol):
-        self.protocol = protocol
-        self.protocol.onDisconnection = self.onDisconnection
-        # We are issuing 3 publish in a row
-        # if order matters, then set window size to 1
-        # Publish requests beyond window size are enqueued
-        self.protocol.setWindowSize(1)
-
-        try:
-            yield self.protocol.connect("TwistedMQTT-pub", keepalive=60)
-        except Exception as e:
-            log.error("Connecting to {broker} raised {excp!s}",
-                      broker=BROKER, excp=e)
-        else:
-            log.info("Connected to {broker}".format(broker=BROKER))
-
-    def onDisconnection(self, reason):
-        log.warn("Connection to broker lost: %r", reason)
-        self.whenConnected().addCallback(self.connectToBroker)
-
-    def publish(self, topic, msg):
-        def _logFailure(failure):
-            log.warn("publish failed: %s", failure.getErrorMessage())
-            return failure
-
-        return self.protocol.publish(topic=topic, qos=0, message=msg).addErrback(_logFailure)
 
 def rdfGraphBody(body, headers):
     g = Graph()
@@ -85,7 +43,9 @@ class OutputPage(cyclone.web.RequestHandler):
         for dev, attrs in devs.items():
             if stmt[0:2] == (dev, ROOM['brightness']):
                 sw = 'OFF' if stmt[2].toPython() == 0 else 'ON'
-                serv.publish("%s/w1/light/switch" % attrs['root'], sw)
+                self.settings.mqtt.publish("%s/w1/light/switch" % attrs['root'], sw)
+                self.settings.mqtt.publish("%s/rgb/rgb/set" % attrs['root'],
+                                           '200,255,200' if sw == 'ON' else '0,0,0')
                 self.settings.masterGraph.patchObject(attrs['ctx'],
                                                       stmt[0], stmt[1], stmt[2])
                 return
@@ -105,9 +65,7 @@ if __name__ == '__main__':
 
     masterGraph = PatchableGraph()
 
-    factory    = MQTTFactory(profile=MQTTFactory.PUBLISHER)
-    myEndpoint = clientFromString(reactor, BROKER)
-    serv       = MQTTService(myEndpoint, factory)
+    mqtt = MqttClient(brokerPort=1883)
 
     port = 10008
     reactor.listenTCP(port, cyclone.web.Application([
@@ -115,12 +73,12 @@ if __name__ == '__main__':
         (r"/graph/events", CycloneGraphEventsHandler,
          {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
-        ], serv=serv, masterGraph=masterGraph, debug=arg['-v']), interface='::')
+        ], mqtt=mqtt, masterGraph=masterGraph, debug=arg['-v']), interface='::')
     log.warn('serving on %s', port)
 
     for dev, attrs in devs.items():
         masterGraph.patchObject(attrs['ctx'],
                                 dev, ROOM['brightness'], Literal(0.0))
     
-    serv.startService()
+    
     reactor.run()
