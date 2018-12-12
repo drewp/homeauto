@@ -9,4 +9,4 @@ COPY *.py *.html *.css *.js ./
 
 EXPOSE 10011:10011
 
-CMD [ "python", "./front_door_lock.py", "-v" ]
+CMD [ "python", "./front_door_lock.py" ]
