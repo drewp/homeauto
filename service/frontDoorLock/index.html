@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+  <head>
+    <title>front door lock</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="/lib/require/require-2.3.3.js"></script>
+    <script>
+     requirejs.config({
+       paths: {
+         "streamed-graph": "/rdf/streamed-graph",
+         "quadstore": "/rdf/quadstore",
+         "async-module": "/lib/async/80f1793/async",
+         "async": "/lib/async/80f1793/async",
+         "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
+         "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
+         "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
+         "moment": "/lib/moment.min",
+         "underscore": "/lib/underscore-1.5.2.min",
+       }
+     });
+    </script>
+    <script>
+     window.NS = {
+       dev: 'http://projects.bigasterisk.com/device/',
+       room: 'http://projects.bigasterisk.com/room/',
+       rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
+       sensor: 'http://bigasterisk.com/homeauto/sensor/',
+     };
+    </script>
+    <link rel="import" href="/rdf/streamed-graph.html">
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+    <link rel="import" href="/rdf/rdf-oneshot.html">
+    <link rel="import" href="/rdf/rdf-uri.html">
+  </head>
+  <body>
+    <dom-module id="door-control">
+      <style>
+       button {
+           min-width: 60px;
+           min-height: 40px;
+       }
+       div#form {
+           margin: 20px;
+           background: #dff5e5;
+           padding: 10px;
+           line-height: 40px;
+           text-align: center;
+           border: 2px groove white;
+       }
+      </style>
+      <template>
+        <div>
+          <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+        </div>
+
+        <div id="form">
+
+          <div>
+            Door is {{lockState}}
+          </div>
+
+          <rdf-oneshot
+            id="unlockOneshot"
+            post="output"
+            subject="<http://projects.bigasterisk.com/room/frontDoorLock>"
+            predicate="<http://projects.bigasterisk.com/room/state>"
+            object="<http://projects.bigasterisk.com/room/unlocked>"
+          ></rdf-oneshot>
+          <button on-click="unlock">Unlock</button>
+          
+          <template is="dom-if" if="{{autoLockIsComing}}">
+            <div>
+              Locking in {{autoLockInSec}}
+            </div>
+          </template>
+        </div>
+      </template>
+      <script>
+       HTMLImports.whenReady(function () {
+         Polymer({
+           is: 'door-control',
+           properties: {
+             graph: { type: Object, notify: true, observer: "_onGraph" },
+             lockState: { type: String },
+             autoLockIsComing: { type: Boolean },
+             autoLockInSec: { type: String},
+           },
+           behaviors: [BigastUri],
+           _onGraph: function(graph) {
+             if (!graph.graph) return;
+             const env = graph.graph.store.rdf;
+             graph.graph.quadStore.quads(
+               {subject: env.createNamedNode('room:frontDoorLock'),
+                predicate: env.createNamedNode('room:state'),
+               },
+               (q) => {
+                 this.lockState = q.object.toString().replace(/.*\//, '');
+               });
+             
+             this.autoLockIsComing = false;
+             graph.graph.quadStore.quads(
+               {subject: env.createNamedNode('room:frontDoorLock'),
+                predicate: env.createNamedNode('room:autoLockInSec'),
+               },
+               (q) => {
+                 this.autoLockIsComing = true;
+                 this.autoLockInSec = parseFloat(q.object.valueOf());
+               });
+           },
+           unlock: function() {
+             this.$.unlockOneshot.go();
+           }
+         });
+       });
+      </script>
+    </dom-module>
+    <door-control></door-control>
+  </body>
+</html>
