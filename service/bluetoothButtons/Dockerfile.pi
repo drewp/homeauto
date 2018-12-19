@@ -1,0 +1,15 @@
+FROM bang6:5000/base_pi
+
+RUN apt-get install --yes libxss-dev
+
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+ADD https://projects.bigasterisk.com/rdfdb/more.tgz ./
+RUN tar xvzf more.tgz
+
+COPY *.py ./
+
+EXPOSE 9107
+
+CMD [ "python", "./bluetooth_buttons.py" ]
