@@ -1,12 +1,10 @@
+isodate==0.4.8
 python-dateutil
 rdflib==4.2.2
-
-influxdb==4.1.1
+twisted
 cyclone
+influxdb==4.1.1
 service_identity
+https://github.com/dirjud/python-dpms/archive/master.zip
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.6.0.tar.gz
 rdflib-jsonld==0.3
-
-https://github.com/vpelletier/python-hidraw/archive/master.zip
-requests
-

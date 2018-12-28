@@ -15,7 +15,7 @@ from __future__ import division
 import sys, cyclone.web, json, traceback, time, pystache, datetime, logging
 import web.utils
 from cyclone.httpclient import fetch
-sys.path.append("/home/drewp/projects/photo/lib/python2.7/site-packages")
+
 from dateutil import tz
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
@@ -23,15 +23,14 @@ import docopt
 from influxdb import InfluxDBClient
 from pymongo import Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef, ConjunctiveGraph
-sys.path.append("/my/site/magma")
+
 from stategraph import StateGraph
 from wifi import Wifi
-sys.path.append("/my/proj/homeauto/lib")
+
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
-sys.path.append("/my/proj/rdfdb")
+
 from rdfdb.patch import Patch
 
-sys.path.append("/my/proj/homeauto/lib")
 from cycloneerr import PrettyErrorHandler
 from logsetup import log
 
@@ -199,7 +198,7 @@ class Poller(object):
 
     # these need to move out to their own service
     def doEntranceMusic(self, action):
-        import restkit, jsonlib
+        import restkit, json
         dt = self.deltaSinceLastArrive(action['name'])
         log.debug("dt=%s", dt)
         if dt > datetime.timedelta(hours=1):
@@ -211,7 +210,7 @@ class Poller(object):
             del action['created']
             del action['_id']
             log.info("post to %s", hub)
-            hub.post("visitorNet", payload=jsonlib.dumps(action))
+            hub.post("visitorNet", payload=json.dumps(action))
 
     def deltaSinceLastArrive(self, name):
         results = list(self.mongo.find({'name' : name}).sort('created',

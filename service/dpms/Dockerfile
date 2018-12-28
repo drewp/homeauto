@@ -1,15 +1,14 @@
 FROM bang6:5000/base_x86
-
-WORKDIR /opt
+RUN apt-get install -y x11-xserver-utils
 
 COPY requirements.txt ./
-RUN pip3 install -r requirements.txt
+RUN pip install -r requirements.txt
 
 ADD https://projects.bigasterisk.com/rdfdb/more.tgz ./
 RUN tar xvzf more.tgz
 
 COPY *.py ./
 
-EXPOSE 11012
+EXPOSE 9095
 
-CMD [ "python3", "./bluetooth_buttons.py" ]
+CMD [ "python", "./dpms_service.py" ]

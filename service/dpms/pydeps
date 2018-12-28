@@ -1,6 +1,0 @@
-bottle==0.10.9
-gunicorn==0.14.2
-isodate==0.4.8
-psutil==0.6.1
-python-dateutil==2.1
-rdflib==3.2.1

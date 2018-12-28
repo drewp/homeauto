@@ -1,0 +1,13 @@
+docopt
+pymongo
+
+BeautifulSoup==3.2.1
+cyclone
+influxdb==3.0.0
+lxml==4.2.5
+pystache==0.5.2
+rdflib==4.2.2
+restkit==4.2.0
+web.py==0.37
+
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.6.0.tar.gz
