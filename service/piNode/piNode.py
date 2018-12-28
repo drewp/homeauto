@@ -36,7 +36,7 @@ HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 hostname = socket.gethostname()
 CTX = ROOM['pi/%s' % hostname]
-etcd = etcd3.client(host='bang6')
+etcd = etcd3.client(host='bang6', port=9022)
 
 def patchRandid():
     """
