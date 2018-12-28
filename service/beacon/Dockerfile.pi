@@ -1,0 +1,16 @@
+FROM bang6:5000/base_pi
+
+WORKDIR /opt
+
+RUN apt-get install -y bluez libbluetooth-dev
+
+# pi may need pi-bluetooth pkg too
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+COPY *.py *.html *.js ./
+
+EXPOSE 9113
+

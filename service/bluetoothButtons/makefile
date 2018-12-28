@@ -9,7 +9,7 @@ build_image_pi:
 	docker push bang6:5000/bluetooth_buttons_pi:latest
 
 shell:
-	docker run --rm -it --cap-add SYS_PTRACE --net=host bang6:5000/bluetooth_buttons_x86:latest  /bin/sh
+	docker run --rm -it --cap-add SYS_PTRACE --net=host bang6:5000/bluetooth_buttons_x86:latest  /bin/bash
 
 local_run:
-	docker run --rm -it -p 9107:9107 --net=host bang6:5000/bluetooth_buttons_x86:latest python ./bluetooth_buttons.py -v
+	sudo docker run --rm -it --net=host --privileged -v /dev:/dev bang6:5000/bluetooth_buttons_x86:latest 

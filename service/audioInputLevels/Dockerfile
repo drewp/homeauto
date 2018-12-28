@@ -2,7 +2,7 @@ FROM bang6:5000/base_x86
 
 WORKDIR /opt
 
-RUN apt-get install --yes libpulse0
+RUN apt-get install --yes libpulse0 pulseaudio-utils
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
