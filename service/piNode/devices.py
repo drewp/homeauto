@@ -18,7 +18,6 @@ try:
     import pigpio
 except ImportError:
     pigpio = None
-import w1thermsensor
 try:
     import rpi_ws281x
 except ImportError:
@@ -359,7 +358,9 @@ class OneWire(DeviceType):
     # deliberately written like arduinoNode's one for an easier merge.
     def __init__(self,  *a, **kw):
         DeviceType.__init__(self, *a, **kw)
+        import w1thermsensor
         log.info("scan for w1 devices")
+        self.SensorNotReadyError = w1thermsensor.core.SensorNotReadyError
         self._sensors = w1thermsensor.W1ThermSensor.get_available_sensors()
         for s in self._sensors:
             # Something looks different about these ids
@@ -379,7 +380,7 @@ class OneWire(DeviceType):
                     stmts.append((sensor.uri, ROOM['temperatureF'],
                                   # see round() note in arduinoNode/devices.py
                                   Literal(round(tempF, 2))))
-                except w1thermsensor.core.SensorNotReadyError as e:
+                except self.SensorNotReadyError as e:
                     log.warning(e)
 
             return stmts
