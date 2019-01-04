@@ -1,0 +1,6 @@
+cyclone
+rdflib-jsonld==0.4.0
+rdflib==4.2.2
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.6.0.tar.gz
+https://github.com/drewp/MFRC522-python/archive/drewp/m4.zip
+
