@@ -18,13 +18,19 @@ class Screen(object):
     def __init__(self, spiDevice=1, rotation=0):
         self._initOutput(spiDevice, rotation)
         self.news = ""
+        self.goalState = None
         self.animateTo(ROOM['boot'])
 
     def _stateImage(self, state):
         return Image.open('anim/%s.png' % state.rsplit('/')[-1])
         
     def _initOutput(self, spiDevice, rotation):
-        self._dev = ssd1331(spi(device=spiDevice, port=0), rotation=rotation)
+        self._dev = ssd1331(spi(device=spiDevice, port=0,
+                                # lots of timeouts on the 12288-byte transfer without this
+                                transfer_size=64,
+                                bus_speed_hz=16000000,
+                                gpio_RST=None),
+                            rotation=rotation)
         
     def setContrast(self, contrast):
         """0..255"""
@@ -38,7 +44,7 @@ class Screen(object):
         self._dev.show()
 
     def display(self, img):
-        self._dev.display(img)
+        self._dev.display(img.convert(self._dev.mode))
 
     def animateTo(self, state):
         """
@@ -48,12 +54,16 @@ class Screen(object):
         lockedUnknownKey
         unlockNews
         """
+        if self.goalState == state:
+            return
         self.goalState = state
         self.display(self._stateImage(state))
         if state == ROOM['unlockNews']:
             self.renderNews()
 
     def setNews(self, text):
+        if self.news == text:
+            return
         self.news = text
         if self.goalState == ROOM['unlockNews']:
             # wrong during animation
@@ -71,7 +81,7 @@ class Screen(object):
         self.display(bg)
         
 class ScreenSim(Screen):
-    def _initOutput(self, spiDevice, rotation):
+    def _initOutput(self):
         self.windowScale = 2
         import pygame
         self.pygame = pygame
