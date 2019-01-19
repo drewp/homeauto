@@ -15,7 +15,7 @@ build_image:
 shell:
 	docker run --rm -it --cap-add SYS_PTRACE --net=host ${TAG}  /bin/bash
 
-local_run:
+local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           -v `pwd`:/mnt \
           --net=host \

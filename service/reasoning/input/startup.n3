@@ -42,3 +42,11 @@
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/plus/sound>; :predicate :postAction ] .
 
 [ a :OneShotPost; :subject <http://bigasterisk.com/host/slash/mpd>; :predicate :postAction ] .
+
+<http://bigasterisk.com/homeauto/thermostatSetTemp> :temperatureF 70 .
+# run rdfdb, put it in there
+
+<http://bigasterisk.com/rfidCard/9327861a28> :cardText "UVOLLTJJEDBZTYBRPCRSFHJMEJGOQAIG"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
+<http://bigasterisk.com/rfidCard/93a7591a77> :cardText "XXGDUPSVAVJJLMZD" ;                :owner <http://bigasterisk.com/foaf.rdf#drewp> .
+<http://bigasterisk.com/rfidCard/93cd401a04> :cardText "JMQHDQZXENVZRYXUGQPYZCPJFJKIZWAS"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
+<http://bigasterisk.com/rfidCard/a3aa6b1a78> :cardText "UOHQPTMTGSHLETGLYOMPMNJXDYINHHIF"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .

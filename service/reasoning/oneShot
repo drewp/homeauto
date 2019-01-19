@@ -3,7 +3,7 @@
 send a statement to the reasoning server for one update cycle. Args
 are s/p/o in n3 notation, with many prefixes predefined here.
 """
-import sys, restkit, time
+import sys, requests, time
 s, p, o = sys.argv[1:]
 
 prefixes = {
@@ -25,9 +25,9 @@ stmt = '%s %s %s .' % (expand(s), expand(p), expand(o))
 print "Sending: %s" % stmt
 
 t1 = time.time()
-reasoning = restkit.Resource("http://bang:9071/")
-ret = reasoning.post("oneShot",
-                     headers={"content-type": "text/n3"},
-                     payload=stmt)
+ret = requests.post(
+    'http://bang:9071/oneShot',
+    headers={"content-type": "text/n3"},
+    data=stmt.encode('ascii'))
 g = float(ret.headers['x-graph-ms'])
 print "%.1f ms for graph update; %.1f ms other overhead" % (g, 1000 * (time.time() - t1) - g)

@@ -12,8 +12,8 @@ build_image:
 	rm -rf tmp_ctx
 
 
-shell:
+shell: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host bang6:5000/mqtt_graph_bridge_x86:latest  /bin/sh
 
-local_run:
+local_run: build_image
 	docker run --rm -it --net=host bang6:5000/mqtt_graph_bridge_x86:latest
