@@ -9,6 +9,7 @@ from twisted.internet.defer import inlineCallbacks, gatherResults
 
 from rdflibtrig import addTrig
 from graphop import graphEqual
+from greplin import scales
 
 from patchsource import ReconnectingPatchSource
 
@@ -21,6 +22,9 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
 
+STATS = scales.collection('/web',
+                          scales.PmfStat('combineGraph'),
+)
 def parseRdf(text, contentType):
     g = Graph()
     g.parse(StringInputSource(text), format={
@@ -33,7 +37,10 @@ class RemoteData(object):
     def __init__(self, onChange):
         self.onChange = onChange
         self.graph = ConjunctiveGraph()
-        self.patchSource = ReconnectingPatchSource(URIRef('http://bang:9072/graph/home'), self.onPatch)
+        self.patchSource = ReconnectingPatchSource(
+            URIRef('http://bang:9072/graph/home'),
+            #URIRef('http://frontdoor:10012/graph/events'),
+            self.onPatch, reconnectSecs=10)
 
     def onPatch(self, p, fullGraph):
         if fullGraph:
@@ -57,7 +64,6 @@ class RemoteData(object):
             ROOM['graphLoadMs'],
             ROOM['localTimeToSecond'],
             ROOM['history'],
-            ROOM['temperatureF'],
             ROOM['connectedAgo'],
             RDFS['comment'],
         ]
@@ -142,7 +148,8 @@ class InputGraph(object):
         t1 = time.time()
         self.addOneShot(g)
         return time.time() - t1
-            
+
+    @STATS.combineGraph.time()
     def getGraph(self):
         """rdflib Graph with the file+remote contents of the input graph"""
         # this could be much faster with the combined readonly graph

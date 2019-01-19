@@ -45,7 +45,9 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 NS = {'': ROOM, 'dev': DEV}
 
 STATS = scales.collection('/web',
-                          scales.PmfStat('graphChanged'))
+                          scales.PmfStat('graphChanged'),
+                          scales.PmfStat('updateRules'),
+)
 
 class Reasoning(object):
     def __init__(self):
@@ -59,6 +61,7 @@ class Reasoning(object):
         self.inputGraph = InputGraph([], self.graphChanged)      
         self.inputGraph.updateFileData()
 
+    @STATS.updateRules.time()
     def updateRules(self):
         rulesPath = 'rules.n3'
         try:
@@ -90,7 +93,11 @@ class Reasoning(object):
         statements are already in inputGraph.getGraph().
         """
         log.info("----------------------")
-        log.info("graphChanged (oneShot=%s):", oneShot)
+        log.info("graphChanged (oneShot=%s %s stmts):",
+                 oneShot, len(oneShotGraph) if oneShotGraph is not None else 0)
+        if oneShotGraph:
+            for stmt in oneShotGraph:
+                log.info(" OS-> %r", stmt)
         t1 = time.time()
         oldInferred = self.inferred
         try:
@@ -171,6 +178,7 @@ class OneShot(cyclone.web.RequestHandler):
         everything appears to be a 'change'.
         """
         try:
+            log.info('POST to oneShot, headers=%s', self.request.headers)
             dt = self.settings.reasoning.inputGraph.addOneShotFromString(
                 self.request.body, self.request.headers['content-type'])
             self.set_header('x-graph-ms', str(1000 * dt))
@@ -294,7 +302,6 @@ if __name__ == '__main__':
     -i                Verbose log on the input phase
     -r                Verbose log on the reasoning phase and web stuff
     -o                Verbose log on the actions/output phase
-    --source=<substr> Limit sources to those with this string.
     """)
     
     r = Reasoning()

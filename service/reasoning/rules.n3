@@ -137,18 +137,16 @@
 #  :storageCeilingLedLong :brightness 1 .
 #} .
 
-@prefix bed: <http://bigasterisk.com/homeauto/sensor/bed/> .
-
-{ bed:greenButton :buttonState :press } => {
+{ sensor:bedGreenButton :buttonState :press } => {
   :headboardWhite :brightness 0.0 .
   :anim1 :position :end .
 } .
 
-{ bed:redButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
+{ sensor:bedRedButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
   :headboardWhite :brightness 0.2 . 
 } .
 
-{ bed:redButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
+{ sensor:bedRedButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
   :headboardWhite :brightness 1 .
 } .
 
@@ -178,18 +176,41 @@
   :livingRoomLamp2 :brightness 1.0 .
 } .
 { :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 1.0 . } => {
-  :livingRoomLamp1 :brightness 0 .
-  :livingRoomLamp2 :brightness 0 .
+  :livingRoomLamp1 :brightness 0.0 .
+  :livingRoomLamp2 :brightness 0.0 .
+} .
+
+{ :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 0.0 . } => {
+  :starTrekLight :brightness 1.0 .
+} .
+{ :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 1.0 . } => {
+  :starTrekLight :brightness 0.0 .
+} .
+
+
+#{  :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/beep1> . } .
+#{ sensor:kitchenCounterButton1 :buttonState :press . } => {
+#  bang: :postAction <http://10.2.0.62/rpc/motor> .
+#} .
+
+{ sensor:kitchenCounterButton1 :buttonState :press . :kitchenLight :brightness 0.0 . } => {
+  :kitchenLight :brightness 1.0 .
+  :kitchenCounterLight :brightness 0.5 .
+# and skylight rgb/rgb/set '200,255,200'
+} .
+{ sensor:kitchenCounterButton1 :buttonState :press . :kitchenLight :brightness 1.0 . } => {
+  :kitchenLight :brightness 0.0 .
+  :kitchenCounterLight :brightness 0.0 .
 } .
 
 
 
 { <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :noMotion . } => {
-  :garageOverhead :brightness 0 .
+  :garageOverhead :brightness 0.0.
 } .
 
 { <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :motion . } => {
-  :garageOverhead :brightness 1 .
+  :garageOverhead :brightness 1.0 .
 } .
 
 { sensor:motionBed :sees :motion . } => { :anim1 :playback :start . } .
@@ -198,6 +219,8 @@
 { sensor:motionFrontdoorInside :seesRecently30 :motion } => {
   <http://bigasterisk.com/host/frontdoor/monitor> :powerState :on .
 } .
+
+
 
 { <http://projects.bigasterisk.com/room/remoteButton/KEY_POWER> :state :press } => {
 #star:slideshow :postAction <http://dash:9049/effects/question> .

@@ -4,13 +4,14 @@ from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor
 import cyclone.web
-import sys, logging
+import sys, logging, json
 from mqtt_client import MqttClient
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 devs = {
-    ROOM['kitchenLight']: {'root': '004BD965', 'ctx': ROOM['kitchenH801']}
+    ROOM['kitchenLight']: {'root': 'h801_skylight', 'ctx': ROOM['kitchenH801']},
+    ROOM['kitchenCounterLight']: {'root': 'h801_counter', 'ctx': ROOM['kitchenH801']},
 }
 
 logging.basicConfig()
@@ -40,16 +41,16 @@ class OutputPage(cyclone.web.RequestHandler):
         self._onStatement(stmt)
             
     def _onStatement(self, stmt):
+        ignored = True
         for dev, attrs in devs.items():
             if stmt[0:2] == (dev, ROOM['brightness']):
-                sw = 'OFF' if stmt[2].toPython() == 0 else 'ON'
-                self.settings.mqtt.publish("%s/w1/light/switch" % attrs['root'], sw)
-                self.settings.mqtt.publish("%s/rgb/rgb/set" % attrs['root'],
-                                           '200,255,200' if sw == 'ON' else '0,0,0')
+                self.settings.mqtt.publish("%s/light/kit_w1/command" % attrs['root'],
+                                           json.dumps({'state': 'ON', 'brightness': int(stmt[2].toPython() * 255)}))                
                 self.settings.masterGraph.patchObject(attrs['ctx'],
                                                       stmt[0], stmt[1], stmt[2])
-                return
-        log.warn("ignoring %s", stmt)
+                ignored = False
+        if ignored:
+            log.warn("ignoring %s", stmt)
             
 if __name__ == '__main__':
     arg = docopt("""
