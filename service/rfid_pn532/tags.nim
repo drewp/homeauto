@@ -22,7 +22,7 @@ proc check(p: ptr, msg: string) =
 proc check(ret: int, msg: string) =
   check(ret == 0, &"{msg} ({ret})")
 
-type NfcDevice = ref object of RootObj
+type NfcDevice* = ref object of RootObj
   context: ptr nfc.context
   dev*: ptr nfc.device
   
@@ -69,7 +69,7 @@ proc getTags(dev: ptr nfc.device): ptr FreefareTag =
 
 # freefare lib wants to free all the tag memory, so process them in a
 # callback and don't keep them outside that.
-proc forAllTags*(self: var NfcDevice, onTag: (NfcTag) -> void) =
+proc forAllTags*(self: NfcDevice, onTag: (NfcTag) -> void) =
   var ret = getTags(self.dev)
   var tagList = cast[TagArray](ret)
   for tagp in tagList:

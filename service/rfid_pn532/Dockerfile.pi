@@ -1,0 +1,21 @@
+FROM bang6:5000/base_nim_pi
+
+WORKDIR /opt
+
+RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev && \
+  ln -sf libnfc.so.5 /usr/lib/arm-linux-gnueabihf/libnfc.so && \
+  ln -sf libfreefare.so.0 /usr/lib/arm-linux-gnueabihf/libfreefare.so
+
+COPY *.nim *.cfg ./
+COPY nfc-nim/ nfc-nim/
+
+RUN nim c -d:nimDebugDlOpen rfid.nim
+
+ENV LIBNFC_DEFAULT_DEVICE="pn532_i2c:/dev/i2c-1"
+
+EXPOSE 10012
+
+# i2c may not read right. might need to run 'pigs m 2 0; pigs m 3 0' first, or restart pigpiod?
+
+CMD ["./rfid"]
+# LIBNFC_DEFAULT_DEVICE="pn532_i2c:/dev/i2c-1" mifare-classic-read-ndef -o /tmp/card
