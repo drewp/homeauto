@@ -18,30 +18,32 @@ type CardEvent = object of RootObj
   appeared: bool
 type CardEventChannel = Channel[CardEvent]
 
-type TagWatcher = ref object of RootObj
-  dev: NfcDevice
-  nearbyUids: HashSet[cstring]
-  events: ref CardEventChannel
-  
+
 type FakeTagWatcher = ref object of RootObj
-  events: ref CardEventChannel
+  events: ptr CardEventChannel
   
-proc initFakeTagWatcher(events: ref  CardEventChannel): FakeTagWatcher =
+proc initFakeTagWatcher(events: ptr CardEventChannel): FakeTagWatcher =
   new result
   result.events = events
 
 proc watchForever*(self: FakeTagWatcher) {.thread.} =
-  var events = self.events[]
   while true:
     sleep(2000)
-    events.send(CardEvent(uid: "abcdef", body: "helloworld", appeared: true))
+    self.events[].send(CardEvent(uid: "abcdef", body: "helloworld", appeared: true))
     sleep(2000)
-    events.send(CardEvent(uid: "abcdef", appeared: false))
-  
-proc initTagWatcher(): TagWatcher =
+    self.events[].send(CardEvent(uid: "abcdef", appeared: false))
+
+   
+type TagWatcher = ref object of RootObj
+  dev: NfcDevice
+  nearbyUids: HashSet[cstring]
+  events: ptr CardEventChannel
+
+proc initTagWatcher(events: ptr CardEventChannel): TagWatcher =
   new(result)
   result.nearbyUids.init()
-  
+  result.events = events
+
 proc oneScan(self: TagWatcher) =
   var nearThisPass = initSet[cstring]()
 
@@ -73,7 +75,6 @@ proc oneScan(self: TagWatcher) =
 
   self.nearbyUids = nearThisPass
 
-
 proc scanTags(self: TagWatcher) =
   self.dev = newNfcDevice()
   try:
@@ -82,22 +83,19 @@ proc scanTags(self: TagWatcher) =
   finally:
     self.dev.destroy()
 
-  
-proc watchForever*(args: tuple[self: TagWatcher, events: ref CardEventChannel]) {.thread.} =
-  args.self.events = args.events
+proc watchForever*(self: TagWatcher) {.thread.} =
   while true:
     try:
-      args.self.scanTags()
+      self.scanTags()
     except IOError:
       echo "IOError: restarting nfc now"
 
-
-type TtgArgs = tuple[events: ref CardEventChannel, server: GraphServer]
+      
+type TtgArgs = tuple[events: ptr CardEventChannel, server: GraphServer]
 proc tagsToGraph(args: TtgArgs) {.thread.} =
-  var events = args.events[]
   while true:
     echo "wait for event"
-    let ev = events.recv()
+    let ev = args.events[].recv()
     if ev.appeared:
       args.server.setGraph()
     else:
@@ -105,18 +103,17 @@ proc tagsToGraph(args: TtgArgs) {.thread.} =
 
 proc main() =
 
-  var events: ref CardEventChannel
-  new(events)
-  events[].open()
+  var events: CardEventChannel
+  events.open()
 
-  var tw = initFakeTagWatcher(events)
+  var tw = initTagWatcher(addr events)
   var thr: Thread[tw.type]
   thr.createThread(watchForever, tw)
 
   let server = newGraphServer(port = 10012)
 
   var t2: Thread[TtgArgs]
-  t2.createThread(tagsToGraph, (events, server))
+  t2.createThread(tagsToGraph, (addr events, server))
   
   server.run()
 
