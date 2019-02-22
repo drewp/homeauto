@@ -87,3 +87,7 @@ proc run*(self: GraphServer) =
     poll()
 
 
+# Replace graph contents
+proc setGraph*(self: GraphServer) =
+  echo "graph replaced"
+  
