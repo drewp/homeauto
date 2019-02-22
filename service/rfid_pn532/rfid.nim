@@ -9,6 +9,7 @@ import strutils
 import graphserver
 import tags
 import threadpool
+import os
 import sets
 
 type CardEvent = object of RootObj
@@ -17,14 +18,28 @@ type CardEvent = object of RootObj
   appeared: bool
 type CardEventChannel = Channel[CardEvent]
 
-
-var events: CardEventChannel
-
-type TagWatcher = object of RootObj
+type TagWatcher = ref object of RootObj
   dev: NfcDevice
-  nearbyUids: var HashSet[cstring]
+  nearbyUids: HashSet[cstring]
+  events: ref CardEventChannel
+  
+type FakeTagWatcher = ref object of RootObj
+  events: ref CardEventChannel
+  
+proc initFakeTagWatcher(events: ref  CardEventChannel): FakeTagWatcher =
+  new result
+  result.events = events
 
-proc initTagWatcher(): var TagWatcher =
+proc watchForever*(self: FakeTagWatcher) {.thread.} =
+  var events = self.events[]
+  while true:
+    sleep(2000)
+    events.send(CardEvent(uid: "abcdef", body: "helloworld", appeared: true))
+    sleep(2000)
+    events.send(CardEvent(uid: "abcdef", appeared: false))
+  
+proc initTagWatcher(): TagWatcher =
+  new(result)
   result.nearbyUids.init()
   
 proc oneScan(self: TagWatcher) =
@@ -47,14 +62,14 @@ proc oneScan(self: TagWatcher) =
     tag.connect()
     try:
       echo &" block1: {tag.readBlock(1).escape}"
-      events.send(CardEvent(uid: tag.uid(), body: tag.readBlock(1),
+      self.events[].send(CardEvent(uid: tag.uid(), body: tag.readBlock(1),
                             appeared: true))
       #tag.writeBlock(1, toBlock("helloworld"))
     finally:
       tag.disconnect()
 
   for uid in self.nearbyUids.difference(nearThisPass):
-    events.send(CardEvent(uid: uid, appeared: false))
+    self.events[].send(CardEvent(uid: uid, appeared: false))
 
   self.nearbyUids = nearThisPass
 
@@ -68,32 +83,41 @@ proc scanTags(self: TagWatcher) =
     self.dev.destroy()
 
   
-proc watchForever*(self: TagWatcher) {.thread.} =
+proc watchForever*(args: tuple[self: TagWatcher, events: ref CardEventChannel]) {.thread.} =
+  args.self.events = args.events
   while true:
     try:
-      self.scanTags()
+      args.self.scanTags()
     except IOError:
       echo "IOError: restarting nfc now"
-  
 
-proc tagsToGraph() {.thread.} =
+
+type TtgArgs = tuple[events: ref CardEventChannel, server: GraphServer]
+proc tagsToGraph(args: TtgArgs) {.thread.} =
+  var events = args.events[]
   while true:
     echo "wait for event"
-    echo &"ev {events.recv()}"
-  
+    let ev = events.recv()
+    if ev.appeared:
+      args.server.setGraph()
+    else:
+      args.server.setGraph()
 
 proc main() =
-  events.open()
 
-  var tw = initTagWatcher()
-  var thr: Thread[void]
-  thr.createThread(tw.watchForever)
+  var events: ref CardEventChannel
+  new(events)
+  events[].open()
 
-  var t2: Thread[void]
-  t2.createThread(tagsToGraph)
-  
+  var tw = initFakeTagWatcher(events)
+  var thr: Thread[tw.type]
+  thr.createThread(watchForever, tw)
 
   let server = newGraphServer(port = 10012)
+
+  var t2: Thread[TtgArgs]
+  t2.createThread(tagsToGraph, (events, server))
+  
   server.run()
 
 main()
