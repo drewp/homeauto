@@ -1,0 +1,9 @@
+FROM bang6:5000/base_x86
+
+WORKDIR /opt
+
+
+RUN apt-get install -y python-clang-6.0 libclang-6.0-dev
+RUN pip install ctypeslib2
+
+RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev 
