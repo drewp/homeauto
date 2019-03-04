@@ -1,31 +1,33 @@
+from ctypes import pointer, byref
 import nfc, freefare
 import logging
 log = logging.getLogger('tags')
 
+    
 class NfcDevice(object):
     def __init__(self):
-        context = ptr nfc.nfc_context
-        nfc.nfc_init(context)
+        self.context = pointer(nfc.nfc_context())
+        nfc.nfc_init(byref(self.context))
+        self.dev = None
 
-        '''
-          var connstrings: array[10, nfc.connstring]
-          var n = nfc.list_devices(result.context,
-                                   cast[ptr nfc.connstring](addr connstrings),
-                                   len(connstrings))
-          info(&"{n} connection strings")
-          for i in 0 ..< n:
-            info(&"  dev {i}: {join(connstrings[i])}")
+        conn_strings = (nfc.nfc_connstring * 10)()
+        t0, _, t2 = nfc.nfc_list_devices.argtypes
+        nfc.nfc_list_devices.argtypes = [t0, type(conn_strings), t2]
+        devices_found = nfc.nfc_list_devices(self.context, conn_strings, 10)
+        print(f'{devices_found} connection strings')
+        for i in range(devices_found):
+            print(f'  dev {i}: {conn_strings[i]}')
 
-          info("open dev")
-          result.dev = nfc.open(result.context, connstrings[0])
-          let dev = result.dev
-          check(device_get_last_error(dev),
-                &"nfc.open failed on {join(connstrings[0])}")
-        '''
+        print("open dev")
+        self.dev = nfc.nfc_open(self.context, conn_strings[0])
+        if nfc.nfc_device_get_last_error(self.dev):
+            raise IOError(f'nfc.open failed on {conn_strings[0]}')
 
     def __del__(self):
-        nfc.close(self.dev)
-        nfc.exit(self.context)
+        if self.dev:
+            nfc.nfc_close(self.dev)
+        nfc.nfc_exit(self.context)
+'''
 
     def getTags(self):
         log.info("getting tags")
@@ -111,3 +113,4 @@ class NfcTag(object):
       check(mifare_classic_write(self.tag, blocknum, data),
             "classic_write() failed")
       log.info(&"  wrote block {blocknum}: {data}")
+'''
