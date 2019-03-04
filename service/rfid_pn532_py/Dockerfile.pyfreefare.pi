@@ -1,0 +1,11 @@
+FROM bang6:5000/base_pi
+
+WORKDIR /opt
+
+RUN apt-get install -y python-clang-5.0 libclang-5.0-dev
+RUN pip install ctypeslib2
+
+RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev 
+COPY build_ctypes_modules.sh ./
+
+CMD ["/opt/build_ctypes_modules.sh"]
