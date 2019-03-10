@@ -1,3 +1,4 @@
+import time
 from ctypes import pointer, byref
 import nfc, freefare
 import logging
@@ -17,7 +18,9 @@ class NfcDevice(object):
         print(f'{devices_found} connection strings')
         for i in range(devices_found):
             print(f'  dev {i}: {conn_strings[i]}')
-
+        if devices_found < 1:
+            raise IOError("no devices")
+            
         print("open dev")
         self.dev = nfc.nfc_open(self.context, conn_strings[0])
         if nfc.nfc_device_get_last_error(self.dev):
@@ -27,46 +30,19 @@ class NfcDevice(object):
         if self.dev:
             nfc.nfc_close(self.dev)
         nfc.nfc_exit(self.context)
-'''
 
     def getTags(self):
         log.info("getting tags")
         t0 = time.time()
         ret = freefare.freefare_get_tags(self.dev)
-        if not ret: raise IOError("freefare_get_tags returned null")
-        log.info(f"found tags in {time.time() - t0}")
-        return ret
-
-    # freefare lib wants to free all the tag memory, so process them in a
-    # callback and don't keep them outside that.
-    def forAllTags(self, onTag: (NfcTag) -> None):
-        ret = self.getTags()
-        for tagp in ret:
-          if isNil(tagp):
-            break
-          if cast[int](tagp) < 10:
-            # pointer value looks wrong
-            break
-  
-          let tag: FreefareTag = tagp[]
-          if isNil(tag):
-            break
-          onTag(NfcTag(tag: tag))
-        freefare.freefare_free_tags(ret)
-
-def blockFromString(s: str):
-    result = MifareClassicBlock()
-    for i in 0..result.high:
-      if i < s.len:
-        result[i] = s[i]
-      else:
-        result[i] = '\x00'
-    return result
-  
-proc stringFromBlock(b: MifareClassicBlock) -> string
-  return ''.join(b)#cast[array[16,char]](b).join
-  
-type TagArray {.unchecked.} = array[999, ptr FreefareTag]
+        if not ret:
+            raise IOError("freefare_get_tags returned null")
+        try:
+            log.info(f"found tags in {time.time() - t0}")
+            for t in ret:
+                yield NfcTag(t)
+        finally:
+            freefare.freefare_free_tags(ret)
 
 pubkey = ['\xff', '\xff', '\xff', '\xff', '\xff', '\xff']
 
@@ -78,7 +54,7 @@ class NfcTag(object):
     def __init__(self, tag): #FreefareTag
         self.tag = tag
 
-    def tagType(self): freefare.freefare_tag_type =
+    def tagType(self) -> freefare.freefare_tag_type:
         return freefare.freefare_get_tag_type(self.tag)
 
     def uid(self):
@@ -90,27 +66,26 @@ class NfcTag(object):
     def disconnect(self):
         check(freefare.mifare_classic_disconnect(self.tag), "disconnect")
 
-    def readBlock(self, blockNumber: int) -> string:
-      blockNum = cast[freefare.MifareClassicBlockNumber](blockNumber)
+    def readBlock(self, blockNumber: int) -> str:
+      blockNum = freefare.MifareClassicBlockNumber(blockNumber)
       check(freefare.mifare_classic_authenticate(
         self.tag, blockNum, pubkey, freefare.MFC_KEY_A),
-            &"mifare_classic_authenticate() failed")
+            "mifare_classic_authenticate() failed")
 
-      var data: freefare.MifareClassicBlock
+      data = freefare.MifareClassicBlock()
 
-      check(mifare_classic_read(self.tag, blockNum, addr data),
+      check(freefare.mifare_classic_read(self.tag, blockNum, pointer(data)),
             "classic_read() failed")
-      return toString(data)
+      return data
 
     def writeBlock(self,
                     blockNumber: int,
-                    data: freefare.MifareClassicBlock) =
-      var blocknum = cast[freefare.MifareClassicBlockNumber](blockNumber)
+                    data: freefare.MifareClassicBlock):
+      blocknum = freefare.MifareClassicBlockNumber(blockNumber)
       check(freefare.mifare_classic_authenticate(
         self.tag, blocknum, pubkey, freefare.MFC_KEY_A),
-            &"mifare_classic_authenticate() failed")
+            "mifare_classic_authenticate() failed")
 
-      check(mifare_classic_write(self.tag, blocknum, data),
+      check(freefare.mifare_classic_write(self.tag, blocknum, data),
             "classic_write() failed")
-      log.info(&"  wrote block {blocknum}: {data}")
-'''
+      log.info("  wrote block {blocknum}: {data}")
