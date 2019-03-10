@@ -46,20 +46,20 @@ typedef unsigned char MifareUltralightPage[4];
 FreefareTag	*freefare_get_tags(nfc_device *device);
 FreefareTag	 freefare_tag_new(nfc_device *device, nfc_target target);
 freefare_tag_type freefare_get_tag_type(FreefareTag tag);
-  // const char	*freefare_get_tag_friendly_name(FreefareTag tag);
-  // char		*freefare_get_tag_uid(FreefareTag tag);
-  // void		 freefare_free_tag(FreefareTag tag);
-  // void		 freefare_free_tags(FreefareTag *tags);
-  // bool		 freefare_selected_tag_is_present(nfc_device *device);
-  // 
-  // const char	*freefare_strerror(FreefareTag tag);
-  // int		 freefare_strerror_r(FreefareTag tag, char *buffer, size_t len);
-  // void		 freefare_perror(FreefareTag tag, const char *string);
-  // 
-  // 
-  // 
+const char	*freefare_get_tag_friendly_name(FreefareTag tag);
+char		*freefare_get_tag_uid(FreefareTag tag);
+void		 freefare_free_tag(FreefareTag tag);
+void		 freefare_free_tags(FreefareTag *tags);
+bool		 freefare_selected_tag_is_present(nfc_device *device);
+
+const char	*freefare_strerror(FreefareTag tag);
+int		 freefare_strerror_r(FreefareTag tag, char *buffer, size_t len);
+void		 freefare_perror(FreefareTag tag, const char *string);
+
+
+
   // bool		 felica_taste(nfc_device *device, nfc_target target);
-  // 
+
   // #define FELICA_SC_RW 0x0009
 // #define FELICA_SC_RO 0x000b
 // 
@@ -152,67 +152,67 @@ freefare_tag_type freefare_get_tag_type(FreefareTag tag);
 // FreefareTag      mifare_mini_tag_new(nfc_device *device, nfc_target target);
 // FreefareTag	 mifare_classic1k_tag_new(nfc_device *device, nfc_target target);
 // FreefareTag	 mifare_classic4k_tag_new(nfc_device *device, nfc_target target);
-// void		 mifare_classic_tag_free(FreefareTag tag);
+void		 mifare_classic_tag_free(FreefareTag tag);
 // 
-// typedef unsigned char MifareClassicBlock[16];
-// 
-// typedef uint8_t MifareClassicSectorNumber;
-// typedef unsigned char MifareClassicBlockNumber;
-// 
-// typedef enum { MFC_KEY_A, MFC_KEY_B } MifareClassicKeyType;
-// typedef unsigned char MifareClassicKey[6];
-// 
-// /* NFC Forum public key */
-// extern const MifareClassicKey mifare_classic_nfcforum_public_key_a;
-// 
-// int		 mifare_classic_connect(FreefareTag tag);
-// int		 mifare_classic_disconnect(FreefareTag tag);
-// 
-// int		 mifare_classic_authenticate(FreefareTag tag, const MifareClassicBlockNumber block, const MifareClassicKey key, const MifareClassicKeyType key_type);
-// int		 mifare_classic_read(FreefareTag tag, const MifareClassicBlockNumber block, MifareClassicBlock *data);
-// int		 mifare_classic_init_value(FreefareTag tag, const MifareClassicBlockNumber block, const int32_t value, const MifareClassicBlockNumber adr);
-// int		 mifare_classic_read_value(FreefareTag tag, const MifareClassicBlockNumber block, int32_t *value, MifareClassicBlockNumber *adr);
-// int		 mifare_classic_write(FreefareTag tag, const MifareClassicBlockNumber block, const MifareClassicBlock data);
-// 
-// int		 mifare_classic_increment(FreefareTag tag, const MifareClassicBlockNumber block, const uint32_t amount);
-// int		 mifare_classic_decrement(FreefareTag tag, const MifareClassicBlockNumber block, const uint32_t amount);
-// int		 mifare_classic_restore(FreefareTag tag, const MifareClassicBlockNumber block);
-// int		 mifare_classic_transfer(FreefareTag tag, const MifareClassicBlockNumber block);
-// 
-// int		 mifare_classic_get_trailer_block_permission(FreefareTag tag, const MifareClassicBlockNumber block, const uint16_t permission, const MifareClassicKeyType key_type);
-// int		 mifare_classic_get_data_block_permission(FreefareTag tag, const MifareClassicBlockNumber block, const unsigned char permission, const MifareClassicKeyType key_type);
-// 
-// int		 mifare_classic_format_sector(FreefareTag tag, const MifareClassicSectorNumber sector);
-// 
-// void		 mifare_classic_trailer_block(MifareClassicBlock *block, const MifareClassicKey key_a, uint8_t ab_0, uint8_t ab_1, uint8_t ab_2, uint8_t ab_tb, const uint8_t gpb, const MifareClassicKey key_b);
-// 
-// MifareClassicSectorNumber mifare_classic_block_sector(MifareClassicBlockNumber block);
-// MifareClassicBlockNumber  mifare_classic_sector_first_block(MifareClassicSectorNumber sector);
-// size_t		 mifare_classic_sector_block_count(MifareClassicSectorNumber sector);
-// MifareClassicBlockNumber  mifare_classic_sector_last_block(MifareClassicSectorNumber sector);
-// 
-// #define C_000 0
-// #define C_001 1
-// #define C_010 2
-// #define C_011 3
-// #define C_100 4
-// #define C_101 5
-// #define C_110 6
-// #define C_111 7
-// #define C_DEFAULT 255
-// 
-// /* MIFARE Classic Access Bits */
-// #define MCAB_R 0x8
-// #define MCAB_W 0x4
-// #define MCAB_D 0x2
-// #define MCAB_I 0x1
-// 
-// #define MCAB_READ_KEYA         0x400
-// #define MCAB_WRITE_KEYA        0x100
-// #define MCAB_READ_ACCESS_BITS  0x040
-// #define MCAB_WRITE_ACCESS_BITS 0x010
-// #define MCAB_READ_KEYB         0x004
-// #define MCAB_WRITE_KEYB        0x001
+typedef unsigned char MifareClassicBlock[16];
+
+typedef uint8_t MifareClassicSectorNumber;
+typedef unsigned char MifareClassicBlockNumber;
+
+typedef enum { MFC_KEY_A, MFC_KEY_B } MifareClassicKeyType;
+typedef unsigned char MifareClassicKey[6];
+
+/* NFC Forum public key */
+extern const MifareClassicKey mifare_classic_nfcforum_public_key_a;
+
+int		 mifare_classic_connect(FreefareTag tag);
+int		 mifare_classic_disconnect(FreefareTag tag);
+
+int		 mifare_classic_authenticate(FreefareTag tag, const MifareClassicBlockNumber block, const MifareClassicKey key, const MifareClassicKeyType key_type);
+int		 mifare_classic_read(FreefareTag tag, const MifareClassicBlockNumber block, MifareClassicBlock *data);
+int		 mifare_classic_init_value(FreefareTag tag, const MifareClassicBlockNumber block, const int32_t value, const MifareClassicBlockNumber adr);
+int		 mifare_classic_read_value(FreefareTag tag, const MifareClassicBlockNumber block, int32_t *value, MifareClassicBlockNumber *adr);
+int		 mifare_classic_write(FreefareTag tag, const MifareClassicBlockNumber block, const MifareClassicBlock data);
+
+int		 mifare_classic_increment(FreefareTag tag, const MifareClassicBlockNumber block, const uint32_t amount);
+int		 mifare_classic_decrement(FreefareTag tag, const MifareClassicBlockNumber block, const uint32_t amount);
+int		 mifare_classic_restore(FreefareTag tag, const MifareClassicBlockNumber block);
+int		 mifare_classic_transfer(FreefareTag tag, const MifareClassicBlockNumber block);
+
+int		 mifare_classic_get_trailer_block_permission(FreefareTag tag, const MifareClassicBlockNumber block, const uint16_t permission, const MifareClassicKeyType key_type);
+int		 mifare_classic_get_data_block_permission(FreefareTag tag, const MifareClassicBlockNumber block, const unsigned char permission, const MifareClassicKeyType key_type);
+
+int		 mifare_classic_format_sector(FreefareTag tag, const MifareClassicSectorNumber sector);
+
+void		 mifare_classic_trailer_block(MifareClassicBlock *block, const MifareClassicKey key_a, uint8_t ab_0, uint8_t ab_1, uint8_t ab_2, uint8_t ab_tb, const uint8_t gpb, const MifareClassicKey key_b);
+
+MifareClassicSectorNumber mifare_classic_block_sector(MifareClassicBlockNumber block);
+MifareClassicBlockNumber  mifare_classic_sector_first_block(MifareClassicSectorNumber sector);
+size_t		 mifare_classic_sector_block_count(MifareClassicSectorNumber sector);
+MifareClassicBlockNumber  mifare_classic_sector_last_block(MifareClassicSectorNumber sector);
+
+#define C_000 0
+#define C_001 1
+#define C_010 2
+#define C_011 3
+#define C_100 4
+#define C_101 5
+#define C_110 6
+#define C_111 7
+#define C_DEFAULT 255
+
+/* MIFARE Classic Access Bits */
+#define MCAB_R 0x8
+#define MCAB_W 0x4
+#define MCAB_D 0x2
+#define MCAB_I 0x1
+
+#define MCAB_READ_KEYA         0x400
+#define MCAB_WRITE_KEYA        0x100
+#define MCAB_READ_ACCESS_BITS  0x040
+#define MCAB_WRITE_ACCESS_BITS 0x010
+#define MCAB_READ_KEYB         0x004
+#define MCAB_WRITE_KEYB        0x001
 // 
 // struct mad_aid {
 //     uint8_t application_code;

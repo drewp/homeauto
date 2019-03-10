@@ -1,0 +1,18 @@
+FROM bang6:5000/base_pi
+
+
+
+
+WORKDIR /opt
+RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev 
+RUN apt-get install -y python3-nose2
+COPY pyfreefare-build-pi ./pyfreefare-build
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY *.py *.html  ./
+
+ENV PYTHONPATH=/opt/pyfreefare-build
+EXPOSE 10012
+
