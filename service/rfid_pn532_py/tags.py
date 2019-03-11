@@ -1,5 +1,5 @@
 import time
-from ctypes import pointer, byref
+from ctypes import pointer, byref, c_ubyte, cast, c_char_p
 import nfc, freefare
 import logging
 log = logging.getLogger('tags')
@@ -15,13 +15,13 @@ class NfcDevice(object):
         t0, _, t2 = nfc.nfc_list_devices.argtypes
         nfc.nfc_list_devices.argtypes = [t0, type(conn_strings), t2]
         devices_found = nfc.nfc_list_devices(self.context, conn_strings, 10)
-        print(f'{devices_found} connection strings')
+        log.info(f'{devices_found} connection strings')
         for i in range(devices_found):
-            print(f'  dev {i}: {conn_strings[i]}')
+            log.info(f'  dev {i}: {conn_strings[i]}')
         if devices_found < 1:
             raise IOError("no devices")
             
-        print("open dev")
+        log.info("open dev")
         self.dev = nfc.nfc_open(self.context, conn_strings[0])
         if nfc.nfc_device_get_last_error(self.dev):
             raise IOError(f'nfc.open failed on {conn_strings[0]}')
@@ -44,48 +44,51 @@ class NfcDevice(object):
         finally:
             freefare.freefare_free_tags(ret)
 
-pubkey = ['\xff', '\xff', '\xff', '\xff', '\xff', '\xff']
-
-def check(ret, msg):
-    if ret != 0:
-        raise IOError(msg)
+pubkey = b'\xff\xff\xff\xff\xff\xff'
 
 class NfcTag(object):
     def __init__(self, tag): #FreefareTag
         self.tag = tag
 
-    def tagType(self) -> freefare.freefare_tag_type:
-        return freefare.freefare_get_tag_type(self.tag)
+    def _check(self, ret: int):
+        if ret == 0:
+            return
 
-    def uid(self):
-        return freefare.freefare_get_tag_uid(self.tag)
+        raise IOError(cast(freefare.freefare_strerror(self.tag), c_char_p).value)
+        
+    def tagType(self) -> str:
+        typeNum = freefare.freefare_get_tag_type(self.tag)
+        log.info('typeNum %r', typeNum)
+        return freefare.freefare_tag_type__enumvalues[typeNum]
+
+    def uid(self) -> str:
+        return cast(freefare.freefare_get_tag_uid(self.tag),
+                    c_char_p).value.decode('ascii')
 
     def connect(self):
-        check(freefare.mifare_classic_connect(self.tag), "connect")
+        self._check(freefare.mifare_classic_connect(self.tag))
 
     def disconnect(self):
-        check(freefare.mifare_classic_disconnect(self.tag), "disconnect")
+        self._check(freefare.mifare_classic_disconnect(self.tag))
 
-    def readBlock(self, blockNumber: int) -> str:
+    def readBlock(self, blockNumber: int) -> bytes:
       blockNum = freefare.MifareClassicBlockNumber(blockNumber)
-      check(freefare.mifare_classic_authenticate(
-        self.tag, blockNum, pubkey, freefare.MFC_KEY_A),
-            "mifare_classic_authenticate() failed")
+      self._check(freefare.mifare_classic_authenticate(
+          self.tag, blockNum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
 
       data = freefare.MifareClassicBlock()
+      self._check(freefare.mifare_classic_read(self.tag, blockNum, pointer(data)))
+      return ''.join(map(chr, data)) # with trailing nulls
 
-      check(freefare.mifare_classic_read(self.tag, blockNum, pointer(data)),
-            "classic_read() failed")
-      return data
-
-    def writeBlock(self,
-                    blockNumber: int,
-                    data: freefare.MifareClassicBlock):
+    def writeBlock(self, blockNumber: int, data: str):
       blocknum = freefare.MifareClassicBlockNumber(blockNumber)
-      check(freefare.mifare_classic_authenticate(
-        self.tag, blocknum, pubkey, freefare.MFC_KEY_A),
-            "mifare_classic_authenticate() failed")
+      self._check(freefare.mifare_classic_authenticate(
+        self.tag, blocknum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
 
-      check(freefare.mifare_classic_write(self.tag, blocknum, data),
-            "classic_write() failed")
-      log.info("  wrote block {blocknum}: {data}")
+      dataBytes = data.encode('utf8')
+      if len(dataBytes) > 16:
+          raise ValueError('too long')
+      dataBlock = (c_ubyte*16)(*dataBytes)
+      
+      self._check(freefare.mifare_classic_write(self.tag, blocknum, dataBlock))
+      log.info("  wrote block {blocknum}: {dataBlock}")
