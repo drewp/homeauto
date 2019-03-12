@@ -72,23 +72,23 @@ class NfcTag(object):
         self._check(freefare.mifare_classic_disconnect(self.tag))
 
     def readBlock(self, blockNumber: int) -> bytes:
-      blockNum = freefare.MifareClassicBlockNumber(blockNumber)
-      self._check(freefare.mifare_classic_authenticate(
-          self.tag, blockNum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
-
-      data = freefare.MifareClassicBlock()
-      self._check(freefare.mifare_classic_read(self.tag, blockNum, pointer(data)))
-      return ''.join(map(chr, data)) # with trailing nulls
+        blockNum = freefare.MifareClassicBlockNumber(blockNumber)
+        self._check(freefare.mifare_classic_authenticate(
+            self.tag, blockNum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
+  
+        data = freefare.MifareClassicBlock()
+        self._check(freefare.mifare_classic_read(self.tag, blockNum, pointer(data)))
+        return ''.join(map(chr, data)) # with trailing nulls
 
     def writeBlock(self, blockNumber: int, data: str):
-      blocknum = freefare.MifareClassicBlockNumber(blockNumber)
-      self._check(freefare.mifare_classic_authenticate(
-        self.tag, blocknum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
-
-      dataBytes = data.encode('utf8')
-      if len(dataBytes) > 16:
-          raise ValueError('too long')
-      dataBlock = (c_ubyte*16)(*dataBytes)
-      
-      self._check(freefare.mifare_classic_write(self.tag, blocknum, dataBlock))
-      log.info("  wrote block {blocknum}: {dataBlock}")
+        blocknum = freefare.MifareClassicBlockNumber(blockNumber)
+        self._check(freefare.mifare_classic_authenticate(
+          self.tag, blocknum, (c_ubyte*6)(*pubkey), freefare.MFC_KEY_A))
+  
+        dataBytes = data.encode('utf8')
+        if len(dataBytes) > 16:
+            raise ValueError('too long')
+        dataBlock = (c_ubyte*16)(*dataBytes)
+        
+        self._check(freefare.mifare_classic_write(self.tag, blocknum, dataBlock))
+        log.info("  wrote block {blocknum}: {dataBlock}")
