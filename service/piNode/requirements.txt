@@ -16,5 +16,4 @@ numpy
 pillow
 imageio==2.2.0
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
-etcd3
-
+etcd3==0.8.1
