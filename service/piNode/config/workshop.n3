@@ -1,0 +1,95 @@
+@prefix rdfs:     <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix :         <http://projects.bigasterisk.com/room/> .
+@prefix order:    <http://projects.bigasterisk.com/room/ledColorOrder/> .
+@prefix ha:       <http://bigasterisk.com/homeauto/> .
+@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
+@prefix houseLoc: <http://bigasterisk.com/homeauto/houseLoc/> .
+
+@prefix pin: <http://bigasterisk.com/homeauto/piWorkshop/pin/> .
+@prefix ow: <http://bigasterisk.com/homeauto/piWorkshop/oneWire/> .
+@prefix shopPwm: <http://bigasterisk.com/homeauto/boardShop/pwm/> .
+
+ha:piWorkshop a :PiBoard;
+  :hostname "workshop";
+  :onboardDevice ha:workshopPiTemp;
+  :hasPin
+    pin:GPIO4,
+    pin:GPIO16,
+    pin:GPIO17,
+    pin:GPIO18,
+    pin:GPIO26;
+  :hasI2cBus pin:I2cBus1
+    .
+
+ha:workshopPiTemp a :OnboardTemperature;
+  :influxMeasurement "temperatureF";
+  :influxTag [:key "location"; :value "workshopPi"] .
+
+# pin number ignored; see /boot/config.txt
+pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
+ow: a :OneWire .
+
+ow: :connectedTo ow:dev-000003a5c6b9 .
+ow:dev-000003a5c6b9 a :TemperatureSensor;
+  :position houseLoc:printerHigh;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "workshop"], [:key "location"; :value "printer-high"]] .
+
+ow: :connectedTo ow:dev-000003a5b709 .
+ow:dev-000003a5b709 a :TemperatureSensor;
+  :position houseLoc:printerMid;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "workshop"], [:key "location"; :value "printer-mid"]] .
+    
+ow: :connectedTo ow:dev-000003a5a326 .
+ow:dev-000003a5a326 a :TemperatureSensor;
+  :position houseLoc:printerLow;
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "workshop"], [:key "location"; :value "printer-low"]] .
+
+pin:I2cBus1 :connectedTo :workshopRoomLights .
+:workshopRoomLights a :PwmBoard;
+  :output
+    [:area :shopSewingLight; :channel 0; :wattage 7],
+    [:area :shopLight0;      :channel 1; :wattage 10],
+    [:area :shopLight1;      :channel 2; :wattage 10],
+    [:area :shopAriLight;    :channel 3; :wattage 10],
+    [:area :shopLight2;      :channel 4; :wattage 10],
+    [:area :shopLight3;      :channel 6; :wattage 8] .
+    
+pin:GPIO16 :gpioNumber 16; :connectedTo :workshopTempHumid .
+:workshopTempHumid a :TempHumidSensor ;
+ :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :pointsAtLeastEvery 10;
+    :tag [:key "host"; :value "workshop"], [:key "location"; :value "workshop"]], [
+    :measurement "humidity";
+    :predicate :humidity;
+    :tag [:key "host"; :value "workshop"], [:key "location"; :value "workshop"]].
+
+
+pin:GPIO4 :gpioNumber 4; :connectedTo :workshopOpenSwitch .
+:workshopOpenSwitch a :Pushbutton .
+
+pin:GPIO18 :gpioNumber 18; :connectedTo :workshopRgb .
+:workshopRgb a :RgbPixels;
+  :colorOrder order:GRB;
+  :pixelGroup :workshopStrip .
+
+:workshopStrip
+  :startIndex 0;
+  :endIndex 3;
+  :src "rainbow.png";
+  :x 0;
+  :y 0;
+  :height 4;
+  :interpolate :slide;
+  :rate 30 . # px/sec
+
