@@ -1,5 +1,8 @@
 FROM bang6:5000/base_pi
 
+# super slow build
+RUN pip install grpcio==1.18.0
+
 COPY requirements.txt ./
 
 RUN pip install -r requirements.txt
