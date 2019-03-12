@@ -36,7 +36,6 @@ HOST = Namespace('http://bigasterisk.com/ruler/host/')
 
 hostname = socket.gethostname()
 CTX = ROOM['pi/%s' % hostname]
-etcd = etcd3.client(host='bang6', port=9022)
 
 def patchRandid():
     """
@@ -53,8 +52,11 @@ def patchRandid():
 patchRandid()
 
 class Config(object):
-    def __init__(self, masterGraph):
+    def __init__(self, masterGraph, hubHost):
+        self.etcd = etcd3.client(host=hubHost, port=9022)
+
         self.masterGraph = masterGraph
+        self.hubHost = hubHost
         self.configGraph = ConjunctiveGraph()
         self.boards = []
         self.etcPrefix = 'pi/'
@@ -64,7 +66,7 @@ class Config(object):
         deferToThread(self.watchEtcd)
 
     def watchEtcd(self):
-        events, cancel = etcd.watch_prefix(self.etcPrefix)
+        events, cancel = self.etcd.watch_prefix(self.etcPrefix)
         reactor.addSystemEventTrigger('before', 'shutdown', cancel)
         for ev in events:
             log.info('%s changed', ev.key)
@@ -83,7 +85,7 @@ class Config(object):
         self.rereadLater = None
         log.info('read config')
         self.configGraph = ConjunctiveGraph()
-        for v, md in etcd.get_prefix(self.etcPrefix):
+        for v, md in self.etcd.get_prefix(self.etcPrefix):
             log.info('  read file %r', md.key)
             self.configGraph.parse(StringInputSource(v), format='n3')
         self.configGraph.bind('', ROOM)
@@ -106,14 +108,15 @@ class Config(object):
             return
 
         log.info("found config for board %r" % thisBoard)
-        self.boards = [Board(self.configGraph, self.masterGraph, thisBoard)]
+        self.boards = [Board(self.configGraph, self.masterGraph, thisBoard, self.hubHost)]
         self.boards[0].startPolling()
 
 
 class Board(object):
     """similar to arduinoNode.Board but without the communications stuff"""
-    def __init__(self, graph, masterGraph, uri):
+    def __init__(self, graph, masterGraph, uri, hubHost):
         self.graph, self.uri = graph, uri
+        self.hubHost = hubHost
         self.masterGraph = masterGraph
         self.masterGraph.setToGraph(self.staticStmts())
         self.pi = pigpio.pi()
@@ -181,7 +184,7 @@ class Board(object):
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
-        url = 'http://bang6:9071/oneShot'
+        url = 'http://%s:9071/oneShot' % self.hubHost
         d = fetch(method='POST',
                   url=url,
                   headers={'Content-Type': ['text/n3']},
@@ -279,7 +282,9 @@ def main():
     arg = docopt("""
     Usage: piNode.py [options]
 
-    -v   Verbose
+    -v           Verbose
+    --ow         Just report onewire device URIs and readings, then exit.
+    --hub=HOST   Hostname for etc3 and oneshot posts. [default: bang.vpn-home.bigasterisk.com]
     """)
     log.setLevel(logging.WARN)
     if arg['-v']:
@@ -288,8 +293,14 @@ def main():
 
         log.setLevel(logging.DEBUG)
 
+    if arg['--ow']:
+        log.setLevel(logging.INFO)
+        for stmt in devices.OneWire().poll():
+            print stmt
+        return
+        
     masterGraph = PatchableGraph()
-    config = Config(masterGraph)
+    config = Config(masterGraph, arg['--hub'])
     
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
