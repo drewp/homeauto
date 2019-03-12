@@ -129,6 +129,8 @@ def register(deviceType):
 @register
 class MotionSensorInput(DeviceType):
     """
+    Triggering all the time? Try 5V VCC, per https://electronics.stackexchange.com/a/416295
+    
                     0          30s          60s         90s                    10min
                     |           |           |           |          ...          |          
     Sensor input    ******** ** ******* ****
@@ -258,6 +260,9 @@ class RgbStrip(DeviceType):
 
 @register
 class TempHumidSensor(DeviceType):
+    """
+    AM2302/DHT22 pinout is vcc-data-nc-gnd. VCC to 3.3V. Add 10k pullup on data.
+    """
     deviceType = ROOM['TempHumidSensor']
     pollPeriod = 5
 
@@ -361,6 +366,7 @@ class OneWire(DeviceType):
         import w1thermsensor
         log.info("scan for w1 devices")
         self.SensorNotReadyError = w1thermsensor.core.SensorNotReadyError
+        self.ResetValueError = w1thermsensor.core.ResetValueError
         self._sensors = w1thermsensor.W1ThermSensor.get_available_sensors()
         for s in self._sensors:
             # Something looks different about these ids
@@ -380,7 +386,7 @@ class OneWire(DeviceType):
                     stmts.append((sensor.uri, ROOM['temperatureF'],
                                   # see round() note in arduinoNode/devices.py
                                   Literal(round(tempF, 2))))
-                except self.SensorNotReadyError as e:
+                except (self.SensorNotReadyError, self.ResetValueError) as e:
                     log.warning(e)
 
             return stmts
@@ -612,6 +618,66 @@ class Lcd8544(DeviceType):
             'pred': ROOM['color'],
         }]
 
+@register
+class PwmBoard(DeviceType):
+    """
+    need this in /boot/config.txt
+      dtparam=i2c_arm=on
+    check for devices with
+      apt-get install -y i2c-tools
+      sudo i2cdetect -y 1
+
+    gpio8 = bcm2 = sda1
+    gpio9 = bcm3 = scl1
+    They're next to the 3v3 pin.
+    """
+    deviceType = ROOM['PwmBoard']
+    @classmethod
+    def findInstances(cls, graph, board, pi):
+        for row in graph.query("""SELECT DISTINCT ?dev WHERE {
+          ?board :hasI2cBus ?bus .
+          ?bus :connectedTo ?dev .
+          ?dev a :PwmBoard .
+        }""", initBindings=dict(board=board), initNs={'': ROOM}):
+            outs = {}
+            for out in graph.query("""SELECT DISTINCT ?area ?chan WHERE {
+               ?dev :output [:area ?area; :channel ?chan] .
+            }""", initBindings=dict(dev=row.dev), initNs={'': ROOM}):
+                outs[out.area] = out.chan.toPython()
+            yield cls(graph, row.dev, pi, outs)
+        
+    def __init__(self, graph, dev, pi, outs):
+        super(PwmBoard, self).__init__(graph, dev, pi, pinNumber=None)
+        import PCA9685
+        self.pwm = PCA9685.PWM(pi, bus=1, address=0x40)
+        self.pwm.set_frequency(1200)
+        self.outs = outs
+        self.values = {uri: 0 for uri in self.outs.keys()} # uri: brightness
+
+    def hostStatements(self):
+        return [(uri, ROOM['brightness'], Literal(b))
+                for uri, b in self.values.items()]
+
+    def outputPatterns(self):
+        return [(area, ROOM['brightness'], None) for area in self.outs]
+
+    def sendOutput(self, statements):
+        assert len(statements) == 1
+        assert statements[0][1] == ROOM['brightness'];
+        chan = self.outs[statements[0][0]]
+        value = float(statements[0][2])
+        self.values[statements[0][0]] = value
+        self.pwm.set_duty_cycle(chan, value * 100)
+            
+    def outputWidgets(self):
+        return [{
+            'element': 'output-slider',
+            'min': 0,
+            'max': 1,
+            'step': 1 / 255,
+            'subj': area,
+            'pred': ROOM['brightness'],
+        } for area in self.outs]
 
         
 def makeDevices(graph, board, pi):
