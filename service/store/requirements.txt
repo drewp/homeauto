@@ -1,0 +1,4 @@
+rdflib==4.2.2
+cyclone
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.6.0.tar.gz
+rdflib-jsonld==0.3
