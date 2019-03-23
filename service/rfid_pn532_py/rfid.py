@@ -109,7 +109,7 @@ class ReadLoop(object):
 
         for tag in self.reader.getTags(): # blocks for a bit
             uid = tag.uid()
-            log.info('detected tag uid=%r', uid)
+            log.debug('detected tag uid=%r', uid)
             cardIdUri = uidUri(uid)
 
             is_new = cardIdUri not in self.log
@@ -142,7 +142,7 @@ class ReadLoop(object):
                             (cardUri, ROOM['cardText'], text)])
 
     def endCardRead(self, cardUri):
-        log.info(f'{cardUri} has been gone for {self.expireSecs} sec')
+        log.debug(f'{cardUri} has been gone for {self.expireSecs} sec')
         delQuads = []
         for spo in self.masterGraph._graph.triples(
                 (sensor, ROOM['reading'], cardUri)):

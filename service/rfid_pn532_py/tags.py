@@ -25,7 +25,7 @@ class NfcDevice(object):
         if devices_found < 1:
             raise IOError("no devices")
             
-        log.info("open dev")
+        log.debug("open dev")
         self.dev = nfc.nfc_open(self.context, conn_strings[0])
         if not self.dev or nfc.nfc_device_get_last_error(self.dev):
             raise IOError(f'nfc.open failed on {cast(conn_strings[0], c_char_p).value}')
@@ -36,13 +36,13 @@ class NfcDevice(object):
         nfc.nfc_exit(self.context)
 
     def getTags(self):
-        log.info("getting tags")
+        log.debug("getting tags")
         t0 = time.time()
         ret = freefare.freefare_get_tags(self.dev)
         if not ret:
             raise IOError("freefare_get_tags returned null")
         try:
-            log.info(f"found tags in {time.time() - t0}")
+            log.debug(f"found tags in {time.time() - t0}")
             for t in ret:
                 if not t:
                     break
@@ -64,7 +64,6 @@ class NfcTag(object):
         
     def tagType(self) -> str:
         typeNum = freefare.freefare_get_tag_type(self.tag)
-        log.info('typeNum %r', typeNum)
         return freefare.freefare_tag_type__enumvalues[typeNum]
 
     def uid(self) -> str:
