@@ -7,7 +7,7 @@ COPY pyfreefare-build-pi ./pyfreefare-build
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-RUN pip3 install -v -U 'https://github.com/drewp/cyclone/archive/patch-1.zip'
+RUN pip3 install -v -U 'https://github.com/drewp/cyclone/archive/python3.zip'
 
 COPY *.py *.html  ./
 
