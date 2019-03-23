@@ -4,6 +4,10 @@ import nfc, freefare
 import logging
 log = logging.getLogger('tags')
 
+class FakeNfc(object):
+    def getTags(self):
+        return []
+
     
 class NfcDevice(object):
     def __init__(self):
@@ -17,14 +21,14 @@ class NfcDevice(object):
         devices_found = nfc.nfc_list_devices(self.context, conn_strings, 10)
         log.info(f'{devices_found} connection strings')
         for i in range(devices_found):
-            log.info(f'  dev {i}: {conn_strings[i]}')
+            log.info(f'  dev {i}: {cast(conn_strings[i], c_char_p).value}')
         if devices_found < 1:
             raise IOError("no devices")
             
         log.info("open dev")
         self.dev = nfc.nfc_open(self.context, conn_strings[0])
-        if nfc.nfc_device_get_last_error(self.dev):
-            raise IOError(f'nfc.open failed on {conn_strings[0]}')
+        if not self.dev or nfc.nfc_device_get_last_error(self.dev):
+            raise IOError(f'nfc.open failed on {cast(conn_strings[0], c_char_p).value}')
 
     def __del__(self):
         if self.dev:
@@ -40,6 +44,8 @@ class NfcDevice(object):
         try:
             log.info(f"found tags in {time.time() - t0}")
             for t in ret:
+                if not t:
+                    break
                 yield NfcTag(t)
         finally:
             freefare.freefare_free_tags(ret)
@@ -91,4 +97,4 @@ class NfcTag(object):
         dataBlock = (c_ubyte*16)(*dataBytes)
         
         self._check(freefare.mifare_classic_write(self.tag, blocknum, dataBlock))
-        log.info("  wrote block {blocknum}: {dataBlock}")
+        log.info(f"  wrote block {blocknum}: {dataBlock}")
