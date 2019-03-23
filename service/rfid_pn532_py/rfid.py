@@ -190,7 +190,7 @@ if __name__ == '__main__':
 
     port = 10012
     reactor.listenTCP(port, cyclone.web.Application([
-        (r"/()", cyclone.web.StaticFileHandler,
+        (r"/(|.+\.html)", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler,
