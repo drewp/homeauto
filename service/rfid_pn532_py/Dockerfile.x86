@@ -1,17 +1,17 @@
-FROM bang6:5000/base_pi
+FROM bang6:5000/base_x86
 
 WORKDIR /opt
 RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev 
 RUN apt-get install -y python3-nose2
-COPY pyfreefare-build-pi ./pyfreefare-build
+COPY pyfreefare-build-x86 ./pyfreefare-build
 
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
-RUN pip3 install -v -U 'https://github.com/drewp/cyclone/archive/patch-1.zip'
+RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/patch-1.zip'
 
 COPY *.py *.html  ./
 
 ENV PYTHONPATH=/opt/pyfreefare-build
 EXPOSE 10012
 
-CMD ["/usr/bin/python3", "rfid.py"]
+CMD ["/usr/bin/python3", "rfid.py", "-v"]
