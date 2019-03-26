@@ -1,5 +1,5 @@
 #!bin/python
-import json, logging, time
+import json, logging, time, os
 import sys
 sys.path.append("/my/proj/homeauto/lib")
 from logsetup import log
@@ -34,25 +34,30 @@ class Poller(object):
                             <LocalCommand>
                               <Name>get_price_blocks</Name>
                               <MacId>0x{macId}</MacId>
-                            </LocalCommand>'''.format(macId=macId))
+                            </LocalCommand>'''.format(macId=macId),
+                timeout=10)
             ret = json.loads(resp.body)
             if ret['demand_units'] != 'kW':
                 raise ValueError
             if ret['summation_units'] != 'kWh':
                 raise ValueError
-            influx.write_points([
+            pts = [
                 dict(measurement='housePowerW',
                      fields=dict(value=float(ret['demand']) * 1000),
                      tags=dict(house='berkeley'),
-                     time=int(startTime)),
-                dict(measurement='housePowerSumDeliveredKwh',
-                     fields=dict(value=float(ret['summation_delivered'])),
+                     time=int(startTime))]
+            sd = float(ret['summation_delivered'])
+            if sd > 0: # Sometimes nan
+                pts.append(dict(measurement='housePowerSumDeliveredKwh',
+                     fields=dict(value=float()),
                      tags=dict(house='berkeley'),
-                     time=int(startTime)),
-                ], time_precision='s')
+                     time=int(startTime)))
+                   
+            influx.write_points(pts, time_precision='s')
         except Exception as e:
             log.error("failed: %r", e)
             log.error(repr(ret))
+            os.abort()
 
         now = time.time()
         goal = startTime + periodSec - .2
