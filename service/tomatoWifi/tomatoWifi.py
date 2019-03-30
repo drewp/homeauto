@@ -243,6 +243,8 @@ class Poller(object):
                 'wireless': URIRef("http://bigasterisk.com/wifiAccessPoints"),
                 '2.4G': URIRef("http://bigasterisk.com/wifiAccessPoints"),
                 '5G':  URIRef("http://bigasterisk.com/wifiAccessPoints"),
+                '-': URIRef("http://bigasterisk.com/wifiUnknownConnectionType"),
+                'Unknown': URIRef("http://bigasterisk.com/wifiUnknownConnectionType"),
                 'wired': URIRef("http://bigasterisk.com/houseOpenNet")}[dev['contype']], ctx))
             if 'clientHostname' in dev and dev['clientHostname']:
                 g.add((uri, ROOM['wifiNetworkName'], Literal(dev['clientHostname']), ctx))
