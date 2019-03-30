@@ -114,7 +114,7 @@ class Wifi(object):
 
 @inlineCallbacks
 def loadUvaData():
-    config = json.load(open("/my/proj/homeauto/service/tomatoWifi/priv-uva.json"))
+    config = json.load(open("priv-uva.json"))
     headers = {'Authorization': ['Basic %s' % config['userPass'].encode('base64').strip()]}
     resp = yield fetch('http://10.2.0.2/wlstationlist.cmd', headers=headers)
     root = lxml.html.soupparser.fromstring(resp.body)
@@ -138,7 +138,7 @@ def loadUvaData():
 
 @inlineCallbacks
 def loadCiscoData():
-    config = json.load(open("/my/proj/homeauto/service/tomatoWifi/priv-uva.json"))
+    config = json.load(open("priv-uva.json"))
     headers = {'Authorization': ['Basic %s' % config['userPass'].encode('base64').strip()]}
     print headers
     resp = yield fetch('http://10.2.0.2/', headers=headers)
@@ -147,7 +147,7 @@ def loadCiscoData():
 
 @inlineCallbacks
 def loadOrbiData():
-    config = json.load(open("/my/proj/homeauto/service/tomatoWifi/priv-uva.json"))
+    config = json.load(open("priv-uva.json"))
     headers = {'Authorization': ['Basic %s' % config['userPass'].encode('base64').strip()]}
     resp = yield fetch('http://orbi.bigasterisk.com/DEV_device_info.htm', headers=headers)
 
