@@ -21,7 +21,7 @@ from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import docopt
 from influxdb import InfluxDBClient
-from pymongo import Connection, DESCENDING
+from pymongo import MongoClient as Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef, ConjunctiveGraph
 
 from stategraph import StateGraph
