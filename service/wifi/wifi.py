@@ -1,4 +1,3 @@
-#!/usr/bin/python
 """
 scrape the tomato router status pages to see who's connected to the
 wifi access points. Includes leases that aren't currently connected.
@@ -11,25 +10,25 @@ Returns:
 Todo: this should be the one polling and writing to mongo, not entrancemusic
 
 """
-from __future__ import division
-import sys, cyclone.web, json, traceback, time, pystache, datetime, logging
-from cyclone.httpclient import fetch
+import sys, json, traceback, time, datetime, logging
+from typing import List
 
+from cyclone.httpclient import fetch
 from dateutil import tz
-from twisted.internet import reactor, task
-from twisted.internet.defer import inlineCallbacks
-import docopt
 from influxdb import InfluxDBClient
 from pymongo import MongoClient as Connection, DESCENDING
-from rdflib import Namespace, Literal, URIRef, ConjunctiveGraph
-
-from scrape import Wifi, macUri
-
-from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
+from rdflib import Namespace, Literal, ConjunctiveGraph
+from twisted.internet import reactor, task
+from twisted.internet.defer import inlineCallbacks
+import ago
+import cyclone.web
+import docopt
+import pystache
 
 from cycloneerr import PrettyErrorHandler
 from logsetup import log
-
+from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
+from scrape import Wifi, SeenNode
 
 AST = Namespace("http://bigasterisk.com/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
@@ -38,7 +37,6 @@ reasoning = "http://bang:9071/"
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
-
         age = time.time() - self.settings.poller.lastPollTime
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
@@ -61,8 +59,7 @@ def whenConnected(mongo, macThatIsNowConnected):
     return lastArrive['created']
 
 def connectedAgoString(conn):
-    return web.utils.datestr(
-        conn.astimezone(tz.tzutc()).replace(tzinfo=None))
+    return ago.human(conn.astimezone(tz.tzutc()).replace(tzinfo=None))
     
 class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -88,7 +85,6 @@ class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
                 rows=sorted(map(rowDict, self.settings.poller.lastAddrs),
                             key=lambda a: (not a.get('connected'),
                                            a.get('name'))))))
-       
 
 class Json(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -97,13 +93,13 @@ class Json(PrettyErrorHandler, cyclone.web.RequestHandler):
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
         self.write(json.dumps({"wifi" : self.settings.poller.lastAddrs,
-                                     "dataAge" : age}))
+                               "dataAge" : age}))
 
 class Poller(object):
     def __init__(self, wifi, mongo):
         self.wifi = wifi
         self.mongo = mongo
-        self.lastAddrs = []
+        self.lastAddrs = [] # List[SeenNode]
         self.lastWithSignal = []
         self.lastPollTime = 0
 
@@ -113,50 +109,42 @@ class Poller(object):
 
     @inlineCallbacks
     def poll(self):     
-        now = int(time.time())
-        
-        # UVA mode:
-        addDhcpData = lambda *args: None
-        
         try:
             newAddrs = yield self.wifi.getPresentMacAddrs()
-            addDhcpData(newAddrs)
-            
-            newWithSignal = [a for a in newAddrs if a.get('connected')]
-
-            actions = self.computeActions(newWithSignal)
-            points = []
-            for action in actions:
-                log.info("action: %s", action)
-                action['created'] = datetime.datetime.now(tz.gettz('UTC'))
-                mongo.save(action)
-                points.append(
-                    self.influxPoint(now, action['address'].lower(),
-                                     1 if action['action'] == 'arrive' else 0))
-                try:
-                    self.doEntranceMusic(action)
-                except Exception as e:
-                    log.error("entrancemusic error: %r", e)
-
-            if now // 3600 > self.lastPollTime // 3600:
-                log.info('hourly writes')
-                for addr in newWithSignal:
-                    points.append(self.influxPoint(now, addr['mac'].lower(), 1))
-                    
-            influx.write_points(points, time_precision='s')
-            self.lastWithSignal = newWithSignal
-            if actions: # this doesn't currently include signal strength changes
-                fetch(reasoning + "immediateUpdate",
-                      method='PUT',
-                      timeout=2,
-                      headers={'user-agent': ['tomatoWifi']}).addErrback(log.warn)
-            self.lastAddrs = newAddrs
-            self.lastPollTime = now
-
-            self.updateGraph(masterGraph)
+            self.onNodes(newAddrs)
         except Exception as e:
             log.error("poll error: %r\n%s", e, traceback.format_exc())
 
+    def onNodes(self, newAddrs: List[SeenNode]):
+        now = int(time.time())
+        newWithSignal = [a for a in newAddrs if a.connected]
+
+        actions = self.computeActions(newWithSignal)
+        points = []
+        for action in actions:
+            log.info("action: %s", action)
+            action['created'] = datetime.datetime.now(tz.gettz('UTC'))
+            mongo.save(action)
+            points.append(
+                self.influxPoint(now, action['address'].lower(),
+                                 1 if action['action'] == 'arrive' else 0))
+        if now // 3600 > self.lastPollTime // 3600:
+            log.info('hourly writes')
+            for addr in newWithSignal:
+                points.append(self.influxPoint(now, addr.mac.lower(), 1))
+
+        influx.write_points(points, time_precision='s')
+        self.lastWithSignal = newWithSignal
+        if actions: # this doesn't currently include signal strength changes
+            fetch(reasoning + "immediateUpdate",
+                  method='PUT',
+                  timeout=2,
+                  headers={'user-agent': ['wifi']}).addErrback(log.warn)
+        self.lastAddrs = newAddrs
+        self.lastPollTime = now
+
+        self.updateGraph(masterGraph)
+            
     def influxPoint(self, now, address, value):
         return {
             'measurement': 'presence',
@@ -168,45 +156,26 @@ class Poller(object):
     def computeActions(self, newWithSignal):
         actions = []
 
-        def makeAction(addr, act):
+        def makeAction(addr: SeenNode, act: str):
             d = dict(sensor="wifi",
-                     address=addr.get('mac').upper(), # mongo data is legacy uppercase
-                     name=addr.get('name'),
-                     networkName=addr.get('clientHostname'),
+                     address=addr.mac.upper(), # mongo data is legacy uppercase
                      action=act)
-            if act == 'arrive' and 'ip' in addr:
+            if act == 'arrive':
                 # this won't cover the possible case that you get on
                 # wifi but don't have an ip yet. We'll record an
                 # action with no ip and then never record your ip.
-                d['ip'] = addr['ip']
+                d['ip'] = addr.ip
             return d                             
 
         for addr in newWithSignal:
-            if addr['mac'] not in [r['mac'] for r in self.lastWithSignal]:
+            if addr.mac not in [r.mac for r in self.lastWithSignal]:
                 actions.append(makeAction(addr, 'arrive'))
 
         for addr in self.lastWithSignal:
-            if addr['mac'] not in [r['mac'] for r in newWithSignal]:
+            if addr.mac not in [r.mac for r in newWithSignal]:
                 actions.append(makeAction(addr, 'leave'))
 
         return actions
-
-
-    # these need to move out to their own service
-    def doEntranceMusic(self, action):
-        import restkit, json
-        dt = self.deltaSinceLastArrive(action['name'])
-        log.debug("dt=%s", dt)
-        if dt > datetime.timedelta(hours=1):
-            hub = restkit.Resource(
-                # PSHB not working yet; "http://bang:9030/"
-                "http://slash:9049/"
-                )
-            action = action.copy()
-            del action['created']
-            del action['_id']
-            log.info("post to %s", hub)
-            hub.post("visitorNet", payload=json.dumps(action))
 
     def deltaSinceLastArrive(self, name):
         results = list(self.mongo.find({'name' : name}).sort('created',
@@ -218,7 +187,6 @@ class Poller(object):
         return now - last
 
     def updateGraph(self, masterGraph):
-
         g = ConjunctiveGraph()
         ctx = DEV['wifi']
 
@@ -230,43 +198,30 @@ class Poller(object):
             raise ValueError("poll data is stale. age=%s" % age)
 
         for dev in self.lastAddrs:
-            if not dev.get('connected'):
+            if not dev.connected:
                 continue
-            mac = dev['mac'].lower()                
-            uri = macUri(mac)
-            g.add((uri, ROOM['macAddress'], Literal(mac), ctx))
+            g.add((dev.uri, ROOM['macAddress'], Literal(dev.mac), ctx))
+            g.add((dev.uri, ROOM['ipAddress'], Literal(dev.ip), ctx))
 
-            g.add((uri, ROOM['connected'], {
-                'wireless': AST['wifiAccessPoints'],
-                '2.4G': AST['wifiAccessPoints'],
-                '5G':  AST['wifiAccessPoints'],
-                '-': AST['wifiUnknownConnectionType'],
-                'Unknown': AST['wifiUnknownConnectionType'],
-                'wired': AST['houseOpenNet']}[dev['contype']], ctx))
-            if 'clientHostname' in dev and dev['clientHostname']:
-                g.add((uri, ROOM['wifiNetworkName'], Literal(dev['clientHostname']), ctx))
-            if 'name' in dev and dev['name']:
-                g.add((uri, ROOM['deviceName'], Literal(dev['name']), ctx))
-            if 'signal' in dev:
-                g.add((uri, ROOM['signalStrength'], Literal(dev['signal']), ctx))
-            if 'model' in dev:
-                g.add((uri, ROOM['networkModel'], Literal(dev['model']), ctx))
+            for s,p,o in dev.stmts:
+                g.add((s, p, o, ctx))
+
             try:
-                conn = whenConnected(mongo, dev['mac'])
+                conn = whenConnected(mongo, dev.mac)
             except ValueError:
                 traceback.print_exc()
                 pass
             else:
-                g.add((uri, ROOM['connectedAgo'],
+                g.add((dev.uri, ROOM['connectedAgo'],
                        Literal(connectedAgoString(conn)), ctx))
-                g.add((uri, ROOM['connected'], Literal(conn), ctx))
+                g.add((dev.uri, ROOM['connected'], Literal(conn), ctx))
         masterGraph.setToGraph(g)
 
 
 if __name__ == '__main__':
     args = docopt.docopt('''
 Usage:
-  tomatoWifi [options]
+  wifi.py [options]
 
 Options:
   -v, --verbose  more logging
@@ -282,8 +237,11 @@ Options:
     mongo = Connection('bang', 27017, tz_aware=True)['visitor']['visitor']
     influx = InfluxDBClient('bang', 9060, 'root', 'root', 'main')
 
+    config = ConjunctiveGraph()
+    config.parse(open('private_config.n3'), format='n3')
+    
     masterGraph = PatchableGraph()
-    wifi = Wifi()
+    wifi = Wifi(config)
     poller = Poller(wifi, mongo)
     task.LoopingCall(poller.poll).start(1/float(args['--poll']))
 
@@ -301,5 +259,4 @@ Options:
             wifi=wifi,
             poller=poller,
             mongo=mongo))
-    import twisted; print('twisted', twisted.__version__)
     reactor.run()
