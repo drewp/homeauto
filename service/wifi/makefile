@@ -11,11 +11,11 @@ build_image:
 	docker push ${TAG}
 	rm -r tmp_ctx
 
-shell:
+shell: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host ${TAG} /bin/bash
 
-local_run:
-	docker run --rm -it -p ${PORT}:${PORT} \
-          --net=host \
-          ${TAG} \
-          python tomatoWifi.py -v 
+local_run: build_image
+	docker run --rm -it -p ${PORT}:${PORT} --net=host ${TAG} python3 wifi.py -v
+
+local_run_strace: build_image
+	docker run --rm -it -p ${PORT}:${PORT} --cap-add=SYS_PTRACE --net=host ${TAG} strace -f -s 200 python3 wifi.py -v
