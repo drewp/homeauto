@@ -23,7 +23,7 @@ from influxdb import InfluxDBClient
 from pymongo import MongoClient as Connection, DESCENDING
 from rdflib import Namespace, Literal, URIRef, ConjunctiveGraph
 
-from scrape import Wifi
+from scrape import Wifi, macUri
 
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
 
@@ -31,6 +31,7 @@ from cycloneerr import PrettyErrorHandler
 from logsetup import log
 
 
+AST = Namespace("http://bigasterisk.com/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 reasoning = "http://bang:9071/"
@@ -231,16 +232,17 @@ class Poller(object):
         for dev in self.lastAddrs:
             if not dev.get('connected'):
                 continue
-            uri = URIRef("http://bigasterisk.com/mac/%s" % dev['mac'].lower())
-            g.add((uri, ROOM['macAddress'], Literal(dev['mac'].lower()), ctx))
+            mac = dev['mac'].lower()                
+            uri = macUri(mac)
+            g.add((uri, ROOM['macAddress'], Literal(mac), ctx))
 
             g.add((uri, ROOM['connected'], {
-                'wireless': URIRef("http://bigasterisk.com/wifiAccessPoints"),
-                '2.4G': URIRef("http://bigasterisk.com/wifiAccessPoints"),
-                '5G':  URIRef("http://bigasterisk.com/wifiAccessPoints"),
-                '-': URIRef("http://bigasterisk.com/wifiUnknownConnectionType"),
-                'Unknown': URIRef("http://bigasterisk.com/wifiUnknownConnectionType"),
-                'wired': URIRef("http://bigasterisk.com/houseOpenNet")}[dev['contype']], ctx))
+                'wireless': AST['wifiAccessPoints'],
+                '2.4G': AST['wifiAccessPoints'],
+                '5G':  AST['wifiAccessPoints'],
+                '-': AST['wifiUnknownConnectionType'],
+                'Unknown': AST['wifiUnknownConnectionType'],
+                'wired': AST['houseOpenNet']}[dev['contype']], ctx))
             if 'clientHostname' in dev and dev['clientHostname']:
                 g.add((uri, ROOM['wifiNetworkName'], Literal(dev['clientHostname']), ctx))
             if 'name' in dev and dev['name']:
@@ -285,18 +287,19 @@ Options:
     poller = Poller(wifi, mongo)
     task.LoopingCall(poller.poll).start(1/float(args['--poll']))
 
-    reactor.listenTCP(int(args['--port']),
-                      cyclone.web.Application(
-                          [
-                              (r"/", Index),
-                              (r'/json', Json),
-                              (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
-                              (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
-                              (r'/table', Table),
-                              #(r'/activity', Activity),
-                          ],
-                          wifi=wifi,
-                          poller=poller,
-                          mongo=mongo))
+    reactor.listenTCP(
+        int(args['--port']),
+        cyclone.web.Application(
+            [
+                (r"/", Index),
+                (r'/json', Json),
+                (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
+                (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+                (r'/table', Table),
+                #(r'/activity', Activity),
+            ],
+            wifi=wifi,
+            poller=poller,
+            mongo=mongo))
     import twisted; print('twisted', twisted.__version__)
     reactor.run()

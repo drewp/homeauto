@@ -5,9 +5,8 @@ from rdflib import Literal, Graph, RDFS, URIRef
 
 log = logging.getLogger()
 
-class Router(object):
-    def __repr__(self):
-        return repr(self.__dict__)
+def macUri(macAddress: str) -> URIRef:
+    return URIRef("http://bigasterisk.com/mac/%s" % dev['mac'].lower())
 
 class Wifi(object):
     """
@@ -63,7 +62,7 @@ class Wifi(object):
         for row in rows:
             if 'clientHostname' in row:
                 row['name'] = row['clientHostname']
-            mac = URIRef('http://bigasterisk.com/mac/%s' % row['mac'].lower())
+            mac = macUri(row['mac'].lower())
             label = self.graph.value(mac, RDFS.label)
             if label:
                 row['name'] = label
