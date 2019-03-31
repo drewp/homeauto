@@ -19,3 +19,6 @@ local_run: build_image
 
 local_run_strace: build_image
 	docker run --rm -it -p ${PORT}:${PORT} --cap-add=SYS_PTRACE --net=host ${TAG} strace -f -s 200 python3 wifi.py -v
+
+redeploy: build_image
+	supervisorctl restart $(JOB)_$(PORT)
