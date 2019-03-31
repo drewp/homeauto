@@ -9,7 +9,7 @@ RUN pip3 install -r requirements.txt
 # not sure why this doesn't work from inside requirements.txt
 RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v2'
 
-COPY *.py *.n3 *.json *.html ./
+COPY *.py *.n3 *.html ./
 
 EXPOSE 9070
 
