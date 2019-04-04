@@ -53,7 +53,7 @@
 
            this.devices = [];
            
-           find(null, "room:connected", "http://bigasterisk.com/wifiAccessPoints"
+           find(null, "room:connectedToNetwork", "http://bigasterisk.com/wifiAccessPoints"
                 ).forEach(function(row) {
              var out = {
                mac: N3.Util.getLiteralValue(
