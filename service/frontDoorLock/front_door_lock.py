@@ -12,7 +12,7 @@ from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
 import cyclone.web
-import sys, logging, time
+import logging, time, json
 from mqtt_client import MqttClient
 from logsetup import log, enableTwistedLog
 
@@ -39,6 +39,12 @@ def stateFromMqtt(msg):
     
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
+        try:
+            user = URIRef(self.request.headers['x-foaf-agent'])
+        except KeyError:
+            log.warn('request without x-foaf-agent: %s', self.request.headers)
+            self.set_status(403, 'need x-foaf-agent')
+            return
         arg = self.request.arguments
         if arg.get('s') and arg.get('p'):
             subj = URIRef(arg['s'][-1])
@@ -49,11 +55,17 @@ class OutputPage(cyclone.web.RequestHandler):
             g = rdfGraphBody(self.request.body, self.request.headers)
             assert len(g) == 1, len(g)
             stmt = g.triples((None, None, None)).next()
-        self._onStatement(stmt)
+        self._onStatement(user, stmt)
     post = put
     
-    def _onStatement(self, stmt):
+    def _onStatement(self, user, stmt):
+        log.info('put statement %r', stmt)
         if stmt[0:2] == (ROOM['frontDoorLock'], ROOM['state']):
+            if stmt[2] == ROOM['unlocked']:
+                log.info('unlock for %r', user)
+                self.settings.autoLock.onUnlockedStmt()
+            if stmt[2] == ROOM['locked']:
+                self.settings.autoLock.onLockedStmt()
             self.settings.mqtt.publish("frontdoor/switch/strike/command",
                                        mqttMessageFromState(stmt[2]))
             return
@@ -65,24 +77,44 @@ class AutoLock(object):
         self.masterGraph = masterGraph
         self.mqtt = mqtt
         self.timeUnlocked = None
-        self.autoLockSec = 5
+        self.autoLockSec = 6 
         self.subj = ROOM['frontDoorLock']
         task.LoopingCall(self.check).start(1)
 
+    def relock(self):
+        log.info('autolock is up: requesting lock')
+        self.mqtt.publish("frontdoor/switch/strike/command",
+                          mqttMessageFromState(ROOM['locked']))
+
+    def reportTimes(self, unlockedFor):
+        g = self.masterGraph
+        lockIn = self.autoLockSec - int(unlockedFor)
+        if lockIn < 0:
+            tu = self.timeUnlocked
+            log.warn("timeUnlocked %(tu)r, state %(state)s, "
+                     "unlockedFor %(unlockedFor)r, lockIn %(lockIn)r", vars())
+            lockIn = 0
+        g.patchObject(ctx, self.subj, ROOM['unlockedForSec'],
+                      Literal(int(unlockedFor)))
+        g.patchObject(ctx, self.subj, ROOM['autoLockInSec'],
+                      Literal(lockIn))
+
+    def clearReport(self):
+        g = self.masterGraph
+        g.patchObject(ctx, self.subj, ROOM['unlockedForSec'], None)
+        g.patchObject(ctx, self.subj, ROOM['autoLockInSec'], None)
+        
     def check(self):
+        g = self.masterGraph
         now = time.time()
-        state = self.masterGraph._graph.value(self.subj, ROOM['state'])
+        state = g._graph.value(self.subj, ROOM['state'])
         if state == ROOM['unlocked']:
             if self.timeUnlocked is None:
                 self.timeUnlocked = now
+            # *newly* unlocked- this resets on every input stmt
             unlockedFor = now - self.timeUnlocked
-            self.masterGraph.patchObject(ctx, self.subj, ROOM['unlockedForSec'],
-                                         Literal(int(unlockedFor)))
-            self.masterGraph.patchObject(ctx, self.subj, ROOM['autoLockInSec'],
-                                         Literal(self.autoLockSec - int(unlockedFor)))
             if unlockedFor > self.autoLockSec:
-                self.mqtt.publish("frontdoor/switch/strike/command",
-                                  mqttMessageFromState(ROOM['locked']))
+                self.relock()
         else:
             self.timeUnlocked = None
             self.masterGraph.patchObject(ctx, self.subj, ROOM['unlockedForSec'], None)
@@ -111,14 +143,21 @@ if __name__ == '__main__':
 
     mqtt.subscribe("frontdoor/switch/strike/state").subscribe(on_next=toGraph)
     port = 10011
-    reactor.listenTCP(port, cyclone.web.Application([
-        (r"/()", cyclone.web.StaticFileHandler,
-         {"path": ".", "default_filename": "index.html"}),
-        (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
-        (r"/graph/events", CycloneGraphEventsHandler,
-         {'masterGraph': masterGraph}),
-        (r'/output', OutputPage),
-        ], mqtt=mqtt, masterGraph=masterGraph, debug=arg['-v']), interface='::')
+    reactor.listenTCP(port, cyclone.web.Application(
+        [
+            (r"/()", cyclone.web.StaticFileHandler,
+             {"path": ".", "default_filename": "index.html"}),
+            (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
+            (r"/graph/events", CycloneGraphEventsHandler,
+             {'masterGraph': masterGraph}),
+            (r'/output', OutputPage),
+            (r'/bluetoothButton', BluetoothButton),
+        ],
+        mqtt=mqtt,
+        masterGraph=masterGraph,
+        autoLock=autoclose,
+        debug=arg['-v']),
+                      interface='::')
     log.warn('serving on %s', port)
 
     reactor.run()

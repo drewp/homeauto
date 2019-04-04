@@ -15,5 +15,8 @@ build_image:
 shell:
 	docker run --rm -it --cap-add SYS_PTRACE --net=host bang6:5000/$(JOB)_x86:latest  /bin/sh
 
-local_run:
-	docker run --rm -it --net=host -v `pwd`/index.html:/opt/index.html bang6:5000/$(JOB)_x86:latest python ./front_door_lock.py 
+local_run: build_image
+	docker run --rm -it --net=host -v `pwd`/index.html:/opt/index.html bang6:5000/$(JOB)_x86:latest python ./front_door_lock.py -v
+
+redeploy: build_image
+	supervisorctl restart $(JOB)_$(PORT)
