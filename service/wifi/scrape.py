@@ -60,7 +60,7 @@ def loadOrbiData(config):
     rows = []
     for row in json.loads(resp.body.split(b'device=', 1)[-1]):
         extra = []
-        extra.append((ROOM['connected'], {
+        extra.append((ROOM['connectedToNetwork'], {
                     'wireless': AST['wifiAccessPoints'],
                     '2.4G': AST['wifiAccessPoints'],
                     '5G':  AST['wifiAccessPoints'],
