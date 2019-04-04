@@ -58,6 +58,7 @@
       <template>
         <div>
           <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+          <streamed-graph url="/store/graph/events" graph="{{storeGraph}}"></streamed-graph>
         </div>
 
         <div id="form">
@@ -73,13 +74,42 @@
             predicate="room:state"
             object="room:unlocked"
           ></rdf-oneshot>
-          <button on-click="unlock">Unlock</button>
+          <button on-click="unlock"
+                  disabled$="[[!isLocked]]">Unlock 10 seconds</button>
           
-          <template is="dom-if" if="{{autoLockIsComing}}">
-            <div>
+            <div class$="invis-[[!autoLockIsComing]]">
               Locking in {{autoLockInSec}}
             </div>
-          </template>
+
+          <div>
+            <rdf-oneshot
+              id="hold"
+              post="/store/values"
+              subject="room:frontDoorLockRequest"
+              predicate="room:state"
+              object="room:unlocked"
+            ></rdf-oneshot>
+            <template is="dom-if" if="{{!isHeld}}">
+              <button on-click="hold">Hold unlocked</button>
+            </template>
+            <rdf-oneshot
+              id="releaseHold"
+              post="/store/values"
+              subject="room:frontDoorLockRequest"
+              predicate="room:state"
+              object="room:unset"
+            ></rdf-oneshot>
+            <rdf-oneshot
+              id="lockNow"
+              post="output"
+              subject="room:frontDoorLock"
+              predicate="room:state"
+              object="room:locked"
+            ></rdf-oneshot>
+            <template is="dom-if" if="{{isHeld}}">
+              <button on-click="releaseHold">Release hold; lock door</button>
+            </template>
+          </div>
         </div>
       </template>
       <script>
@@ -88,20 +118,26 @@
            is: 'door-control',
            properties: {
              graph: { type: Object, notify: true, observer: "_onGraph" },
+             storeGraph: { type: Object, notify: true, observer: "_onStoreGraph" },
              lockState: { type: String },
              autoLockIsComing: { type: Boolean },
              autoLockInSec: { type: String},
+             isHeld: { type: Boolean },
            },
            behaviors: [BigastUri],
            _onGraph: function(graph) {
              if (!graph.graph) return;
              const env = graph.graph.store.rdf;
+             const unlocked = env.createNamedNode('room:unlocked');
+             const locked = env.createNamedNode('room:locked');
+             this.isLocked = null;
              graph.graph.quadStore.quads(
                {subject: env.createNamedNode('room:frontDoorLock'),
                 predicate: env.createNamedNode('room:state'),
                },
                (q) => {
                  this.lockState = q.object.toString().replace(/.*\//, '');
+                 this.isLocked = q.object.equals(locked) ? true : (q.object.equals(unlocked) ? false : null);
                });
              
              this.autoLockIsComing = false;
@@ -112,11 +148,32 @@
                (q) => {
                  this.autoLockIsComing = true;
                  this.autoLockInSec = parseFloat(q.object.valueOf());
+               });          
+           },
+           _onStoreGraph: function(graph) {
+             if (!graph.graph) return;
+             const env = graph.graph.store.rdf;
+             const unlocked = env.createNamedNode('room:unlocked');
+             const locked = env.createNamedNode('room:locked');
+             this.isHeld = false;
+             graph.graph.quadStore.quads(
+               {subject: env.createNamedNode('room:frontDoorLockRequest'),
+                predicate: env.createNamedNode('room:state'),
+               },
+               (q) => {
+                 this.isHeld = q.object.equals(unlocked);
                });
            },
            unlock: function() {
              this.$.unlockOneshot.go();
-           }
+           },
+           hold: function () {
+             this.$.hold.go(); 
+           },
+           releaseHold: function() {
+             this.$.releaseHold.go();
+             this.$.lockNow.go(); // may race with releaseHold?
+           },
          });
        });
       </script>
