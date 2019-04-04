@@ -17,7 +17,7 @@ from cyclone.httpclient import fetch
 from dateutil import tz
 from influxdb import InfluxDBClient
 from pymongo import MongoClient as Connection, DESCENDING
-from rdflib import Namespace, Literal, ConjunctiveGraph
+from rdflib import Namespace, Literal, ConjunctiveGraph, RDF
 from twisted.internet import reactor, task
 from twisted.internet.defer import inlineCallbacks
 import ago
@@ -200,6 +200,7 @@ class Poller(object):
         for dev in self.lastAddrs:
             if not dev.connected:
                 continue
+            g.add((dev.uri, RDF.type, ROOM['NetworkedDevice'], ctx))
             g.add((dev.uri, ROOM['macAddress'], Literal(dev.mac), ctx))
             g.add((dev.uri, ROOM['ipAddress'], Literal(dev.ip), ctx))
 
