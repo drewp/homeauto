@@ -3,6 +3,7 @@
   <head>
     <title>front door lock</title>
     <meta charset="utf-8" />
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
@@ -42,13 +43,17 @@
            min-height: 40px;
        }
        div#form {
-           margin: 20px;
+           margin: 2px;
            background: #dff5e5;
            padding: 10px;
-           line-height: 40px;
+           line-height: 30px;
            text-align: center;
            border: 2px groove white;
        }
+       .invis-true {
+           visibility: hidden;
+       }
+       
       </style>
       <template>
         <div>
@@ -64,9 +69,9 @@
           <rdf-oneshot
             id="unlockOneshot"
             post="output"
-            subject="<http://projects.bigasterisk.com/room/frontDoorLock>"
-            predicate="<http://projects.bigasterisk.com/room/state>"
-            object="<http://projects.bigasterisk.com/room/unlocked>"
+            subject="room:frontDoorLock"
+            predicate="room:state"
+            object="room:unlocked"
           ></rdf-oneshot>
           <button on-click="unlock">Unlock</button>
           
