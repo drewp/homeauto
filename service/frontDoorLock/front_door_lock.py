@@ -1,3 +1,11 @@
+"""
+:frontDoorLock :state :locked/:unlocked
+is the true state of the lock, maintained in this process.
+
+put :frontDoorLock :state ?s to this /output to request a change.
+
+reasoning can infer :frontDoorLock :putState ?s to do that put request.
+"""
 from docopt import docopt
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from rdflib import Namespace, URIRef, Literal, Graph
