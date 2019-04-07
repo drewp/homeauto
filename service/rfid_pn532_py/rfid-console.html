@@ -4,7 +4,7 @@
 <link rel="import" href="/rdf/rdf-uri.html">
 <link rel="import" href="/rdf/streamed-graph.html">
 
-<dom-module id="rfid-control">
+<dom-module id="rfid-console">
   <style>
    button {
        min-width: 60px;
@@ -19,14 +19,10 @@
    }
   </style>
   <template>
-    <div>
-      <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
-      <!-- also get a graph of users so we can look up cards -->
-    </div>
     
     <iron-ajax id="rewrite" url="rewrite" method="POST"></iron-ajax>
     
-    Current reads: 
+    Current RFID reads: 
     <table>
       <tr><th>Card UID</th><th>Card text</th><th></th></tr>
       <template is="dom-repeat" items="{{currentReads}}">
@@ -41,11 +37,15 @@
         </tr>
       </template>
     </table>
-    
+
+    <div>
+      <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+      <!-- also get a graph of users so we can look up cards -->
+    </div>
   </template>
   <script>
    Polymer({
-     is: 'rfid-control',
+     is: 'rfid-console',
      properties: {
        graph: { type: Object, notify: true, observer: "_onGraph" },
        currentReads: { type: Array, value: [] },

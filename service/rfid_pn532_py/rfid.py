@@ -6,7 +6,7 @@ from rdfdb.patch import Patch
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
-from twisted.internet import reactor, task
+from twisted.internet import reactor, task, defer
 import cyclone.web
 from cyclone.httpclient import fetch
 import cyclone
@@ -14,14 +14,16 @@ import logging, time, json, random, string
 from logsetup import log, enableTwistedLog
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
+from export_to_influxdb import InfluxExporter
 from tags import NfcDevice, FakeNfc
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 ctx = ROOM['frontDoorWindowRfidCtx']
 
-STATS = scales.collection('/web',
+STATS = scales.collection('/root',
                           scales.PmfStat('cardReadPoll'),
+                          scales.IntStat('newCardReads'),
 )
 
 class OutputPage(cyclone.web.RequestHandler):
@@ -96,7 +98,7 @@ class ReadLoop(object):
         self.overwrite_any_tag = overwrite_any_tag
         self.log = {} # cardIdUri : most recent seentime
 
-        self.pollPeriodSecs = 5.1
+        self.pollPeriodSecs = .1
         self.expireSecs = 5
         
         task.LoopingCall(self.poll).start(self.pollPeriodSecs)
@@ -107,25 +109,29 @@ class ReadLoop(object):
 
         self.flushOldReads(now)
 
-        for tag in self.reader.getTags(): # blocks for a bit
-            uid = tag.uid()
-            log.debug('detected tag uid=%r', uid)
-            cardIdUri = uidUri(uid)
+        try:
+            for tag in self.reader.getTags(): # blocks for a bit
+                uid = tag.uid()
+                log.debug('detected tag uid=%r', uid)
+                cardIdUri = uidUri(uid)
 
-            is_new = cardIdUri not in self.log
-            self.log[cardIdUri] = now
-            if is_new:
-                tag.connect()
-                try:
-                    textLit = Literal(tag.readBlock(1).rstrip('\x00'))
-                    if self.overwrite_any_tag and not looksLikeBigasterisk(textLit):
-                        log.info("block 1 was %r; rewriting it", textLit)
-                        tag.writeBlock(1, randomBody())
+                is_new = cardIdUri not in self.log
+                self.log[cardIdUri] = now
+                if is_new:
+                    STATS.newCardReads += 1
+                    tag.connect()
+                    try:
                         textLit = Literal(tag.readBlock(1).rstrip('\x00'))
-                finally:
-                    tag.disconnect()
-                self.startCardRead(cardIdUri, textLit)
-        
+                        if self.overwrite_any_tag and not looksLikeBigasterisk(textLit):
+                            log.info("block 1 was %r; rewriting it", textLit)
+                            tag.writeBlock(1, randomBody())
+                            textLit = Literal(tag.readBlock(1).rstrip('\x00'))
+                    finally:
+                        tag.disconnect()
+                    self.startCardRead(cardIdUri, textLit)
+        except OSError as e:
+            log.error(e)
+            reactor.stop()
     def flushOldReads(self, now):
         for uri in list(self.log):
             if self.log[uri] < now - self.expireSecs:
@@ -185,6 +191,15 @@ if __name__ == '__main__':
         
     masterGraph = PatchableGraph()
     reader = NfcDevice() if not arg['-n'] else FakeNfc()
+
+    ie=InfluxExporter(Graph())
+    ie.exportStats(STATS, ['root.cardReadPoll.count',
+                           'root.cardReadPoll.95percentile',
+                           'root.newCardReads',
+                       ],
+                    period_secs=10,
+                    retain_days=7,
+    )
 
     loop = ReadLoop(reader, masterGraph, overwrite_any_tag=arg['--overwrite_any_tag'])
 

@@ -37,12 +37,14 @@ build_image_pi: pyfreefare-build-pi/nfc.py pyfreefare-build-pi/freefare.py Docke
 	docker push bang6:5000/$(SERVICE)_pi:latest
 
 run_local_x86: build_image_x86
-	docker run -it --rm --privileged --net=host --cap-add=SYS_PTRACE --name $(JOB)_run bang6:5000/$(SERVICE)_x86:latest python3 rfid.py -v 
+	docker run -it --rm --privileged --net=host --hostname=testhost --cap-add=SYS_PTRACE --name $(JOB)_run bang6:5000/$(SERVICE)_x86:latest python3 rfid.py -v
 
 
 # test on pi:
 # docker pull bang6:5000/rfid_pn532_py_pi:latest && docker run -it --rm --privileged --name rfid_shell bang6:5000/rfid_pn532_py_pi:latest nose2-3 tags_test
 
-redeploy: build_image_pi
+fresh_sudo:
+	sudo -v
+redeploy: fresh_sudo build_image_pi
 	sudo /my/proj/ansible/playbook -l $(RUNHOST) -t rfid
 	supervisorctl -s http://$(RUNHOST):9001/ restart $(JOB)_$(PORT)
