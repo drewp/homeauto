@@ -109,10 +109,11 @@ class ReconnectingPatchSource(object):
 
     todo: generate connection stmts in here
     """
-    def __init__(self, url, listener):
+    def __init__(self, url, listener, reconnectSecs=60):
         self.url = url
         self._stopped = False
         self._listener = listener
+        self.reconnectSecs = reconnectSecs
         self._reconnect()
 
     def _reconnect(self):
@@ -136,8 +137,8 @@ class ReconnectingPatchSource(object):
         self._ps.stop()
         
     def _onConnectionFailed(self, arg):
-        reactor.callLater(60, self._reconnect)
+        reactor.callLater(self.reconnectSecs, self._reconnect)
         
     def _onConnectionLost(self, arg):
-        reactor.callLater(60, self._reconnect)        
+        reactor.callLater(self.reconnectSecs, self._reconnect)        
             
