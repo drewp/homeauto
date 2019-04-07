@@ -162,7 +162,7 @@ class ReadLoop(object):
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
-        url = b'http://bang6:19071/oneShot'
+        url = b'http://bang:9071/oneShot'
         d = fetch(method=b'POST',
                   url=url,
                   headers={b'Content-Type': [b'text/n3']},
