@@ -1,13 +1,13 @@
 FROM bang6:5000/base_pi
 
 WORKDIR /opt
-RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev 
-RUN apt-get install -y python3-nose2
+RUN apt-get install -y libnfc5 libfreefare0 libnfc-dev libfreefare-dev python3-nose2 libffi-dev
 COPY pyfreefare-build-pi ./pyfreefare-build
 
 COPY requirements.txt .
-RUN pip3 install -r requirements.txt
-RUN pip3 install -v -U 'https://github.com/drewp/cyclone/archive/python3.zip'
+RUN pip3 install -Ur requirements.txt
+# not sure why this doesn't work from inside requirements.txt
+RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip'
 
 COPY *.py *.html  ./
 

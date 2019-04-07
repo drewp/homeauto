@@ -18,6 +18,7 @@ class NfcDevice(object):
         conn_strings = (nfc.nfc_connstring * 10)()
         t0, _, t2 = nfc.nfc_list_devices.argtypes
         nfc.nfc_list_devices.argtypes = [t0, type(conn_strings), t2]
+        log.info("nfc_list_devices:")
         devices_found = nfc.nfc_list_devices(self.context, conn_strings, 10)
         log.info(f'{devices_found} connection strings')
         for i in range(devices_found):
@@ -38,6 +39,8 @@ class NfcDevice(object):
     def getTags(self):
         log.debug("getting tags")
         t0 = time.time()
+        # see https://github.com/nfc-tools/libfreefare/blob/master/libfreefare/freefare.c
+        # for how this might waste time on felica tags
         ret = freefare.freefare_get_tags(self.dev)
         if not ret:
             raise IOError("freefare_get_tags returned null")
