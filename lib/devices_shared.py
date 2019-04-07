@@ -67,6 +67,7 @@ class ScanGroup(object):
         self.x = AnimChannel(0)
         self.y = AnimChannel(0)
         self.height = AnimChannel(numLeds)
+        self.src = ""
 
     def animateTo(self, x, y, height, src, rate=30, interpolate=ROOM['slide']):
         log.info('anim to %s x=%s y=%s h=%s', src, x, y, height)
@@ -87,7 +88,13 @@ class ScanGroup(object):
         log.debug('current = %r', self.current)
         
     def currentStatements(self):
-        return []
+        return [
+            (self.uri, RDF.type, ROOM['ScanGroup']),
+            (self.uri, ROOM['xValue'], Literal(self.x.get())),
+            (self.uri, ROOM['yValue'], Literal(self.y.get())),
+            (self.uri, ROOM['heightValue'], Literal(self.height.get())),
+            (self.uri, ROOM['src'], Literal(self.src)),
+        ]
 
     def colorForIndex(self, i):
         return list(self.current[i,:])
@@ -132,7 +139,9 @@ class RgbPixelsAnimation(object):
         return (
             [(self.uri, ROOM['pixelGroup'], grp) for grp in self.groups.keys()] +
             sum([v[2].currentStatements()
-                 for v in self.groups.itervalues()], []))
+                 for v in self.groups.itervalues()], []) +
+            [] # current
+        )
 
     def getColorOrder(self, graph, uri):
         colorOrder = graph.value(uri, ROOM['colorOrder'],
@@ -148,7 +157,6 @@ class RgbPixelsAnimation(object):
         self.updateOutput()
         
     def onStatements(self, statements, _groups=True):
-
         needSetup = False
         animateCalls = {} # group uri : kw for animateTo
         for s, p, o in statements:
