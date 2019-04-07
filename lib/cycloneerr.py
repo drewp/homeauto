@@ -1,4 +1,8 @@
-import httplib, cgi
+try:
+    import httplib
+except ImportError:
+    import http.client as httplib
+import cgi
 
 class PrettyErrorHandler(object):
     """
