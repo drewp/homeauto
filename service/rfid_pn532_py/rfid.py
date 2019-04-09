@@ -1,5 +1,5 @@
 import os
-os.environ['LIBNFC_DEFAULT_DEVICE'] = "pn532_i2c:/dev/i2c-1"
+os.environ['LIBNFC_DEFAULT_DEVICE'] = "pn532_uart:/dev/ttyUSB0"
 
 from docopt import docopt
 from rdfdb.patch import Patch
