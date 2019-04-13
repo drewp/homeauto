@@ -10,12 +10,12 @@ from twisted.internet import reactor, task, defer
 import cyclone.web
 from cyclone.httpclient import fetch
 import cyclone
-import logging, time, json, random, string
+import logging, time, json, random, string, traceback
 from logsetup import log, enableTwistedLog
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
 from export_to_influxdb import InfluxExporter
-from tags import NfcDevice, FakeNfc
+from tags import NfcDevice, FakeNfc, NfcError, AuthFailedError
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
@@ -127,9 +127,15 @@ class ReadLoop(object):
                             tag.writeBlock(1, randomBody())
                             textLit = Literal(tag.readBlock(1).rstrip('\x00'))
                     finally:
+                        # This might not be appropriate to call after
+                        # readBlock fails. I am getting double
+                        # exceptions.
                         tag.disconnect()
                     self.startCardRead(cardIdUri, textLit)
-        except OSError as e:
+        except AuthFailedError as e:
+            log.error(e)
+        except (NfcError, OSError) as e:
+            traceback.print_exc()
             log.error(e)
             reactor.stop()
     def flushOldReads(self, now):

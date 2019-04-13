@@ -55,6 +55,13 @@ class NfcDevice(object):
 
 pubkey = b'\xff\xff\xff\xff\xff\xff'
 
+class NfcError(Exception):
+    def __init__(self, code, strerror):
+        Exception.__init__(self, "%s [%s]" % (strerror, code))
+        self.code = code
+
+class AuthFailedError(NfcError): pass
+
 class NfcTag(object):
     def __init__(self, tag): #FreefareTag
         self.tag = tag
@@ -63,7 +70,13 @@ class NfcTag(object):
         if ret == 0:
             return
 
-        raise IOError(cast(freefare.freefare_strerror(self.tag), c_char_p).value)
+        msg = cast(freefare.freefare_strerror(self.tag), c_char_p).value
+        if msg == b'Mifare Authentication Failed':
+            # return code is -1 (!). I was excpecting
+            # AUTHENTICATION_ERROR=0xAE or something.
+            raise AuthFailedError(ret, msg)        
+            
+        raise NfcError(ret, msg)
         
     def tagType(self) -> str:
         typeNum = freefare.freefare_get_tag_type(self.tag)
