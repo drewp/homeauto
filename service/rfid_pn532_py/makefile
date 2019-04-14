@@ -48,3 +48,7 @@ fresh_sudo:
 redeploy: fresh_sudo build_image_pi
 	sudo /my/proj/ansible/playbook -l $(RUNHOST) -t rfid
 	supervisorctl -s http://$(RUNHOST):9001/ restart $(JOB)_$(PORT)
+
+nginx_local:
+	nginx -c `pwd`/local.conf
+
