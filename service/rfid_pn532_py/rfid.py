@@ -149,7 +149,7 @@ class ReadLoop(object):
             (sensor, ROOM['reading'], cardUri, ctx),
             (cardUri, ROOM['cardText'], text, ctx)],
                                      delQuads=[]))
-        log.info('read card at id=%s %r', cardUri, str(text))
+        log.info('%s :cardText %s .', cardUri.n3(), text.n3())
         self._sendOneshot([(sensor, ROOM['startReading'], cardUri),
                             (cardUri, ROOM['cardText'], text)])
 
