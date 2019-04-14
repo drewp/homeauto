@@ -194,6 +194,7 @@ if __name__ == '__main__':
         enableTwistedLog()
         log.setLevel(logging.DEBUG)
         log.info(f'cyclone {cyclone.__version__}')
+        defer.setDebugging(True)
         
     masterGraph = PatchableGraph()
     reader = NfcDevice() if not arg['-n'] else FakeNfc()
