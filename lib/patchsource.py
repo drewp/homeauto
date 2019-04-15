@@ -41,7 +41,7 @@ class PatchSource(object):
             d.addCallback(self._onDisconnect)
         self._eventSource.protocol.setFinishedDeferred = sfd
 
-    def stats(self):
+    def state(self):
         return {
             'url': self.url,
             'fullGraphReceived': self._fullGraphReceived,
@@ -127,9 +127,9 @@ class ReconnectingPatchSource(object):
     def _onPatch(self, p, fullGraph):
         self._listener(p, fullGraph=fullGraph)
 
-    def stats(self):
+    def state(self):
         return {
-            'reconnectedPatchSource': self._ps.stats(),
+            'reconnectedPatchSource': self._ps.state(),
         }
         
     def stop(self):

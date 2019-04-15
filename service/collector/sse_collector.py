@@ -86,9 +86,9 @@ class ActiveStatements(object):
         # http://bigasterisk.com/sse_collector/).
         self.statements = collections.defaultdict(lambda: (set(), set())) # (s,p,o,c): (sourceUrls, handlers)`
 
-    def stats(self):
+    def state(self):
         return {
-'len': len(self.statements),
+            'len': len(self.statements),
             }
         
     def _postDeleteStatements(self):
@@ -201,11 +201,11 @@ class GraphClients(object):
         
         self._localStatements = LocalStatements(self._onPatch)
 
-    def stats(self):
+    def state(self):
         return {
-            'clients': [ps.stats() for ps in self.clients.values()],
-            'sseHandlers': [h.stats() for h in self.handlers],
-            'statements': self.statements.stats(),
+            'clients': [ps.state() for ps in self.clients.values()],
+            'sseHandlers': [h.state() for h in self.handlers],
+            'statements': self.statements.state(),
         }
 
     def _sourcesForHandler(self, handler):
@@ -307,10 +307,10 @@ class SomeGraph(cyclone.sse.SSEHandler):
     def __repr__(self):
         return '<Handler #%s>' % self._serial
 
-    def stats(self):
+    def state(self):
         return {
-            'created': self.created,
-            'ageHours': (time.time() - self.created) / 3600,
+            'created': round(self.created, 2),
+            'ageHours': round((time.time() - self.created) / 3600, 2),
             'streamId': self.streamId,
             'remoteIp': self.request.remote_ip,
             'userAgent': self.request.headers.get('user-agent'),
@@ -322,22 +322,22 @@ class SomeGraph(cyclone.sse.SSEHandler):
     def unbind(self):
         self.graphClients.removeSseHandler(self)
 
-class Stats(cyclone.web.RequestHandler):
+class State(cyclone.web.RequestHandler):
+    @STATS.getState.time()
     def get(self):
         try:
-            stats = self.settings.graphClients.stats()
+            state = self.settings.graphClients.state()
         except:
             import traceback; traceback.print_exc()
             raise
         
-        self.write(json.dumps({'graphClients': stats}, indent=2))
+        self.write(json.dumps({'graphClients': state}, indent=2))
 
 class Root(cyclone.web.RequestHandler):
     def get(self):
         self.write('<html><body>sse_collector</body></html>')
         
 if __name__ == '__main__':
-
     arg = docopt("""
     Usage: sse_collector.py [options]
 
@@ -357,7 +357,7 @@ if __name__ == '__main__':
         cyclone.web.Application(
             handlers=[
                 (r'/', Root),
-                (r'/stats', Stats),
+                (r'/state', State),
                 (r'/graph/(.*)', SomeGraph),
             ],
             graphClients=graphClients),
