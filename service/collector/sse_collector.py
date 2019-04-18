@@ -12,7 +12,7 @@ from crochet import no_setup
 no_setup()
 
 import sys, logging, collections, json, time
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 import cyclone.web, cyclone.sse
 from rdflib import URIRef, Namespace
 from docopt import docopt
@@ -260,6 +260,7 @@ class GraphClients(object):
         
         for source in sources:
             if source not in self.clients and source != COLLECTOR:
+                log.debug('connect to patch source %s', source)
                 self._localStatements.setSourceState(source, ROOM['connect'])
                 self.clients[source] = ReconnectingPatchSource(
                     source, listener=lambda p, fullGraph, source=source: self._onPatch(
@@ -268,9 +269,7 @@ class GraphClients(object):
         
     def removeSseHandler(self, handler):
         log.info('removeSseHandler %r', handler)
-
         self.statements.discardHandler(handler)
-
         for source in self._sourcesForHandler(handler):
             for otherHandler in self.handlers:
                 if (otherHandler != handler and
@@ -347,11 +346,13 @@ if __name__ == '__main__':
     if arg['-v']:
         import twisted.python.log
         twisted.python.log.startLogging(sys.stdout)
-        log.setLevel(logging.INFO)
+        log.setLevel(logging.DEBUG)
+        defer.setDebugging(True)
 
 
     graphClients = GraphClients()
-        
+    #exporter = InfluxExporter(... to export some stats values
+    
     reactor.listenTCP(
         9072,
         cyclone.web.Application(
@@ -359,6 +360,7 @@ if __name__ == '__main__':
                 (r'/', Root),
                 (r'/state', State),
                 (r'/graph/(.*)', SomeGraph),
+                (r'/stats/(.*)', StatsHandler, {'serverName': 'collector'}),
             ],
             graphClients=graphClients),
         interface='::')
