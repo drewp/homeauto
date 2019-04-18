@@ -1,0 +1,3 @@
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#>.
+
+<http://projects.bigasterisk.com/device/calendar> rdfs:comment "facts related to the calendar" .
