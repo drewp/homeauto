@@ -77,6 +77,7 @@ class LocalStatements(object):
 def abbrevTerm(t):
     if isinstance(t, URIRef):
         return (t.replace('http://projects.bigasterisk.com/room/', 'room:')
+                .replace('http://projects.bigasterisk.com/device/', 'dev:')
                 .replace('http://bigasterisk.com/sse_collector/', 'sc:'))
     return t
 
@@ -85,11 +86,10 @@ def abbrevStmt(stmt):
     
 class ActiveStatements(object):
     def __init__(self):
-
         # This table holds statements asserted by any of our sources
         # plus local statements that we introduce (source is
         # http://bigasterisk.com/sse_collector/).
-        self.statements = collections.defaultdict(lambda: (set(), set())) # (s,p,o,c): (sourceUrls, handlers)`
+        self.statements = collections.defaultdict(lambda: (set(), set())) # (s,p,o,c): (sourceUrls, handlers)
 
     def state(self):
         return {
@@ -143,10 +143,9 @@ class ActiveStatements(object):
         return Patch(addQuads=adds, delQuads=dels)
         
     def applySourcePatch(self, source, p):
-        source = unicode(source)
         for stmt in p.addQuads:
             sourceUrls, handlers = self.statements[stmt]
-            if unicode(source) in sourceUrls:
+            if source in sourceUrls:
                 raise ValueError("%s added stmt that it already had: %s" %
                                  (source, abbrevStmt(stmt)))
             sourceUrls.add(source)
@@ -154,7 +153,7 @@ class ActiveStatements(object):
         with self._postDeleteStatements() as garbage:
             for stmt in p.delQuads:
                 sourceUrls, handlers = self.statements[stmt]
-                if unicode(source) not in sourceUrls:
+                if source not in sourceUrls:
                     raise ValueError("%s deleting stmt that it didn't have: %s" %
                                      (source, abbrevStmt(stmt)))
                 sourceUrls.remove(source)
@@ -166,7 +165,6 @@ class ActiveStatements(object):
 
     @STATS.replaceSourceStatements.time()
     def replaceSourceStatements(self, source, stmts):
-        source = unicode(source)
         log.debug('replaceSourceStatements with %s stmts', len(stmts))
         newStmts = set(stmts)
 
@@ -192,7 +190,6 @@ class ActiveStatements(object):
                     garbage.add(stmt)
 
     def discardSource(self, source):
-        source = unicode(source)
         with self._postDeleteStatements() as garbage:
             for stmt, (sources, handlers) in self.statements.iteritems():
                 sources.discard(source)
