@@ -1,4 +1,3 @@
-crochet==1.5.0
 cyclone
 docopt
 ipdb
