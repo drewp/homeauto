@@ -39,21 +39,16 @@ class SoundEffects(object):
         # also '/my/music/entrance/%s.wav' then speak "Neew %s. %s" % (sensorWords[data['sensor']], data['name']),
 
         log.info("loading")
-        self.buffers = {
-            'leave': pygame.mixer.Sound('sound/leave.wav'),
-            'highlight' : pygame.mixer.Sound('sound/KDE-Im-Highlight-Msg-44100.wav'),
-            'question' : pygame.mixer.Sound('sound/angel_question.wav'),
-            'jazztrumpet': pygame.mixer.Sound('sound/acid-jazz-trumpet-11.wav'),
-            'troyandabed': pygame.mixer.Sound('sound/troy_and_abed_in_the_morning.wav'),
-            'beep1': pygame.mixer.Sound('sound/beep1.wav'),
-            'beep2': pygame.mixer.Sound('sound/beep2.wav'),
-        }
+        self.buffers = {name.rsplit('.', 1)[0]: pygame.mixer.Sound('sound/%s' % name) for name in os.listdir('sound')}
         log.info("loaded sounds")
         self.playingSources = []
         self.queued = []
+        self.volume = 1 # level for the next sound that's played (or existing instances of the same sound)
 
     def playEffect(self, name):
-        return self.playBuffer(self.buffers[name])
+        snd = self.buffers[name]
+        snd.set_volume(self.volume)
+        return self.playBuffer(snd)
 
     def playSpeech(self, txt, preEffect=None, postEffect=None, preEffectOverlap=0):
         buf, secs = makeSpeech(txt)
@@ -112,9 +107,15 @@ class Server(object):
         self.sfx.playSpeech(request.args['msg'][0])
         return "ok"
 
-    @app.route('/effects/<string:name>', methods=['POST'])
+    @app.route('/playSound', methods=['POST'])
+    def effect(self, request):
+        uri = request.args['uri'][0]
+        self.sfx.playEffect(uri)
+        return "ok"
+
+    @app.route('/volume', methods=['PUT'])
     def effect(self, request, name):
-        self.sfx.playEffect(name)
+        self.sfx.setVolume(float(request.args['msg'][0]))
         return "ok"
 
     @app.route('/stopAll', methods=['POST'])

@@ -2,6 +2,7 @@ FROM bang6:5000/base_pi
 
 WORKDIR /opt
 
+RUN apt-get update
 RUN apt-get install --yes libopenal1 libogg0 pulseaudio-utils python-pygame festival sox
 COPY requirements.txt ./
 RUN pip install -r requirements.txt

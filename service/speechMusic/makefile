@@ -8,52 +8,61 @@ prep_ctx:
 	rm -rf tmp_ctx
 	mkdir -p tmp_ctx
 	cp -a Dockerfile* ../../lib/*.py *.py *.jade req* *.conf /my/proj/csigen/generator.py tmp_ctx
-	mkdir -p tmp_ctx/sound/
-	cp '/my/music/entrance/leave.wav' tmp_ctx/sound/
-	cp '/my/music/snd/Oxygen/KDE-Im-Highlight-Msg-44100.wav' tmp_ctx/sound/
-	cp '/my/music/snd/angel_ogg/angel_question.wav' tmp_ctx/sound/
-	cp '/my/music/snd/sampleswap/MELODIC SAMPLES and LOOPS/Acid Jazz Trumpet Lines/acid-jazz-trumpet-11.wav' tmp_ctx/sound/
-	cp '/my/music/snd/troy_and_abed_in_the_morning.wav' tmp_ctx/sound/
-	cp '/my/music/snd/bxfr/beep1.wav' tmp_ctx/sound/
-	cp '/my/music/snd/bxfr/beep2.wav' tmp_ctx/sound/
 
 build_image: prep_ctx
 	docker build --network=host -t ${TAG} tmp_ctx
+
+push_image: build_image
 	docker push ${TAG}
-	rm -rf tmp_ctx
+
 
 build_image_pi: prep_ctx
 	docker build --network=host --file=tmp_ctx/Dockerfile.pi -t ${TAG_PI} tmp_ctx
-	docker push ${TAG_PI}
-	rm -rf tmp_ctx
 
-shell:
+push_image_pi: build_image_pi
+	docker push ${TAG_PI}
+
+shell: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} /bin/bash
 
-pactl_test:
+pactl_test: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} pactl stat
 
-paplay_test_that_is_loud:
+paplay_test_that_is_loud: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} paplay /usr/local/lib/python2.7/dist-packages/pygame/examples/data/whiff.wav
 
-pygame_test:
+pygame_test: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host -e SDL_AUDIOSERVER=pulseaudio -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} python -c  'import os; print os.environ; import pygame.mixer; pygame.mixer.init()'
 
 
-local_run:
+local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           -v `pwd`:/mnt \
+          --name=$(JOB)_local \
           --net=host \
           -v /tmp/pulseaudio:/tmp/pulseaudio \
           ${TAG} \
           python /mnt/speechMusic.py -v
 
-local_run_strace:
+local_run_strace: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           -v `pwd`:/mnt \
+          --name=$(JOB)_local \
           --net=host \
--v /tmp/pulseaudio:/tmp/pulseaudio \
+	  -v /tmp/pulseaudio:/tmp/pulseaudio \
           --cap-add SYS_PTRACE \
--e SDL_AUDIOSERVER=pulse \
+	  -e SDL_AUDIOSERVER=pulse \
           ${TAG} \
           strace -f -tts 200 python /mnt/speechMusic.py -v
+
+fresh_sudo:
+	sudo -v
+
+redeploy: fresh_sudo push_image push_image_pi
+	sudo /my/proj/ansible/playbook -l with_speakers -t $(JOB)
+	supervisorctl -s http://dash:9001/ restart $(JOB)_$(PORT)
+	supervisorctl -s http://slash:9001/ restart $(JOB)_$(PORT)
+	supervisorctl -s http://bed:9001/ restart $(JOB)_$(PORT)
+	supervisorctl -s http://living:9001/ restart $(JOB)_$(PORT)
+	supervisorctl -s http://kitchen:9001/ restart $(JOB)_$(PORT)
+
