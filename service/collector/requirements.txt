@@ -1,7 +1,7 @@
 docopt
 ipdb
-service_identity
-twisted
+service_identity==18.1.0
+twisted==19.2.0
 py-spy
 mypy
 
@@ -11,3 +11,4 @@ rdflib-jsonld==0.4.0
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.8.0.tar.gz
 https://github.com/drewp/cyclone/archive/python3.zip
+influxdb==5.2.2

@@ -7,17 +7,19 @@ Future:
 - filter out unneeded stmts from the sources
 - give a time resolution and concatenate any patches that come faster than that res
 """
-import logging, collections, json, time
-from twisted.internet import reactor, defer
-import cyclone.web, cyclone.sse
-from rdflib import URIRef, Namespace
 from docopt import docopt
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
+from rdflib import Namespace, URIRef, StatementType
+from rdflib.term import Node
+from twisted.internet import reactor, defer
+from typing import Callable, Dict, NewType, Tuple, Union, Any, Sequence, Set, List, Optional
+import cyclone.web, cyclone.sse
+import logging, collections, json, time
+
 from logsetup import log, enableTwistedLog
 from patchablegraph import jsonFromPatch
 from rdfdb.patch import Patch
-from typing import Callable, Dict, NewType
 
 # workaround for broken import in twisted_sse_demo/eventsourcee.py
 import sys; sys.path.append('twisted_sse_demo')
@@ -25,11 +27,12 @@ from patchsource import ReconnectingPatchSource
 
 from sse_collector_config import config
 
-SourceUri = NewType('SourceUri', URIRef)
+#SourceUri = NewType('SourceUri', URIRef) # doesn't work
+class SourceUri(URIRef): pass
 
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
-COLLECTOR = URIRef('http://bigasterisk.com/sse_collector/')
+COLLECTOR = SourceUri(URIRef('http://bigasterisk.com/sse_collector/'))
 
 STATS = scales.collection('/root',
                           scales.PmfStat('getState'),
@@ -44,12 +47,12 @@ class LocalStatements(object):
     """
     functions that make statements originating from sse_collector itself
     """
-    def __init__(self, applyPatch: Callable[[Patch], None]):
+    def __init__(self, applyPatch: Callable[[URIRef, Patch], None]):
         self.applyPatch = applyPatch
         self._sourceState: Dict[SourceUri, URIRef] = {} # source: state URIRef
 
     @STATS.localStatementsPatch.time()
-    def setSourceState(self, source, state):
+    def setSourceState(self, source: SourceUri, state: URIRef):
         """
         add a patch to the COLLECTOR graph about the state of this
         source. state=None to remove the source.
@@ -80,44 +83,54 @@ class LocalStatements(object):
                     (source, ROOM['state'], oldState, COLLECTOR),
                 ]))
 
-def abbrevTerm(t):
+def abbrevTerm(t: Union[URIRef, Node]) -> Union[str, Node]:
     if isinstance(t, URIRef):
         return (t.replace('http://projects.bigasterisk.com/room/', 'room:')
                 .replace('http://projects.bigasterisk.com/device/', 'dev:')
                 .replace('http://bigasterisk.com/sse_collector/', 'sc:'))
     return t
 
-def abbrevStmt(stmt):
-    return '(%s %s %s %s)' % tuple(map(abbrevTerm, stmt))
-    
+def abbrevStmt(stmt: StatementType) -> str:
+    t = tuple(map(abbrevTerm, stmt))
+    return '(%s %s %s %s)' % (t[0], t[1], t[2], t[3])
+
+StatementTable = Dict[StatementType, Tuple[Set[SourceUri], Set[SomeGraph]]]
+
+
+class PostDeleter(object):
+    def __init__(self, statements: StatementTable):
+        self.statements = statements
+
+    def __enter__(self):
+        self._garbage: List[StatementType] = []
+        return self
+        
+    def add(self, stmt: StatementType):
+        self._garbage.append(stmt)
+        
+    def __exit__(self, type, value, traceback):
+        if type is not None:
+            raise
+        for stmt in self._garbage:
+            del self.statements[stmt]
+
+            
 class ActiveStatements(object):
     def __init__(self):
         # This table holds statements asserted by any of our sources
         # plus local statements that we introduce (source is
         # http://bigasterisk.com/sse_collector/).
-        self.statements = collections.defaultdict(lambda: (set(), set())) # (s,p,o,c): (sourceUrls, handlers)
+        self.statements: StatementTable = collections.defaultdict(lambda: (set(), set()))
 
-    def state(self):
+    def state(self) -> Dict:
         return {
             'len': len(self.statements),
             }
         
-    def _postDeleteStatements(self):
-        statements = self.statements
-        class PostDeleter(object):
-            def __enter__(self):
-                self._garbage = []
-                return self
-            def add(self, stmt):
-                self._garbage.append(stmt)
-            def __exit__(self, type, value, traceback):
-                if type is not None:
-                    raise
-                for stmt in self._garbage:
-                    del statements[stmt]
-        return PostDeleter()
+    def _postDeleteStatements(self) -> PostDeleter:
+        return PostDeleter(self.statements)
         
-    def pprintTable(self):
+    def pprintTable(self) -> None:
         for i, (stmt, (sources, handlers)) in enumerate(sorted(self.statements.items())):
             print("%03d. %-80s from %s to %s" % (
                 i,
@@ -126,15 +139,14 @@ class ActiveStatements(object):
                 handlers))
 
     @STATS.makeSyncPatch.time()
-    def makeSyncPatch(self, handler, sources):
+    def makeSyncPatch(self, handler: SomeGraph, sources: Set[SourceUri]):
         # todo: this could run all handlers at once, which is how we use it anyway
         adds = []
         dels = []
 
-        sources_set = set(sources)
         with self._postDeleteStatements() as garbage:
             for stmt, (stmtSources, handlers) in self.statements.items():
-                belongsInHandler = not sources_set.isdisjoint(stmtSources)
+                belongsInHandler = not sources.isdisjoint(stmtSources)
                 handlerHasIt = handler in handlers
                 log.debug("%s %s %s", abbrevStmt(stmt), belongsInHandler, handlerHasIt)
                 if belongsInHandler and not handlerHasIt:
@@ -148,7 +160,7 @@ class ActiveStatements(object):
 
         return Patch(addQuads=adds, delQuads=dels)
         
-    def applySourcePatch(self, source, p):
+    def applySourcePatch(self, source: SourceUri, p: Patch):
         for stmt in p.addQuads:
             sourceUrls, handlers = self.statements[stmt]
             if source in sourceUrls:
@@ -170,7 +182,7 @@ class ActiveStatements(object):
                     garbage.add(stmt)
 
     @STATS.replaceSourceStatements.time()
-    def replaceSourceStatements(self, source, stmts):
+    def replaceSourceStatements(self, source: SourceUri, stmts: Sequence[StatementType]):
         log.debug('replaceSourceStatements with %s stmts', len(stmts))
         newStmts = set(stmts)
 
@@ -188,19 +200,20 @@ class ActiveStatements(object):
 
         self.applySourcePatch(source, Patch(addQuads=newStmts, delQuads=[]))
 
-    def discardHandler(self, handler):
+    def discardHandler(self, handler: SomeGraph):
         with self._postDeleteStatements() as garbage:
             for stmt, (sources, handlers) in self.statements.items():
                 handlers.discard(handler)
                 if not sources and not handlers:
                     garbage.add(stmt)
 
-    def discardSource(self, source):
+    def discardSource(self, source: SourceUri):
         with self._postDeleteStatements() as garbage:
             for stmt, (sources, handlers) in self.statements.items():
                 sources.discard(source)
                 if not sources and not handlers:
                     garbage.add(stmt)
+
                     
 class GraphClients(object):
     """
@@ -212,28 +225,28 @@ class GraphClients(object):
     statements come and go, we make patches to send to requesters.
     """
     def __init__(self):
-        self.clients = {}  # url: PatchSource (COLLECTOR is not listed)
-        self.handlers = set()  # handler
-        self.statements = ActiveStatements()
+        self.clients: Dict[SourceUri, PatchSource] = {}  # (COLLECTOR is not listed)
+        self.handlers: Set[SomeGraph] = set()
+        self.statements: ActiveStatements = ActiveStatements()
         
         self._localStatements = LocalStatements(self._onPatch)
 
-    def state(self):
+    def state(self) -> Dict:
         return {
             'clients': [ps.state() for ps in self.clients.values()],
             'sseHandlers': [h.state() for h in self.handlers],
             'statements': self.statements.state(),
         }
 
-    def _sourcesForHandler(self, handler):
+    def _sourcesForHandler(self, handler: SomeGraph) -> List[SourceUri]:
         streamId = handler.streamId
         matches = [s for s in config['streams'] if s['id'] == streamId]
         if len(matches) != 1:
             raise ValueError("%s matches for %r" % (len(matches), streamId))
-        return list(map(URIRef, matches[0]['sources'])) + [COLLECTOR]
+        return [SourceUri(URIRef(s)) for s in matches[0]['sources']] + [COLLECTOR]
 
     @STATS.onPatch.time()
-    def _onPatch(self, source, p, fullGraph=False):
+    def _onPatch(self, source: SourceUri, p: Patch, fullGraph: bool=False):
         if fullGraph:
             # a reconnect may need to resend the full graph even
             # though we've already sent some statements
@@ -253,7 +266,7 @@ class GraphClients(object):
                 ROOM['patchesReceived'])
 
     @STATS.sendUpdatePatch.time()
-    def _sendUpdatePatch(self, handler=None):
+    def _sendUpdatePatch(self, handler: Optional[SomeGraph]=None):
         """
         send a patch event out this handler to bring it up to date with
         self.statements
@@ -279,7 +292,7 @@ class GraphClients(object):
             else:
                 log.debug('nothing to send to %s', h)
                 
-    def addSseHandler(self, handler):
+    def addSseHandler(self, handler: SomeGraph):
         log.info('addSseHandler %r %r', handler, handler.streamId)
 
         # fail early if id doesn't match
@@ -301,7 +314,7 @@ class GraphClients(object):
 
         self._sendUpdatePatch(handler)
         
-    def removeSseHandler(self, handler):
+    def removeSseHandler(self, handler: SomeGraph):
         log.info('removeSseHandler %r', handler)
         self.statements.discardHandler(handler)
         for source in self._sourcesForHandler(handler):
@@ -314,7 +327,7 @@ class GraphClients(object):
             
         self.handlers.remove(handler)
 
-    def _stopClient(self, url):
+    def _stopClient(self, url: SourceUri):
         if url == COLLECTOR:
             return
             
@@ -329,7 +342,7 @@ class GraphClients(object):
 
 class SomeGraph(cyclone.sse.SSEHandler):
     _handlerSerial = 0
-    def __init__(self, application, request):
+    def __init__(self, application: cyclone.web.Application, request):
         cyclone.sse.SSEHandler.__init__(self, application, request)
         self.bound = False
         self.created = time.time()
@@ -337,12 +350,12 @@ class SomeGraph(cyclone.sse.SSEHandler):
         
         self._serial = SomeGraph._handlerSerial
         SomeGraph._handlerSerial += 1
-        self.lastPatchSentTime = 0
+        self.lastPatchSentTime: float = 0.0
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<Handler #%s>' % self._serial
 
-    def state(self):
+    def state(self) -> Dict:
         return {
             'created': round(self.created, 2),
             'ageHours': round((time.time() - self.created) / 3600, 2),
@@ -351,21 +364,22 @@ class SomeGraph(cyclone.sse.SSEHandler):
             'userAgent': self.request.headers.get('user-agent'),
         }
         
-    def bind(self, graphPath):
-        self.streamId = graphPath
+    def bind(self, *args, **kwargs):
+        self.streamId = args[0]
 
         self.graphClients.addSseHandler(self)
         # If something goes wrong with addSseHandler, I don't want to
         # try removeSseHandler.
         self.bound = True
         
-    def unbind(self):
+    def unbind(self) -> None:
         if self.bound:
             self.graphClients.removeSseHandler(self)
 
+            
 class State(cyclone.web.RequestHandler):
     @STATS.getState.time()
-    def get(self):
+    def get(self) -> None:
         try:
             state = self.settings.graphClients.state()
         except:
@@ -374,9 +388,11 @@ class State(cyclone.web.RequestHandler):
         
         self.write(json.dumps({'graphClients': state}, indent=2))
 
+        
 class Root(cyclone.web.RequestHandler):
-    def get(self):
+    def get(self) -> None:
         self.write('<html><body>sse_collector</body></html>')
+
         
 if __name__ == '__main__':
     arg = docopt("""
@@ -395,7 +411,7 @@ if __name__ == '__main__':
     #exporter = InfluxExporter(... to export some stats values
     
     reactor.listenTCP(
-        19072,
+        9072,
         cyclone.web.Application(
             handlers=[
                 (r'/', Root),

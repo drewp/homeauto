@@ -6,14 +6,19 @@ TAG=bang6:5000/${JOB}_x86:latest
 build_image:
 	rm -rf tmp_ctx
 	mkdir -p tmp_ctx
-	cp -a Dockerfile ../../lib/*.py ../../lib/twisted_sse_demo *.py req* stubs tmp_ctx
+	cp -a Dockerfile ../../lib/*.py ../../lib/twisted_sse_demo *.py req* *.ini stubs tmp_ctx
 	docker build --network=host -t ${TAG} tmp_ctx
 
 push_image: build_image
 	docker push ${TAG}
 
 shell: build_image
-	docker run --rm -it --cap-add SYS_PTRACE --net=host ${TAG} /bin/bash
+	docker run --rm -it --cap-add SYS_PTRACE \
+	  --name $(JOB)_shell \
+	  --net=host \
+	  -v `pwd`/.mypy_cache:/opt/.mypy_cache \
+	  -v `pwd`/sse_collector.py:/opt/sse_collector.py \
+	  ${TAG} /bin/bash
 
 local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
@@ -40,9 +45,9 @@ local_run_pyspy: build_image
 typecheck: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           --net=host \
-	  -e=MYPY=/usr/local/lib/python3.6/dist-packages:stubs \
+	  -v `pwd`/.mypy_cache:/opt/.mypy_cache \
           ${TAG} \
-           /usr/local/bin/mypy --python-executable /usr/bin/python3 --no-implicit-optional --ignore-missing-imports sse_collector.py
+           /usr/local/bin/mypy -m sse_collector -m export_to_influxdb -m logsetup -m patchablegraph -m patchsource -m rdfdb.patch
 
 
 redeploy: push_image
