@@ -1,7 +1,7 @@
 try:
     import httplib
 except ImportError:
-    import http.client as httplib
+    import http.client as httplib  # type: ignore
 import cgi
 
 class PrettyErrorHandler(object):

@@ -11,8 +11,7 @@ class EventSourceProtocol(LineReceiver):
         self.data = ''
 
     def lineLengthExceeded(self, line):
-        print "line too long"
-        raise NotImplementedError
+        raise NotImplementedError('line too long')
 
     def setFinishedDeferred(self, d):
         self.finished = d
