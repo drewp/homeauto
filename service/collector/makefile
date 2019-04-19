@@ -6,18 +6,20 @@ TAG=bang6:5000/${JOB}_x86:latest
 build_image:
 	rm -rf tmp_ctx
 	mkdir -p tmp_ctx
-	cp -a Dockerfile ../../lib/*.py ../../lib/twisted_sse_demo *.py req* tmp_ctx
+	cp -a Dockerfile ../../lib/*.py ../../lib/twisted_sse_demo *.py req* stubs tmp_ctx
 	docker build --network=host -t ${TAG} tmp_ctx
+
+push_image: build_image
 	docker push ${TAG}
 
-shell:
+shell: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host ${TAG} /bin/bash
 
 local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           --net=host \
           ${TAG} \
-          python sse_collector.py -v
+          python3 sse_collector.py -v
 
 local_run_strace: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
@@ -25,7 +27,7 @@ local_run_strace: build_image
           --net=host \
           --cap-add SYS_PTRACE \
           ${TAG} \
-          strace -f -tts 200 python /mnt/sse_collector.py -v
+          strace -f -tts 200 python3 /mnt/sse_collector.py -v
 
 local_run_pyspy: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
@@ -33,9 +35,16 @@ local_run_pyspy: build_image
           --net=host \
           --cap-add SYS_PTRACE \
           ${TAG} \
-          py-spy -- python /mnt/sse_collector.py
+          py-spy -- python3 /mnt/sse_collector.py
+
+typecheck: build_image
+	docker run --rm -it -p ${PORT}:${PORT} \
+          --net=host \
+	  -e=MYPY=/usr/local/lib/python3.6/dist-packages:stubs \
+          ${TAG} \
+           /usr/local/bin/mypy --python-executable /usr/bin/python3 --no-implicit-optional --ignore-missing-imports sse_collector.py
 
 
-redeploy: build_image
+redeploy: push_image
 	supervisorctl restart sse_collector_9072
 
