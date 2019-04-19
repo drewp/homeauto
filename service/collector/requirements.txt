@@ -1,15 +1,13 @@
-cyclone
 docopt
 ipdb
 service_identity
 twisted
+py-spy
+mypy
 
-#rdflib==4.2.2
-git+http://github.com/drewp/rdflib.git@5fa18be1231a5e4dfc86ec28f2f754158c6f6f0b#egg=rdflib
-
-#rdflib-jsonld==0.4.0
-#git+http://github.com/RDFLib/rdflib-jsonld@cc5f005b222105724cd59c6069df9982fbd28c98#egg=rdflib_jsonld
-git+http://github.com/drewp/rdflib-jsonld.git@0a560c9f1aa7c7bbb80fea389e1f5fa51d1287f8#egg=rdflib_jsonld
+rdflib==4.2.2
+rdflib-jsonld==0.4.0
 
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://projects.bigasterisk.com/rdfdb/rdfdb-0.8.0.tar.gz
+https://github.com/drewp/cyclone/archive/python3.zip
