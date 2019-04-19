@@ -46,7 +46,7 @@ local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
           --name=$(JOB)_local \
           --net=host \
-	  --mount type=tmpfs,destination=/sounds,tmpfs-size=52428800 \
+	  --mount type=tmpfs,destination=/tmp,tmpfs-size=52428800 \
           -v /tmp/pulseaudio:/tmp/pulseaudio \
           ${TAG} \
           python speechMusic.py -v
@@ -57,7 +57,7 @@ local_run_strace: build_image
           --name=$(JOB)_local \
           --net=host \
 	  -v /tmp/pulseaudio:/tmp/pulseaudio \
-	  --mount type=tmpfs,destination=/sounds,tmpfs-size=52428800 \
+	  --mount type=tmpfs,destination=/tmp,tmpfs-size=52428800 \
           --cap-add SYS_PTRACE \
           ${TAG} \
           strace -f -tts 200 python /mnt/speechMusic.py -v
