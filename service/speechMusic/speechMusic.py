@@ -7,13 +7,14 @@ import sys, tempfile
 from pyjade.ext.mako import preprocessor as mako_preprocessor
 from mako.lookup import TemplateLookup
 from twisted.internet import reactor
-sys.path.append("/opt")
+from cyclone.httpclient import fetch
 from generator import tts
 import xml.etree.ElementTree as ET
 from klein import Klein
 from twisted.web.static import File
 from logsetup import log
 import pygame.mixer
+class URIRef(str): pass
 
 templates = TemplateLookup(directories=['.'],
                            preprocessor=mako_preprocessor,
@@ -30,23 +31,33 @@ def makeSpeech(speech, fast=False):
         div.set("TYPE", "sentence")
         div.text = sentence
 
-    speechSecs = tts(root, speechWav.name)
+    speechSecs = tts(speech, speechWav.name)
     return pygame.mixer.Sound(speechWav.name), speechSecs
+
+class LOADING(object): pass
 
 class SoundEffects(object):
     def __init__(self):
-
-        # also '/my/music/entrance/%s.wav' then speak "Neew %s. %s" % (sensorWords[data['sensor']], data['name']),
-
-        log.info("loading")
-        self.buffers = {name.rsplit('.', 1)[0]: pygame.mixer.Sound('sound/%s' % name) for name in os.listdir('sound')}
-        log.info("loaded sounds")
+        self.buffers = {} # URIRef : pygame.mixer.Sound
         self.playingSources = []
         self.queued = []
         self.volume = 1 # level for the next sound that's played (or existing instances of the same sound)
 
-    def playEffect(self, name):
-        snd = self.buffers[name]
+    def _getSound(self, uri):
+        def done(resp):
+            print('got', len(resp.body))
+            
+        return fetch(uri).addCallback(done)
+
+    def playEffect(self, uri):
+        if uri not in self.buffers:
+            self.buffers[uri] = LOADING
+            self._getSound(uri).addCallback(self.playEffect, uri)
+        if self.buffers[uri] is LOADING:
+            # The first playback loads then plays, but any attempts
+            # during that load are dropped, not queued.
+            return
+        snd = self.buffers[uri]
         snd.set_volume(self.volume)
         return self.playBuffer(snd)
 
@@ -85,6 +96,7 @@ class SoundEffects(object):
             self.playingSources.pop().stop()
         for q in self.queued:
             q.cancel()
+        # doesn't cover the callLater ones
 
 class Server(object):
     app = Klein()
@@ -114,8 +126,8 @@ class Server(object):
         return "ok"
 
     @app.route('/volume', methods=['PUT'])
-    def effect(self, request, name):
-        self.sfx.setVolume(float(request.args['msg'][0]))
+    def volume(self, request, name):
+        self.sfx.setVolume(float(request.args['v'][0]))
         return "ok"
 
     @app.route('/stopAll', methods=['POST'])

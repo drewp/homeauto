@@ -13,5 +13,6 @@ COPY pulse-client.conf /etc/pulse/client.conf
 
 ENV PULSE_SERVER /tmp/pulseaudio
 EXPOSE 9049
+RUN mkdir /sounds
 
 CMD [ "python", "./speechMusic.py" ]

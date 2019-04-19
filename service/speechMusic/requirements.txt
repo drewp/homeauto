@@ -5,4 +5,4 @@ MarkupSafe==0.18
 mock==1.0.1
 pyjade==2.0.2
 Twisted
-pygame
+pygame==1.9.5

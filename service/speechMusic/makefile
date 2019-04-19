@@ -23,7 +23,14 @@ push_image_pi: build_image_pi
 	docker push ${TAG_PI}
 
 shell: build_image
-	docker run --rm -it --cap-add SYS_PTRACE --net=host -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} /bin/bash
+	docker run --rm -it \
+	  --cap-add SYS_PTRACE \
+	  --name=$(JOB)_shell \
+	  --mount type=tmpfs,destination=/tmp,tmpfs-size=52428800 \
+	   --net=host \
+	  -v /tmp/pulseaudio:/tmp/pulseaudio \
+	  ${TAG} \
+	  /bin/bash
 
 pactl_test: build_image
 	docker run --rm -it --cap-add SYS_PTRACE --net=host -v /tmp/pulseaudio:/tmp/pulseaudio ${TAG} pactl stat
@@ -37,12 +44,12 @@ pygame_test: build_image
 
 local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
-          -v `pwd`:/mnt \
           --name=$(JOB)_local \
           --net=host \
+	  --mount type=tmpfs,destination=/sounds,tmpfs-size=52428800 \
           -v /tmp/pulseaudio:/tmp/pulseaudio \
           ${TAG} \
-          python /mnt/speechMusic.py -v
+          python speechMusic.py -v
 
 local_run_strace: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
@@ -50,8 +57,8 @@ local_run_strace: build_image
           --name=$(JOB)_local \
           --net=host \
 	  -v /tmp/pulseaudio:/tmp/pulseaudio \
+	  --mount type=tmpfs,destination=/sounds,tmpfs-size=52428800 \
           --cap-add SYS_PTRACE \
-	  -e SDL_AUDIOSERVER=pulse \
           ${TAG} \
           strace -f -tts 200 python /mnt/speechMusic.py -v
 
