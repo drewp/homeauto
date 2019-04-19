@@ -11,7 +11,6 @@ ENV SDL_AUDIODRIVER pulse
 ENV PULSE_SERVER /tmp/pulseaudio
 COPY pulse-client.conf /etc/pulse/client.conf
 COPY *.py req* *.jade ./
-RUN mkdir /sounds
 
 EXPOSE 9049
 

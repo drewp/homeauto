@@ -3,7 +3,7 @@
 play sounds according to POST requests.
 """
 from __future__ import division
-import sys, tempfile
+import sys, tempfile, itertools
 from pyjade.ext.mako import preprocessor as mako_preprocessor
 from mako.lookup import TemplateLookup
 from twisted.internet import reactor
@@ -16,6 +16,7 @@ from logsetup import log
 import pygame.mixer
 class URIRef(str): pass
 
+soundCount = itertools.count()
 templates = TemplateLookup(directories=['.'],
                            preprocessor=mako_preprocessor,
                            filesystem_checks=True)
@@ -45,14 +46,19 @@ class SoundEffects(object):
 
     def _getSound(self, uri):
         def done(resp):
-            print('got', len(resp.body))
+            path = '/tmp/sound_%s' % next(soundCount)
+            with open(path, 'w') as out:
+                out.write(resp.body)
+            log.info('write %s bytes to %s', len(resp.body), path)
+            self.buffers[uri] = pygame.mixer.Sound(path)
             
-        return fetch(uri).addCallback(done)
+        return fetch(uri).addCallback(done).addErrback(log.error)
 
     def playEffect(self, uri):
         if uri not in self.buffers:
             self.buffers[uri] = LOADING
-            self._getSound(uri).addCallback(self.playEffect, uri)
+            self._getSound(uri).addCallback(lambda ret: self.playEffect(uri))
+            return
         if self.buffers[uri] is LOADING:
             # The first playback loads then plays, but any attempts
             # during that load are dropped, not queued.
