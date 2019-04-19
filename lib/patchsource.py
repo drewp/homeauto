@@ -29,7 +29,7 @@ class PatchSource(object):
         # start with patches
         self._fullGraphReceived = False
         self._eventSource = EventSource(url.toPython().encode('utf8'))
-        self._eventSource.protocol.delimiter = '\n'
+        self._eventSource.protocol.delimiter = b'\n'
 
         self._eventSource.addEventListener('fullGraph', self._onFullGraph)
         self._eventSource.addEventListener('patch', self._onPatch)
