@@ -14,7 +14,7 @@ push_image: build_image
 
 shell: build_image
 	docker run --rm -it --cap-add SYS_PTRACE \
-	  --name $(JOB)_shell \
+	  --name=$(JOB)_shell \
 	  --net=host \
 	  -v `pwd`/.mypy_cache:/opt/.mypy_cache \
 	  -v `pwd`/sse_collector.py:/opt/sse_collector.py \
@@ -22,13 +22,14 @@ shell: build_image
 
 local_run: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
+	  --name=$(JOB)_local \
           --net=host \
           ${TAG} \
           python3 sse_collector.py -v
 
 local_run_strace: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
-          -v `pwd`:/mnt \
+	  --name=$(JOB)_local \
           --net=host \
           --cap-add SYS_PTRACE \
           ${TAG} \
@@ -36,14 +37,15 @@ local_run_strace: build_image
 
 local_run_pyspy: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
-          -v `pwd`:/mnt \
+	  --name=$(JOB)_local \
           --net=host \
           --cap-add SYS_PTRACE \
           ${TAG} \
-          py-spy -- python3 /mnt/sse_collector.py
+          py-spy -- python3 sse_collector.py
 
 typecheck: build_image
 	docker run --rm -it -p ${PORT}:${PORT} \
+	  --name=$(JOB)_mypy \
           --net=host \
 	  -v `pwd`/.mypy_cache:/opt/.mypy_cache \
           ${TAG} \
