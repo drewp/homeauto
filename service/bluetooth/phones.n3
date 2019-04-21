@@ -1,0 +1,13 @@
+@prefix : <http://projects.bigasterisk.com/room/>.
+
+<http://bigasterisk.com/foaf.rdf#drewp> :carries :drewTreo .
+
+:drewTreo :bluetoothAddress "00:07:E0:5C:8A:DD" .
+
+:johnTreo :bluetoothAddress "00:07:E0:1E:F5:5C" .
+
+:kelsiTreo :bluetoothAddress "00:07:E0:BE:AD:B2" .
+
+# 00:1D:FE:37:89:D0 drew's pre
+
+#1199324300.71 2008-01-02 17:38:20,705 INFO  io.bluetooth:105: no matches for Jawbone (00:17:84:11:E5:D1)
