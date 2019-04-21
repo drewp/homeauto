@@ -2,5 +2,6 @@ cyclone
 rdflib-jsonld==0.4.0
 rdflib==4.2.2
 twisted-mqtt==0.3.6
-https://projects.bigasterisk.com/rdfdb/rdfdb-0.7.0.tar.gz
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.8.0.tar.gz
 rx==1.6.1
+git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
