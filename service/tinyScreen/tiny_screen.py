@@ -25,11 +25,14 @@ class Screen(object):
         return Image.open('anim/%s.png' % state.rsplit('/')[-1])
         
     def _initOutput(self, spiDevice, rotation):
+        # CS on pin 26 (GPIO7; spi0 ce1), DC on pin 18 (GPIO24), RST held at VCC.
         self._dev = ssd1331(spi(device=spiDevice, port=0,
                                 # lots of timeouts on the 12288-byte transfer without this
-                                transfer_size=64,
-                                bus_speed_hz=16000000,
-                                gpio_RST=None),
+                                #transfer_size=64,
+                                #bus_speed_hz=16000000,
+                                gpio_RST=None,
+                                gpio_DC=24,
+                            ),
                             rotation=rotation)
         
     def setContrast(self, contrast):

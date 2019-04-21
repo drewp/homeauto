@@ -1,5 +1,6 @@
 luma.oled
 rdflib==4.2.2
 cyclone
-https://projects.bigasterisk.com/rdfdb/rdfdb-0.6.0.tar.gz
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.8.0.tar.gz
 rdflib-jsonld==0.3
+git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
