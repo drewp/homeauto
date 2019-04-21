@@ -7,29 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
-    <script>
-     requirejs.config({
-       paths: {
-         "streamed-graph": "/rdf/streamed-graph",
-         "quadstore": "/rdf/quadstore",
-         "async-module": "/lib/async/80f1793/async",
-         "async": "/lib/async/80f1793/async",
-         "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
-         "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
-         "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
-         "moment": "/lib/moment.min",
-         "underscore": "/lib/underscore-1.5.2.min",
-       }
-     });
-    </script>
-    <script>
-     window.NS = {
-       dev: 'http://projects.bigasterisk.com/device/',
-       room: 'http://projects.bigasterisk.com/room/',
-       rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
-       sensor: 'http://bigasterisk.com/homeauto/sensor/',
-     };
-    </script>
+    <script src="/rdf/common_paths_and_ns.js"></script>
     <link rel="import" href="rfid-console.html">
     <style>
      .served-resources {
@@ -45,6 +23,12 @@
   <body>
     <rfid-console></rfid-console>
 
+    <template id="t" is="dom-bind">
+      <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+      <div id="out"></div>
+      <script type="module" src="/rdf/streamed_graph_view.js"></script>
+    </template>
+    
     <div class="served-resources">
       <a href="stats/">/stats/</a>
       <a href="graph">/graph</a>
