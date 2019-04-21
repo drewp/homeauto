@@ -22,10 +22,9 @@ differences between RDF graphs
 """
 import sys, json, logging, itertools
 import cyclone.sse
-sys.path.append("/my/proj/rdfdb")
 from rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
-from rdfdb.rdflibpatch import patchQuads
+from rdfdb.rdflibpatch import patchQuads, inGraph
 from rdfdb.patch import Patch
 from rdflib_jsonld.serializer import from_rdf
 from rdflib.parser import StringInputSource
@@ -65,9 +64,9 @@ patchAsJson = jsonFromPatch # deprecated name
 def patchFromJson(j):
     body = json.loads(j)['patch']
     a = ConjunctiveGraph()
-    a.parse(StringInputSource(json.dumps(body['adds'])), format='json-ld')
+    a.parse(StringInputSource(json.dumps(body['adds']).encode('utf8')), format='json-ld')
     d = ConjunctiveGraph()
-    d.parse(StringInputSource(json.dumps(body['deletes'])), format='json-ld')
+    d.parse(StringInputSource(json.dumps(body['deletes']).encode('utf8')), format='json-ld')
     return Patch(addGraph=a, delGraph=d)
 
 def graphAsJson(g):
