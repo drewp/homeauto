@@ -1,0 +1,12 @@
+FROM bang6:5000/base_pi
+
+WORKDIR /opt
+
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
+
+COPY *.py *.html *.css *.js ./
+
+EXPOSE 10012:10012
+
+CMD [ "python", "./graphserver.py" ]
