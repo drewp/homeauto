@@ -2,6 +2,8 @@ twisted
 cyclone
 docopt
 python-dateutil
+pytradfri[async]==6.0.1
+
 rdflib==4.2.2
 rdflib-jsonld==0.4.0
 
