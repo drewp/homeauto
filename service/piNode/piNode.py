@@ -8,6 +8,8 @@ from twisted.internet import reactor, task
 from twisted.internet.threads import deferToThread
 from docopt import docopt
 import etcd3
+from greplin import scales
+from greplin.scales.cyclonehandler import StatsHandler
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -37,6 +39,8 @@ HOST = Namespace('http://bigasterisk.com/ruler/host/')
 hostname = socket.gethostname()
 CTX = ROOM['pi/%s' % hostname]
 
+STATS = scales.collection('/root',
+)
 def patchRandid():
     """
     I'm concerned urandom is slow on raspberry pi, and I'm adding to
@@ -306,12 +310,13 @@ def main():
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "static", "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
+        (r'/stats/(.*)', StatsHandler, {'serverName': 'piNode'}),
         (r'/boards', Boards),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
         (r'/dot', Dot),
-        ], config=config, debug=arg['-v']), interface='::')
+    ], config=config, debug=arg['-v']), interface='::')
     log.warn('serving on 9059')
     reactor.run()
 

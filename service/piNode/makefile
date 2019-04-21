@@ -15,3 +15,6 @@ local_run:
 
 push_config:
 	docker run -it --net=host -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py pi/
+
+redeploy: build_image
+	sudo /my/proj/ansible/playbook -l pi -t raspi_io_node
