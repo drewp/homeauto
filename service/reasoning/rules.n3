@@ -163,6 +163,13 @@
 bang: :postAction <http://10.2.0.62/rpc/motor> .
 } .
 
+{ <http://bigasterisk.com/homeauto/sensor/tempHumidKitchen> :temperatureF ?t .
+  <http://bigasterisk.com/homeauto/thermostatSetTemp> :temperatureF ?setTemp .
+  ?t math:lessThan ?setTemp .
+} =>  {
+  :fakeHeater :state :on .
+} .
+
 { :frontDoorLockRequest :state :unlocked .
 } => {
   :frontDoorLock :putState :unlocked .
