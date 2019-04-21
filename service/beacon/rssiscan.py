@@ -176,21 +176,22 @@ def parse_events(sock, loop_count, source, influx, coll, lastDoc):
                 rows = list(evt_le_advertising_report_dump(pkt))
                 for row in sorted(rows):
                     rssi = row.pop('rssi')
-                    points.append(dict(
-                        measurement='rssi',
-                        tags={'from': source, 'toAddr': row['addr']},
-                        fields={'value': rssi},
-                        time=nowMs,
-                        ))
-                    key = (row['addr'], row['evt_type'])
-                    if lastDoc.get(key) != row:
-                        # should check mongodb here- maybe another
-                        # node already wrote this row
-                        lastDoc.put(key, row)
-                        row = row.copy()
-                        row['t'] = now
-                        coll.insert(row)
-                    
+                    if row['addr_type'] == 'Public': # or, someday, if it's a device we know
+                        points.append(dict(
+                            measurement='rssi',
+                            tags={'from': source, 'toAddr': row['addr']},
+                            fields={'value': rssi},
+                            time=nowMs,
+                            ))
+                        key = (row['addr'], row['evt_type'])
+                        if lastDoc.get(key) != row:
+                            # should check mongodb here- maybe another
+                            # node already wrote this row
+                            lastDoc.put(key, row)
+                            row = row.copy()
+                            row['t'] = now
+                            coll.insert(row)
+
     influx.write_points(points, time_precision='ms')
     sock.setsockopt( bluez.SOL_HCI, bluez.HCI_FILTER, old_filter )
 
