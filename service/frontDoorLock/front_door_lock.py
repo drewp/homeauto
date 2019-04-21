@@ -117,8 +117,28 @@ class AutoLock(object):
                 self.relock()
         else:
             self.timeUnlocked = None
-            self.masterGraph.patchObject(ctx, self.subj, ROOM['unlockedForSec'], None)
-            self.masterGraph.patchObject(ctx, self.subj, ROOM['autoLockInSec'], None)
+            unlockedFor = 0
+        if unlockedFor > 3:
+            # only start showing the count if it looks like we're not
+            # being repeatedly held open. Time is hopefully more than
+            # the refresh rate of "reasoning.actions".
+            self.reportTimes(unlockedFor)
+        else:
+            self.clearReport()
+
+    def onUnlockedStmt(self):
+        self.timeUnlocked = None
+        
+    def onLockedStmt(self):
+        pass
+
+class BluetoothButton(cyclone.web.RequestHandler):
+    def post(self):
+        body = json.loads(self.request.body)
+        log.info('POST bluetoothButton %r', body)
+        if body['addr'] == 'zz:zz:zz:zz:zz:zz' and body['key'] == 'top':
+            log.info('unlock for %r', body['addr'])
+            self.settings.mqtt.publish("frontdoor/switch/strike/command", 'ON')
 
             
 if __name__ == '__main__':
