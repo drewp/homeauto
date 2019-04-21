@@ -1,16 +1,21 @@
 # make rfid && make build_image_pi
 # docker pull bang6:5000/rfid_pn532_pi && docker run --rm -it --name rfid --net=host --privileged bang6:5000/rfid_pn532_pi
 
-# i2c keeps dropping. kernel from 1.20180313 to 1.201811112.1
-
-import nfc-nim/freefare
+#import asyncdispatch
+import os
+import parseutils
+import sets
 import strformat
 import strutils
-import graphserver
-import tags
 import threadpool
-import os
-import sets
+import httpclient
+
+import nfc-nim/freefare
+
+#import graphserver
+import rdf
+import rdf_nodes
+import tags
 
 type CardEvent = object of RootObj
   uid: cstring
@@ -90,19 +95,50 @@ proc watchForever*(self: TagWatcher) {.thread.} =
     except IOError:
       echo "IOError: restarting nfc now"
 
-      
-type TtgArgs = tuple[events: ptr CardEventChannel, server: GraphServer]
+proc uidUri(card_id: cstring): Uri =
+  let id10 = align($card_id, 10, '0')
+  initUri(&"http://bigasterisk.com/rfidCard/{id10}")
+     
+proc graphChanged(newGraph: openArray[Quad]) =
+  let client = newHttpClient()
+  let response = client.request("http://localhost:10012/currentGraph", 
+                                httpMethod = HttpPut, body = toSet(newGraph).toJsonLd())
+  if response.status != "200 OK":
+    raise new IOError
+
+proc sendOneshot(graph: openArray[Quad]) =
+  let client = newHttpClient()
+  let response = client.request("http://10.2.0.1:9071/oneShot", 
+                                httpMethod = HttpPost, 
+                                body = graph.toNtriples(),
+                                headers=newHttpHeaders({
+                                "Content-Type":"text/n3"}))
+  if response.status != "200 OK":
+    raise new IOError
+
+
+type TtgArgs = tuple[events: ptr CardEventChannel,]
 proc tagsToGraph(args: TtgArgs) {.thread.} =
+  let ROOM = initNamespace("http://projects.bigasterisk.com/room/")
+  let sensor = ROOM["frontDoorWindowRfid"]
+  let ctx = ROOM["frontDoorWindowRfidCtx"]
+
   while true:
-    echo "wait for event"
     let ev = args.events[].recv()
     if ev.appeared:
-      args.server.setGraph()
+      let cardUri = uidUri(ev.uid)
+      graphChanged([
+          Quad((sensor, ROOM["reading"], cardUri, ctx)),
+          Quad((cardUri, ROOM["cardText"], initLiteral(ev.body), ctx)),
+      ])
+      sendOneshot([
+        Quad((sensor, ROOM["startReading"], cardUri, ctx)),
+        Quad((cardUri, ROOM["cardText"], initLiteral(ev.body), ctx))
+        ])
     else:
-      args.server.setGraph()
+      graphChanged([])
 
 proc main() =
-
   var events: CardEventChannel
   events.open()
 
@@ -110,11 +146,10 @@ proc main() =
   var thr: Thread[tw.type]
   thr.createThread(watchForever, tw)
 
-  let server = newGraphServer(port = 10012)
-
   var t2: Thread[TtgArgs]
-  t2.createThread(tagsToGraph, (addr events, server))
+  t2.createThread(tagsToGraph, (addr events,))
   
-  server.run()
+  joinThread(thr)
+  joinThread(t2)
 
 main()
