@@ -40,7 +40,7 @@ class RemoteData(object):
         self.patchSource = ReconnectingPatchSource(
             URIRef('http://bang:9072/graph/home'),
             #URIRef('http://frontdoor:10012/graph/events'),
-            self.onPatch, reconnectSecs=10)
+            self.onPatch, reconnectSecs=10, agent='reasoning')
 
     def onPatch(self, p, fullGraph):
         if fullGraph:

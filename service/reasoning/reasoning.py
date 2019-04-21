@@ -24,7 +24,7 @@ sys.path.append('/opt') # docker is putting lib/ here
 from colorlog import ColoredFormatter
 from docopt import docopt
 from rdflib import Namespace, Literal, RDF, Graph
-from twisted.internet import reactor, task
+from twisted.internet import reactor, task, defer
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web, cyclone.websocket
 
@@ -285,6 +285,8 @@ def configLogging(arg):
         secondary_log_colors={},
         style='%'
 ))
+        defer.setDebugging(True)
+
 
     if arg['-i']:
         import twisted.python.log

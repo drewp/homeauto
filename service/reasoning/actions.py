@@ -103,10 +103,12 @@ class Actions(object):
         for stmt in inferred:
             putUrl = deviceGraph.value(stmt[0], ROOM['putUrl'])
             putPred = deviceGraph.value(stmt[0], ROOM['putPredicate'])
-            if putUrl and putPred == stmt[1]:
+            matchPred = deviceGraph.value(stmt[0], ROOM['matchPredicate'],
+                                          default=putPred)
+            if putUrl and matchPred == stmt[1]:
                 self._put(putUrl + '?' + urllib.urlencode([
                     ('s', str(stmt[0])),
-                    ('p', str(stmt[1]))]),
+                    ('p', str(putPred))]),
                           str(stmt[2].toPython()),
                           agent=agentFor.get(stmt[0], None))
 

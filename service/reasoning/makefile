@@ -21,3 +21,7 @@ local_run: build_image
           --net=host \
           ${TAG} \
           python /mnt/${JOB}.py -iro
+
+redeploy: build_image
+	supervisorctl restart $(JOB)_$(PORT)
+
