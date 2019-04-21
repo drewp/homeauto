@@ -100,8 +100,11 @@ class ReadLoop(object):
 
         self.pollPeriodSecs = .1
         self.expireSecs = 5
-        
-        task.LoopingCall(self.poll).start(self.pollPeriodSecs)
+
+        # now=False avoids a serious bug where the first read error
+        # could happen before reactor.run() is called, and then the
+        # error fails to crash the reactor and get us restarted.
+        task.LoopingCall(self.poll).start(self.pollPeriodSecs, now=False)
 
     @STATS.cardReadPoll.time()
     def poll(self):
@@ -138,6 +141,7 @@ class ReadLoop(object):
             traceback.print_exc()
             log.error(e)
             reactor.stop()
+
     def flushOldReads(self, now):
         for uri in list(self.log):
             if self.log[uri] < now - self.expireSecs:
