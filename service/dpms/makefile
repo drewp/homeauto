@@ -14,3 +14,6 @@ shell:
 
 local_run:
 	docker run --rm -it -v /tmp/.X11-unix/:/tmp/.X11-unix/ -v /home/drewp/.Xauthority:/root/.Xauthority -p 9095:9095 --net=host bang6:5000/dpms python ./dpms_service.py 
+
+redeploy: build_image build_image_pi
+	sudo /my/proj/ansible/playbook -t homeauto_dpms
