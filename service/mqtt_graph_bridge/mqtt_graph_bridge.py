@@ -10,8 +10,14 @@ from mqtt_client import MqttClient
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 devs = {
-    ROOM['kitchenLight']: {'root': 'h801_skylight', 'ctx': ROOM['kitchenH801']},
-    ROOM['kitchenCounterLight']: {'root': 'h801_counter', 'ctx': ROOM['kitchenH801']},
+    ROOM['kitchenLight']: {
+        'root': 'h801_skylight',
+        'ctx': ROOM['kitchenH801']
+    },
+    ROOM['kitchenCounterLight']: {
+        'root': 'h801_counter',
+        'ctx': ROOM['kitchenH801']
+    },
 }
 
 logging.basicConfig()
@@ -44,10 +50,19 @@ class OutputPage(cyclone.web.RequestHandler):
         ignored = True
         for dev, attrs in devs.items():
             if stmt[0:2] == (dev, ROOM['brightness']):
-                self.settings.mqtt.publish("%s/light/kit_w1/command" % attrs['root'],
-                                           json.dumps({'state': 'ON', 'brightness': int(stmt[2].toPython() * 255)}))                
-                self.settings.masterGraph.patchObject(attrs['ctx'],
-                                                      stmt[0], stmt[1], stmt[2])
+                for chan, scale in [('w1', 1),
+                                    ('r', 1),
+                                    ('g', .8),
+                                    ('b', .8)]:
+                    out = stmt[2].toPython() * scale 
+                    self.settings.mqtt.publish(
+                        "%s/light/kit_%s/command" % (attrs['root'], chan),
+                        json.dumps({
+                            'state': 'ON',
+                            'brightness': int(out * 255)}))
+                self.settings.masterGraph.patchObject(
+                    attrs['ctx'],
+                    stmt[0], stmt[1], stmt[2])
                 ignored = False
         if ignored:
             log.warn("ignoring %s", stmt)
@@ -70,6 +85,8 @@ if __name__ == '__main__':
 
     port = 10008
     reactor.listenTCP(port, cyclone.web.Application([
+        (r"/()", cyclone.web.StaticFileHandler,
+         {"path": ".", "default_filename": "index.html"}),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler,
          {'masterGraph': masterGraph}),
