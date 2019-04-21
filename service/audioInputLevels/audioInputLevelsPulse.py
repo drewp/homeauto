@@ -2,7 +2,7 @@
 #
 # https://github.com/swharden/Python-GUI-examples/blob/master/2016-07-37_qt_audio_monitor/SWHear.py is similar
 from __future__ import division
-import socket, time, logging, os
+import socket, time, logging, os, subprocess
 from Queue import Queue
 from ctypes import c_void_p, c_ulong, string_at
 from docopt import docopt
@@ -175,7 +175,11 @@ def main():
 
     log.setLevel(logging.DEBUG if arg['-v'] else logging.INFO)
 
-    influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
+    # todo move this into the PeakMonitor part
+    subprocess.check_output(['pactl',
+                             'set-source-volume', arg['--source'], '94900'])
+    
+    influx = InfluxDBClient('bang.vpn-home.bigasterisk.com', 9060, 'root', 'root', 'main')
 
     hostname = socket.gethostname()
     METER_RATE = 8192
