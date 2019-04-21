@@ -26,25 +26,27 @@ import cyclone.web
 from influxdb import InfluxDBClient
 import subprocess, sys, socket, time, os
 from rdflib import Namespace, URIRef
+from logsetup import log, enableTwistedLog
+
+from dpms import DPMS, DPMSModeOn
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 sys.path.append("/my/site/magma")
-from stategraph import StateGraph
-sys.path.append("../../lib")
-from localdisplay import setDisplayToLocalX
+from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
+#sys.path.append("../../lib")
+#from localdisplay import setDisplayToLocalX
 
 influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
+os.environ['DISPLAY'] = ':0.0'
+
+dpms = DPMS()
+host = socket.gethostname()
+
 def getMonitorState():
-    out = subprocess.check_output(['xset', 'q'])
-    for line in out.splitlines():
-        line = line.strip()
-        if line == 'Monitor is On':
-            return 'on'
-        elif line in ['Monitor is Off', 'Monitor is in Suspend', 'Monitor is in Standby']:
-            return 'off'
-    raise NotImplementedError("no matching monitor line in xset output")
+    level, enabled = dpms.Info()
+    return 'on' if level == DPMSModeOn else 'off'
 
 class Root(cyclone.web.RequestHandler):
     def get(self):
@@ -66,19 +68,6 @@ class Monitor(cyclone.web.RequestHandler):
         else:
             raise NotImplementedError("body must be 'on' or 'off'")
 
-
-class Graph(cyclone.web.RequestHandler):
-    def get(self):
-        host = socket.gethostname()
-        g = StateGraph(ctx=DEV['dpms/%s' % host])
-        g.add((URIRef("http://bigasterisk.com/host/%s/monitor" % host),
-               ROOM['powerStateMeasured'],
-               ROOM[getMonitorState()]))
-
-        self.set_header('Content-type', 'application/x-trig')
-        self.write(g.asTrig())
-
-
 class Poller(object):
     def __init__(self):
         self.lastSent = None
@@ -87,15 +76,19 @@ class Poller(object):
         
     def poll(self):
         now = int(time.time())
-        try:
-            state = getMonitorState()
-        except subprocess.CalledProcessError, e:
-            print repr(e)
-            os.abort()
+        state = getMonitorState()
+
+        ctx=DEV['dpms/%s' % host]
+        masterGraph.patchObject(
+            ctx,
+            URIRef("http://bigasterisk.com/host/%s/monitor" % host),
+            ROOM['powerStateMeasured'],
+            ROOM[getMonitorState()])
+        
         if state != self.lastSent or (now > self.lastSentTime + 3600):
             influx.write_points([
                 {'measurement': 'power',
-                 'tags': {'device': '%sMonitor' % socket.gethostname()},
+                 'tags': {'device': '%sMonitor' % host},
                  'fields': {'value': 1 if state == 'on' else 0},
                  'time': now
                  }], time_precision='s')
@@ -103,13 +96,14 @@ class Poller(object):
             self.lastSent = state
             self.lastSentTime = now
 
-setDisplayToLocalX()
+masterGraph = PatchableGraph()
 poller = Poller()
             
 reactor.listenTCP(9095, cyclone.web.Application([
     (r'/', Root),
     (r'/monitor', Monitor),
-    (r'/graph', Graph),
+    (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
+    (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
 ]), interface='::')
 
 reactor.run()
