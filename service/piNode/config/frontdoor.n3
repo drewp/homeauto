@@ -12,7 +12,7 @@ ha:piFrontdoor a :PiBoard;
   :onboardDevice ha:frontdoorPiTemp;
   :hasPin
     pin:GPIO4, # open
-    pin:GPIO11, # motion
+    pin:GPIO5, # motion
     pin:GPIO17, # OW temp
     pin:GPIO18 .   # rgb
 
@@ -30,7 +30,7 @@ pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
       [:key "location"; :value "frontDoor"]];.
 
 
-pin:GPIO11 :gpioNumber 11; :connectedTo sensor:motionFrontdoorInside .
+pin:GPIO5 :gpioNumber 5; :connectedTo sensor:motionFrontdoorInside .
 sensor:motionFrontdoorInside a :MotionSensor;
   :influxMeasurement [
     :measurement "presence";
