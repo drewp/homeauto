@@ -56,5 +56,10 @@ config = {
          'sources': [
              'http://bang:9075/graph/events', # "env"
          ]},
+        {'id': 'workshop',
+         'sources': [
+             'http://workshop.vpn-home:9059/graph/events', 
+         ]},
+        
     ]
 }
