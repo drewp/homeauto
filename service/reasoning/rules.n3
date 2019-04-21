@@ -226,3 +226,21 @@
 #star:slideshow :postAction <http://dash:9049/effects/question> .
 bang: :postAction <http://10.2.0.62/rpc/motor> .
 } .
+
+{ :frontDoorLockRequest :state :unlocked .
+} => {
+  :frontDoorLock :putState :unlocked .
+  :frontDoorLock :putAgent :someStateRequest .
+} .
+
+{:frontDoorLock :state :locked .} => {:frontDoorOled :state :locked .}.
+{:frontDoorLock :state :unlocked .} => {:frontDoorOled :state :unlockNews .}.
+
+{
+  :frontDoorWindowRfid :reading ?card .
+  ?card :cardText ?text .
+  ?card :owner ?agent .
+} => {
+  :frontDoorLock :putState :unlocked .
+  :frontDoorLock :putAgent ?agent .
+} .
