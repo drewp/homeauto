@@ -23,17 +23,17 @@ log = logging.getLogger()
 
 CTX = ROOM['stored']
 
-class OutputPage(cyclone.web.RequestHandler):
+class ValuesResource(cyclone.web.RequestHandler):
     def put(self):
         arg = self.request.arguments
         if arg.get('s') and arg.get('p'):
             self._onQueryStringStatement(arg['s'][-1], arg['p'][-1], self.request.body)
         else:
             self._onGraphBodyStatements(self.request.body, self.request.headers)
-            
+    post = put
     def _onQueryStringStatement(self, s, p, body):
-        subj = URIRef(arg['s'][-1])
-        pred = URIRef(arg['p'][-1])
+        subj = URIRef(s)
+        pred = URIRef(p)
         turtleLiteral = self.request.body
         try:
             obj = Literal(float(turtleLiteral))
@@ -77,14 +77,14 @@ if __name__ == '__main__':
     if dbFile.exists():
         masterGraph._graph.parse(dbFile.open(), format='nquads')
     
-    port = 10014
+    port = 10015
     reactor.listenTCP(port, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler,
          {'masterGraph': masterGraph}),
-        (r'/output', OutputPage),
+        (r'/values', ValuesResource),
     ], masterGraph=masterGraph, dbFile=dbFile, debug=arg['-v']),
                       interface='::')
     log.warn('serving on %s', port)

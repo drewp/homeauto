@@ -1,5 +1,5 @@
 JOB=store
-PORT=10014
+PORT=10015
 
 TAG=bang6:5000/${JOB}_x86:latest
 
@@ -19,4 +19,7 @@ shell:
 	docker run --rm -it --cap-add SYS_PTRACE --net=host $(TAG) /bin/sh
 
 local_run: build_x86
-	docker run --rm -it --net=host -v `pwd`/index.html:/opt/index.html -v `pwd`:/opt/homeauto_store bang6:5000/store_x86:latest python ./store.py -v
+	docker run --rm -it -v `pwd`/index.html:/opt/index.html -v `pwd`:/opt/homeauto_store bang6:5000/store_x86:latest python ./store.py -v
+
+redeploy: build_image
+	supervisorctl restart $(JOB)_$(PORT)

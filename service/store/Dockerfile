@@ -7,6 +7,6 @@ RUN pip install -r requirements.txt
 
 COPY *.py *.html ./
 
-EXPOSE 11014
+EXPOSE 10015
 
 CMD [ "python", "./store.py" ]
