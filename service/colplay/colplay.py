@@ -15,18 +15,22 @@ from dateutil.tz import tzlocal
 from cyclone.httpclient import fetch
 from webcolors import rgb_to_hex
 from influxdb import InfluxDBClient
+from rdflib import Namespace, Graph
+from rdflib.parser import StringInputSource
+
+ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 influx = InfluxDBClient('bang', 9060, 'root', 'root', 'main')
 
-def currentAudio(location='brace'):
+def currentAudio(location='frontbed'):
     t = time.time()
     row = list(influx.query("""SELECT mean(value) FROM audioLevel WHERE "location" = '%s' AND time > %ds""" % (location, t - 30)))[0][0]
     log.debug("query took %.03fms", 1000 * (time.time() - t))
-    base = {'brace': .020,
+    base = {'frontbed': .015,
             'living': .03,
     }[location]
     high = {
-        'brace': .1,
+        'frontbed': .40,
         'living': .3,
         }[location]
     return max(0.0, min(1.0, (row['mean'] - base) / high))
@@ -139,7 +143,7 @@ class LightState(object):
             x = int(((hr - 12) % 24) * pxPerHour) % 2400
             log.debug("x = %s", x)
 
-            audioLevel = currentAudio('brace')
+            audioLevel = currentAudio('frontbed')
             log.debug('level = %s', audioLevel)
             for i, (name, ypos) in enumerate(sorted(lightYPos.items())):
 
@@ -158,6 +162,17 @@ class LightState(object):
             log.error(self.lastError)
             self.lastErrorTime = time.time()
             
+
+            
+class OneShot(cyclone.web.RequestHandler):
+    def post(self):
+        g = Graph()
+        g.parse(StringInputSource(self.request.body), format={
+            'text/n3': 'n3',
+        }[self.request.headers['content-type']])
+
+        for anim in g.subjects(ROOM['playback'], ROOM['start']):
+            startAnim(anim)
             
 class IndexHandler(cyclone.web.RequestHandler):
     def get(self):
@@ -176,5 +191,6 @@ task.LoopingCall(lightState.step).start(3)#3600 / pxPerHour)
 log.info("listening http on 9051")
 reactor.listenTCP(9051, cyclone.web.Application([
     (r'/', IndexHandler),
+    (r'/oneShot', OneShot),
     ], lightState=lightState))
 reactor.run()
