@@ -1,15 +1,12 @@
-import sys, logging
+import logging
 import traceback
-from twisted.internet import reactor, defer
-from twisted_sse_demo.eventsource import EventSource
 from rdflib import ConjunctiveGraph
 from rdflib.parser import StringInputSource
+from twisted.internet import reactor, defer
 
-sys.path.append("../../lib")
 from patchablegraph import patchFromJson
-
-sys.path.append("/my/proj/rdfdb")
 from rdfdb.patch import Patch
+from twisted_sse_demo.eventsource import EventSource
 
 log = logging.getLogger('fetch')
 

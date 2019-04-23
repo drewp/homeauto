@@ -20,16 +20,18 @@ models
 differences between RDF graphs
 
 """
-import sys, json, logging, itertools
-import cyclone.sse
+import json, logging, itertools
+
+from greplin import scales
 from rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
-from rdfdb.rdflibpatch import patchQuads, inGraph
-from rdfdb.patch import Patch
-from rdflib_jsonld.serializer import from_rdf
 from rdflib.parser import StringInputSource
+from rdflib_jsonld.serializer import from_rdf
+import cyclone.sse
+
 from cycloneerr import PrettyErrorHandler
-from greplin import scales
+from rdfdb.patch import Patch
+from rdfdb.rdflibpatch import patchQuads, inGraph
 
 log = logging.getLogger('patchablegraph')
 
