@@ -8,7 +8,7 @@ setup(
     requires=[
         'cyclone',
         'twisted',
-        'rdflib-jsonld>=0.3',
+        'rdflib-jsonld(>=0.3)',
         'git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales',
         
         'https://projects.bigasterisk.com/rdfdb/rdfdb-0.1.0.tar.gz',
