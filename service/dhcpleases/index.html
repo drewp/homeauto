@@ -4,71 +4,43 @@
     <title>dhcp leases</title>
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <script src="/lib/underscore-1.5.2.min.js"></script>
-    <link rel="import" href="/rdf/n3+polymer/trig-store.html">
-    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
+
+    <script src="/lib/require/require-2.3.3.js"></script>
+    <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="import" href="/rdf/streamed-graph.html">
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
   </head>
   <body>
     <h1>Active dhcp leases</h1>
-    <p><a href="../wifi">go to wifi</a></p>
+    <p><a href="../wifi">go to wifi</a>; <a href="/rdf/browse/?graph=https%3A%2F%2Fbigasterisk.com%2Fsse_collector%2Fgraph%2Fnetwork">merge with wifi</a></p>
 
-    <dom-module id="dhcp-table">
-      <template>
-        <iron-ajax auto url="graph"
-                   params='{"pruneExpired": "true"}'
-                   handle-as="text"
-                   last-response="{{ajaxResponse}}"></iron-ajax>
-        <trig-store id="ts" trig-input="{{ajaxResponse}}"></trig-store>
+    <template id="t" is="dom-bind">
 
-        <table>
-          <template is="dom-repeat" items="{{devices}}">
-            <tr>
-              <td>{{item.dhcpHostname}}</td>
-              <td>{{item.ip}}</td>
-              <td>{{item.mac}}</td>
-            </tr>
-          </template>
-        </table>
-      </template>
-    </dom-module>
-    
-    <script>
-     HTMLImports.whenReady(function () {
-       Polymer({
-         is: "dhcp-table",
-         ready: function() {
-           this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
-           this.devices = [];
-         },
-         storeChanged: function(ev) {
-           var store = ev.detail.value;
-           var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
-           var findOne = function(s, p, o) {
-             var rows = find(s, p, o);
-             return rows[0];
-           };
+      <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+      <div id="out"></div>
+      <script type="module" src="/rdf/streamed_graph_view.js"></script>
 
-           this.devices = [];
-           
-           find(null, "room:dhcpHostname", null).forEach(function(row) {
-             var out = {dhcpHostname: N3.Util.getLiteralValue(row.object)}
-             var lease = findOne(null, "room:ethernetAddress",
-                                 row.subject).subject;
-             out.ip = N3.Util.getLiteralValue(
-               findOne(findOne(lease, "room:assignedIp", null).object,
-                       "rdfs:label", null).object);
-             out.mac = N3.Util.getLiteralValue(
-               findOne(findOne(lease, "room:ethernetAddress", null).object,
-                       "room:macAddress", null).object);
-             this.devices.push(out);
-           }.bind(this));
-           this.devices = _.sortBy(this.devices, 'dhcpHostname');
-         }
-       });
-     });
-    </script>
-    <dhcp-table></dhcp-table>
+    </template>
+    <style>
+     .served-resources {
+         margin-top: 4em;
+         border-top: 1px solid gray;
+         padding-top: 1em;
+     }
+     .served-resources a {
+         padding-right: 2em;
+     }
+    </style>
 
-    <iframe src="https://bigasterisk.com/wifi" height="500" style="width: 100%"></iframe>
+    <div class="served-resources">
+      <a href="stats/">/stats/</a>
+      <a href="graph">/graph</a>
+      <a href="graph/events">/graph/events</a>
+    </div>
   </body>
 </html>

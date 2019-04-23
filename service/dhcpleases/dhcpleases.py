@@ -3,71 +3,93 @@ statements about dhcp leases (and maybe live-host pings)
 
 also read 'arp -an' and our dns list 
 """
-import sys
-import datetime
-sys.path.append("/my/site/magma")
-from stategraph import StateGraph
-from rdflib import URIRef, Namespace, Literal, RDF, RDFS, XSD, ConjunctiveGraph
+import datetime, itertools, os
+
+from docopt import docopt
 from dateutil.tz import tzlocal
-import cyclone.web
+from rdflib import URIRef, Namespace, Literal, RDF, RDFS, XSD, ConjunctiveGraph
 from twisted.internet import reactor, task
-from isc_dhcp_leases.iscdhcpleases import IscDhcpLeases
-sys.path.append("/my/proj/homeauto/lib")
+import cyclone.web
+
+from greplin import scales
+from greplin.scales.cyclonehandler import StatsHandler
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
-sys.path.append("/my/proj/rdfdb")
-from rdfdb.patch import Patch
+from standardservice.logsetup import log, verboseLogging
 
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
+ctx = DEV['dhcp']
+
+STATS = scales.collection('/root',
+                          scales.PmfStat('readLeases'),
+                          scales.IntStat('filesDidntChange'),
+                          )
 
 def timeLiteral(dt):
     return Literal(dt.replace(tzinfo=tzlocal()).isoformat(),
                    datatype=XSD.dateTime)
+    
+def macUri(macAddress: str) -> URIRef:
+    return URIRef("http://bigasterisk.com/mac/%s" % macAddress.lower())
 
-def update(masterGraph):
-    g = ConjunctiveGraph()
-    ctx = DEV['dhcp']
+class Poller:
+    def __init__(self, graph):
+        self.graph = graph
+        self.fileTimes = {'/opt/dnsmasq/10.1/leases': 0, '/opt/dnsmasq/10.2/leases': 0}
+        task.LoopingCall(self.poll).start(2)
 
-    now = datetime.datetime.now()
-    for mac, lease in IscDhcpLeases('/var/lib/dhcp/dhcpd.leases'
-                                    ).get_current().items():
-        uri = URIRef("http://bigasterisk.com/dhcpLease/%s" % lease.ethernet)
-
-        g.add((uri, RDF.type, ROOM['DhcpLease'], ctx))
-        g.add((uri, ROOM['leaseStartTime'], timeLiteral(lease.start), ctx))
-        g.add((uri, ROOM['leaseEndTime'], timeLiteral(lease.end), ctx))
-        if lease.end < now:
-            g.add((uri, RDF.type, ROOM['ExpiredLease'], ctx))
-        ip = URIRef("http://bigasterisk.com/localNet/%s/" % lease.ip)
-        g.add((uri, ROOM['assignedIp'], ip, ctx))
-        g.add((ip, RDFS.label, Literal(lease.ip), ctx))
-        mac = URIRef("http://bigasterisk.com/mac/%s" % lease.ethernet)
-        g.add((uri, ROOM['ethernetAddress'], mac, ctx))
-        g.add((mac, ROOM['macAddress'], Literal(lease.ethernet), ctx))
-        if lease.hostname:
-            g.add((mac, ROOM['dhcpHostname'], Literal(lease.hostname), ctx))
-    masterGraph.setToGraph(g)
+    def anythingToRead(self):
+        ret = False
+        for f, t in self.fileTimes.items():
+            mtime = os.path.getmtime(f)
+            if mtime > t:
+                self.fileTimes[f] = mtime
+                ret = True
+        return ret
         
+    def poll(self):
+        if not self.anythingToRead():
+            STATS.filesDidntChange += 1
+            return
+
+        with STATS.readLeases.time():
+            g = ConjunctiveGraph()
+            for line in itertools.chain(*[open(f) for f in self.fileTimes]):
+                # http://lists.thekelleys.org.uk/pipermail/dnsmasq-discuss/2016q2/010595.html
+                expiration_secs, addr, ip, hostname, clientid = line.strip().split(' ')
+
+                uri = macUri(addr)
+                g.add((uri, RDF.type, ROOM['HasDhcpLease'], ctx))
+                g.add((uri, ROOM['macAddress'], Literal(addr), ctx))
+                g.add((uri, ROOM['assignedIp'], Literal(ip), ctx))
+
+                if hostname != '*':
+                    g.add((uri, ROOM['dhcpHostname'], Literal(hostname), ctx))
+
+            self.graph.setToGraph(g)
+            
 if __name__ == '__main__':
-    config = {
-        'servePort' : 9073,
-        }
-    from twisted.python import log as twlog
-    twlog.startLogging(sys.stdout)
-    #log.setLevel(10)
-    #log.setLevel(logging.DEBUG)
+    arg = docopt("""
+    Usage: store.py [options]
+
+    -v           Verbose
+    --port PORT  Serve on port [default: 9073].
+    """)
+
+    verboseLogging(arg['-v'])
+
     masterGraph = PatchableGraph()
-    task.LoopingCall(update, masterGraph).start(1)
+    poller = Poller(masterGraph)
 
     reactor.listenTCP(
-        config['servePort'],
+        int(arg['--port']),
         cyclone.web.Application(
             [
                 (r"/()", cyclone.web.StaticFileHandler,
                  {"path": ".", "default_filename": "index.html"}),
-                
                 (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
                 (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+                (r'/stats/(.*)', StatsHandler, {'serverName': 'dhcpleases'}),
             ], masterGraph=masterGraph
         ))
     reactor.run()
