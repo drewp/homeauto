@@ -20,7 +20,7 @@ class EventSourceProtocol(LineReceiver):
 
     def addCallback(self, event, func):
         self.callbacks[event] = func
-        
+
     def lineReceived(self, line):
         if line == b'':
             # Dispatch event
