@@ -1,0 +1,2 @@
+exclude tasks.py
+exclude setup.py
