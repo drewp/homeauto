@@ -2,11 +2,11 @@ from setuptools import setup
  
 setup(
     name='cycloneerr',
-    version='0.2.0',
+    version='0.3.0',
     packages=['cycloneerr'],
     package_dir={'cycloneerr': ''},
     install_requires=['cyclone'],
-    url='https://projects.bigasterisk.com/cycloneerr/cycloneerr-0.2.0.tar.gz',
+    url='https://projects.bigasterisk.com/cycloneerr/cycloneerr-0.3.0.tar.gz',
     author='Drew Perttula',
     author_email='drewp@bigasterisk.com',
 )
