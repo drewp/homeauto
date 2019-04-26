@@ -1,5 +1,5 @@
 from __future__ import division
-import sys, logging, socket, json, time
+import sys, logging, socket, json, time, pkg_resources
 import cyclone.web
 from cyclone.httpclient import fetch
 from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
@@ -40,6 +40,12 @@ hostname = socket.gethostname()
 CTX = ROOM['pi/%s' % hostname]
 
 STATS = scales.collection('/root',
+                          scales.PmfStat('configReread'),
+                          scales.IntStat('pollException'),
+                          scales.PmfStat('boardPoll'),
+                          scales.PmfStat('sendOneshot'),
+                          scales.PmfStat('outputStatements'),
+
 )
 def patchRandid():
     """
@@ -84,7 +90,8 @@ class Config(object):
         if getattr(self, 'rereadLater', None):
             self.rereadLater.cancel()
         self.rereadLater = None
-        
+
+    @STATS.configReread.time()
     def reread(self):
         self.rereadLater = None
         log.info('read config')
@@ -135,10 +142,12 @@ class Board(object):
     def startPolling(self):
         task.LoopingCall(self._poll).start(.05)
 
+    @STATS.boardPoll.time() # not differentiating multiple boards here
     def _poll(self):
         try:
             self._pollMaybeError()
         except Exception:
+            STATS.pollException += 1
             log.exception("During poll:")
             
     def _pollMaybeError(self):
@@ -148,6 +157,8 @@ class Board(object):
             if (hasattr(i, 'pollPeriod') and
                 self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
                 continue
+            #need something like:
+            #  with i.pollTiming.time():
             new = i.poll()
             pollTime[i.uri] = time.time() - now
             if isinstance(new, dict): # new style
@@ -184,7 +195,8 @@ class Board(object):
         self.masterGraph.patch(Patch.fromDiff(inContext(prev, dev),
                                               inContext(new, dev)))
         self._statementsFromInputs[dev] = new
-            
+
+    @STATS.sendOneshot.time()
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
@@ -199,6 +211,7 @@ class Board(object):
                      url, e.getErrorMessage())
         d.addErrback(err)
 
+    @STATS.outputStatements.time()
     def outputStatements(self, stmts):
         unused = set(stmts)
         for dev in self._devs:
@@ -306,9 +319,11 @@ def main():
     masterGraph = PatchableGraph()
     config = Config(masterGraph, arg['--hub'])
     
+    static = pkg_resources.resource_filename('homeauto_anynode', 'static/')
+
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
-            "path": "static", "default_filename": "index.html"}),
+            "path": static, "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
         (r'/stats/(.*)', StatsHandler, {'serverName': 'piNode'}),
         (r'/boards', Boards),

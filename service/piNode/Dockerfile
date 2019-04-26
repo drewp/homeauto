@@ -3,15 +3,15 @@ FROM bang6:5000/base_pi
 # super slow build
 RUN pip install grpcio==1.18.0
 
+WORKDIR /opt
+
 COPY requirements.txt ./
 
-RUN pip install -r requirements.txt
+RUN pip install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements.txt
 
-ADD https://projects.bigasterisk.com/rdfdb/more.tgz ./
-RUN tar xvzf more.tgz
-
-ADD https://projects.bigasterisk.com/rdfdb/more2.tgz ./
-RUN tar xvzf more2.tgz
+# when we go to py3:
+## not sure why this doesn't work from inside requirements.txt
+#RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 
 COPY *.py ./
 COPY config/ ./config/
