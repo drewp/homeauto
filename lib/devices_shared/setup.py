@@ -1,11 +1,11 @@
-from distutils.core import setup
+from setuptools import setup
  
 setup(
     name='devices_shared',
     version='0.2.0',
     packages=['devices_shared'],
     package_dir={'devices_shared': ''},
-    requires=[
+    install_requires=[
         'numpy',
         'imageio',
         'rdflib',
