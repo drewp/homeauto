@@ -5,7 +5,7 @@ setup(
     version='0.3.0',
     packages=['homeauto_anynode'],
     package_dir={'homeauto_anynode': ''},
-    url='https://projects.bigasterisk.com/homeauto_anynode/homeauto_anynode-0.3.0.tar.gz',
+    url='https://projects.bigasterisk.com/homeauto-anynode/homeauto_anynode-0.3.0.tar.gz',
     author='Drew Perttula',
     author_email='drewp@bigasterisk.com',
 )
