@@ -1,1 +1,1 @@
-recursive-include static *
+include static/*
