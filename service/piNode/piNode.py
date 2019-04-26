@@ -324,7 +324,7 @@ def main():
     reactor.listenTCP(9059, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": static, "default_filename": "index.html"}),
-        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": static}),
         (r'/stats/(.*)', StatsHandler, {'serverName': 'piNode'}),
         (r'/boards', Boards),
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
