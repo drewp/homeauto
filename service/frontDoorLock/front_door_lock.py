@@ -6,15 +6,17 @@ put :frontDoorLock :state ?s to this /output to request a change.
 
 reasoning can infer :frontDoorLock :putState ?s to do that put request.
 """
+import time, json
+
 from docopt import docopt
-from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
 import cyclone.web
-import logging, time, json
+
 from mqtt_client import MqttClient
-from logsetup import log, enableTwistedLog
+from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
+from standardservice.logsetup import log, verboseLogging
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
@@ -25,36 +27,38 @@ def rdfGraphBody(body, headers):
     g.parse(StringInputSource(body), format='nt')
     return g
 
-def mqttMessageFromState(state):
+def mqttMessageFromState(state: URIRef):
     return {
         ROOM['locked']: b'OFF',
         ROOM['unlocked']: b'ON',
         }[state]
 
-def stateFromMqtt(msg):
+def stateFromMqtt(msg: bytes):
     return {
-        'OFF': ROOM['locked'],
-        'ON': ROOM['unlocked'],
-    }[msg.decode('ascii')]
+        b'OFF': ROOM['locked'],
+        b'ON': ROOM['unlocked'],
+    }[bytes(msg)]
     
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
         try:
-            user = URIRef(self.request.headers['x-foaf-agent'])
+            # what happened to the case-insens dict?
+            h = dict((k.lower(), v) for k,v in self.request.headers.items())
+            user = URIRef(h['x-foaf-agent'])
         except KeyError:
-            log.warn('request without x-foaf-agent: %s', self.request.headers)
+            log.warn('request without x-foaf-agent: %s', h)
             self.set_status(403, 'need x-foaf-agent')
             return
         arg = self.request.arguments
         if arg.get('s') and arg.get('p'):
             subj = URIRef(arg['s'][-1])
             pred = URIRef(arg['p'][-1])
-            obj = URIRef(self.request.body)
+            obj = URIRef(self.request.body.strip().decode('ascii'))
             stmt = (subj, pred, obj)
         else:
             g = rdfGraphBody(self.request.body, self.request.headers)
             assert len(g) == 1, len(g)
-            stmt = g.triples((None, None, None)).next()
+            stmt = next(g.triples((None, None, None)))
         self._onStatement(user, stmt)
     post = put
     
@@ -66,7 +70,7 @@ class OutputPage(cyclone.web.RequestHandler):
                 self.settings.autoLock.onUnlockedStmt()
             if stmt[2] == ROOM['locked']:
                 self.settings.autoLock.onLockedStmt()
-            self.settings.mqtt.publish("frontdoor/switch/strike/command",
+            self.settings.mqtt.publish(b"frontdoor/switch/strike/command",
                                        mqttMessageFromState(stmt[2]))
             return
         log.warn("ignoring %s", stmt)
@@ -83,7 +87,7 @@ class AutoLock(object):
 
     def relock(self):
         log.info('autolock is up: requesting lock')
-        self.mqtt.publish("frontdoor/switch/strike/command",
+        self.mqtt.publish(b"frontdoor/switch/strike/command",
                           mqttMessageFromState(ROOM['locked']))
 
     def reportTimes(self, unlockedFor):
@@ -144,7 +148,8 @@ class BluetoothButton(cyclone.web.RequestHandler):
         log.info('POST bluetoothButton %r', body)
         if body['addr'] == 'zz:zz:zz:zz:zz:zz' and body['key'] == 'top':
             log.info('unlock for %r', body['addr'])
-            self.settings.mqtt.publish("frontdoor/switch/strike/command", 'ON')
+            self.settings.mqtt.publish(
+                b"frontdoor/switch/strike/command", b'ON')
 
             
 if __name__ == '__main__':
@@ -153,10 +158,7 @@ if __name__ == '__main__':
 
     -v   Verbose
     """)
-    log.setLevel(logging.INFO)
-    if arg['-v']:
-        enableTwistedLog()
-        log.setLevel(logging.DEBUG)
+    verboseLogging(arg['-v'])
 
     masterGraph = PatchableGraph()
     mqtt = MqttClient(brokerPort=10010)
@@ -167,7 +169,7 @@ if __name__ == '__main__':
         masterGraph.patchObject(ctx, ROOM['frontDoorLock'], ROOM['state'],
                                 stateFromMqtt(payload))
 
-    mqtt.subscribe("frontdoor/switch/strike/state").subscribe(on_next=toGraph)
+    mqtt.subscribe(b"frontdoor/switch/strike/state").subscribe(on_next=toGraph)
     port = 10011
     reactor.listenTCP(port, cyclone.web.Application(
         [
