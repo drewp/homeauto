@@ -78,10 +78,10 @@ class MqttClient(object):
             self._resubscribe(topic)
         return ret
 
-    def _resubscribe(self, topic):
+    def _resubscribe(self, topic: bytes):
         log.info('subscribing %r', topic)
         self.serv.protocol.onPublish = self._onPublish
-        return self.serv.protocol.subscribe(topics=[(topic, 2)])
+        return self.serv.protocol.subscribe(topics=[(topic.decode('utf-8'), 2)])
         
     def _observe_msgs(self, observer):
         self.obs = observer
