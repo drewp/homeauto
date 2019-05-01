@@ -79,7 +79,7 @@ class AutoLock(object):
         self.timeUnlocked = None
         self.autoLockSec = 6 
         self.subj = ROOM['frontDoorLock']
-        task.LoopingCall(self.check).start(1)
+        task.LoopingCall(self.pollCheck).start(1)
 
     def relock(self):
         log.info('autolock is up: requesting lock')
@@ -90,9 +90,9 @@ class AutoLock(object):
         g = self.masterGraph
         lockIn = self.autoLockSec - int(unlockedFor)
         if lockIn < 0:
-            tu = self.timeUnlocked
-            log.warn("timeUnlocked %(tu)r, state %(state)s, "
-                     "unlockedFor %(unlockedFor)r, lockIn %(lockIn)r", vars())
+            state = g._graph.value(self.subj, ROOM['state'])
+            log.warn(f"timeUnlocked {self.timeUnlocked}, state {state}, "
+                     "unlockedFor {unlockedFor}, lockIn {lockIn}")
             lockIn = 0
         g.patchObject(ctx, self.subj, ROOM['unlockedForSec'],
                       Literal(int(unlockedFor)))
@@ -103,6 +103,12 @@ class AutoLock(object):
         g = self.masterGraph
         g.patchObject(ctx, self.subj, ROOM['unlockedForSec'], None)
         g.patchObject(ctx, self.subj, ROOM['autoLockInSec'], None)
+
+    def pollCheck(self):
+        try:
+            self.check()
+        except Exception:
+            log.exception('poll failed')
         
     def check(self):
         g = self.masterGraph
