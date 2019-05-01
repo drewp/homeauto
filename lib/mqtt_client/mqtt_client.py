@@ -47,7 +47,7 @@ class MQTTService(ClientService):
             log.warn("publish failed: %s", failure.getErrorMessage())
             return failure
 
-        return self.protocol.publish(topic=bytearray(topic), qos=0,
+        return self.protocol.publish(topic=topic.decode('utf-8'), qos=0,
                                      message=bytearray(msg)).addErrback(_logFailure)
 
 
