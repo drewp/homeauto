@@ -42,12 +42,13 @@ class MQTTService(ClientService):
         log.warn("Connection to broker lost: %r", reason)
         self.whenConnected().addCallback(self.connectToBroker)
 
-    def publish(self, topic, msg):
+    def publish(self, topic: bytes, msg: bytes):
         def _logFailure(failure):
             log.warn("publish failed: %s", failure.getErrorMessage())
             return failure
 
-        return self.protocol.publish(topic=topic, qos=0, message=msg).addErrback(_logFailure)
+        return self.protocol.publish(topic=bytearray(topic), qos=0,
+                                     message=bytearray(msg)).addErrback(_logFailure)
 
 
 class MqttClient(object):
@@ -64,7 +65,7 @@ class MqttClient(object):
     def publish(self, topic, msg):
         return self.serv.publish(topic, msg)
 
-    def subscribe(self, topic):
+    def subscribe(self, topic: bytes):
         """returns rx.Observable of payload strings"""
         # This is surely broken for multiple topics and subscriptions. Might not even
         # work over a reconnect.
@@ -80,7 +81,7 @@ class MqttClient(object):
     def _resubscribe(self, topic):
         log.info('subscribing %r', topic)
         self.serv.protocol.onPublish = self._onPublish
-        return self.serv.protocol.subscribe(topic, 2)
+        return self.serv.protocol.subscribe(topics=[(topic, 2)])
         
     def _observe_msgs(self, observer):
         self.obs = observer
