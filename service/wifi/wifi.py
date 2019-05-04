@@ -26,7 +26,7 @@ import docopt
 import pystache
 
 from cycloneerr import PrettyErrorHandler
-from logsetup import log
+from standardservice.logsetup import log
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
 from scrape import Wifi, SeenNode
 
