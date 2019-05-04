@@ -1,8 +1,8 @@
 import logging, json, base64
-from typing import List
+from typing import List, Iterable
 
 from cyclone.httpclient import fetch
-from rdflib import Literal, Graph, RDF, URIRef, Namespace
+from rdflib import Literal, Graph, RDF, URIRef, Namespace, RDFS
 from twisted.internet.defer import inlineCallbacks, returnValue
 
 log = logging.getLogger()
@@ -13,12 +13,12 @@ def macUri(macAddress: str) -> URIRef:
     return URIRef("http://bigasterisk.com/mac/%s" % macAddress.lower())
 
 class SeenNode(object):
-    def __init__(self, uri: URIRef, mac: str, ip: str, pred_objs: List):
+    def __init__(self, uri: URIRef, mac: str, ip: str, stmts: Iterable):
         self.connected = True
         self.uri = uri
         self.mac = mac
         self.ip = ip
-        self.stmts = [(uri, p, o) for p, o in pred_objs]
+        self.stmts = stmts
     
 class Wifi(object):
     """
@@ -55,24 +55,38 @@ def loadOrbiData(config):
                                  b'device_changed=0\ndevice=',
                                  b'device_changed=1\ndevice=')):
         raise ValueError(resp.body)
-
+        
     log.debug(resp.body)
     rows = []
     for row in json.loads(resp.body.split(b'device=', 1)[-1]):
-        extra = []
-        extra.append((ROOM['connectedToNetwork'], {
-                    'wireless': AST['wifiAccessPoints'],
-                    '2.4G': AST['wifiAccessPoints'],
-                    '5G':  AST['wifiAccessPoints'],
-                    '-': AST['wifiUnknownConnectionType'],
-                    'Unknown': AST['wifiUnknownConnectionType'],
-                    'wired': AST['houseOpenNet']}[row['contype']]))
+        triples = set()
+        uri = macUri(row['mac'].lower())
+        
+        if row['contype'] in ['2.4G', '5G']:
+            orbi = macUri(row['conn_orbi_mac'])
+            triples.add((orbi, ROOM['wifiBand'],
+                           ROOM['wifiBand/%s' % row['contype']]))
+            triples.add((uri, ROOM['connectedToAp'], orbi))
+            triples.add((orbi, RDF.type, ROOM['AccessPoint']))
+            triples.add((orbi, ROOM['macAddress'],
+                           Literal(row['conn_orbi_mac'].lower())))
+            triples.add((orbi, RDFS.label, Literal(row['conn_orbi_name'])))
+        elif row['contype'] == 'wireless':
+            pass
+        elif row['contype'] == 'wired':
+            pass
+        elif row['contype'] == '-':
+            pass
+        else:
+            pass
+        triples.add((uri, ROOM['connectedToNet'], ROOM['HouseOpenNet']))
+
         if row['model'] != 'Unknown':
-            extra.append((ROOM['networkModel'], Literal(row['model'])))
+            triples.add((uri, ROOM['networkModel'], Literal(row['model'])))
             
         rows.append(SeenNode(
-            uri=macUri(row['mac'].lower()),
+            uri=uri,
             mac=row['mac'].lower(),
             ip=row['ip'],
-            pred_objs=extra))
+            stmts=triples))
     returnValue(rows)
