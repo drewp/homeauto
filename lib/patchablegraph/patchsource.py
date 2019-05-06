@@ -4,9 +4,10 @@ from rdflib import ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, defer
 
-from patchablegraph import patchFromJson
 from rdfdb.patch import Patch
-from twisted_sse_demo.eventsource import EventSource
+from twisted_sse.eventsource import EventSource
+
+from .patchablegraph import patchFromJson
 
 log = logging.getLogger('fetch')
 
