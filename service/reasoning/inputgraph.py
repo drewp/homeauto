@@ -11,9 +11,8 @@ from rdflibtrig import addTrig
 from graphop import graphEqual
 from greplin import scales
 
-from patchsource import ReconnectingPatchSource
+from patchablegraph.patchsource import ReconnectingPatchSource
 
-sys.path.append("/my/proj/rdfdb")
 from rdfdb.rdflibpatch import patchQuads
 
 log = logging.getLogger('fetch')

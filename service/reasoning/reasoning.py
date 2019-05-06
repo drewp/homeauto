@@ -36,7 +36,7 @@ from actions import Actions
 from inputgraph import InputGraph
 from escapeoutputstatements import unquoteOutputStatements
 
-from logsetup import log
+from standardservice.logsetup import log
 
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
