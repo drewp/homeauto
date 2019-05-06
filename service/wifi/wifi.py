@@ -33,7 +33,6 @@ from scrape import Wifi, SeenNode
 AST = Namespace("http://bigasterisk.com/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
-reasoning = "http://bang:9071/"
 
 class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -135,16 +134,11 @@ class Poller(object):
 
         influx.write_points(points, time_precision='s')
         self.lastWithSignal = newWithSignal
-        if actions: # this doesn't currently include signal strength changes
-            fetch(reasoning + "immediateUpdate",
-                  method='PUT',
-                  timeout=2,
-                  headers={'user-agent': ['wifi']}).addErrback(log.warn)
         self.lastAddrs = newAddrs
         self.lastPollTime = now
 
         self.updateGraph(masterGraph)
-            
+
     def influxPoint(self, now, address, value):
         return {
             'measurement': 'presence',
