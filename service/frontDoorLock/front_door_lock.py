@@ -21,6 +21,7 @@ from standardservice.logsetup import log, verboseLogging
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 ctx = ROOM['frontDoorControl']
+espName = b'frontdoorlock' # from door.yaml
 
 def rdfGraphBody(body, headers):
     g = Graph()
@@ -70,7 +71,7 @@ class OutputPage(cyclone.web.RequestHandler):
                 self.settings.autoLock.onUnlockedStmt()
             if stmt[2] == ROOM['locked']:
                 self.settings.autoLock.onLockedStmt()
-            self.settings.mqtt.publish(b"frontdoor/switch/strike/command",
+            self.settings.mqtt.publish(espName + b"/switch/strike/command",
                                        mqttMessageFromState(stmt[2]))
             return
         log.warn("ignoring %s", stmt)
@@ -87,7 +88,7 @@ class AutoLock(object):
 
     def relock(self):
         log.info('autolock is up: requesting lock')
-        self.mqtt.publish(b"frontdoor/switch/strike/command",
+        self.mqtt.publish(espName + b"/switch/strike/command",
                           mqttMessageFromState(ROOM['locked']))
 
     def reportTimes(self, unlockedFor):
@@ -149,7 +150,7 @@ class BluetoothButton(cyclone.web.RequestHandler):
         if body['addr'] == 'zz:zz:zz:zz:zz:zz' and body['key'] == 'top':
             log.info('unlock for %r', body['addr'])
             self.settings.mqtt.publish(
-                b"frontdoor/switch/strike/command", b'ON')
+                espName + b"/switch/strike/command", b'ON')
 
             
 if __name__ == '__main__':
@@ -169,7 +170,7 @@ if __name__ == '__main__':
         masterGraph.patchObject(ctx, ROOM['frontDoorLock'], ROOM['state'],
                                 stateFromMqtt(payload))
 
-    mqtt.subscribe(b"frontdoor/switch/strike/state").subscribe(on_next=toGraph)
+    mqtt.subscribe(espName + b"/switch/strike/state").subscribe(on_next=toGraph)
     port = 10011
     reactor.listenTCP(port, cyclone.web.Application(
         [
