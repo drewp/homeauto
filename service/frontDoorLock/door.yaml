@@ -1,18 +1,15 @@
-esphomeyaml:
-  name: frontdoor
+esphome:
+  name: frontdoorlock
   platform: ESP32
   board: lolin32
   build_path: .
   arduino_version: espressif32@>=1.4.0
-  esphomelib_version:
-    repository: https://github.com/drewp/esphomelib.git
-    tag: dev
+  esphome_core_version: latest
 
 switch:
   - platform: gpio
     pin: 2
     name: "strike"
-
 
 wifi:
   ssid: ''

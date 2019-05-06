@@ -1,6 +1,5 @@
 from invoke import task
 
-
 JOB = 'front_door_lock'
 PORT = 10011
 TAG = f'bang6:5000/{JOB}_x86:latest'
@@ -26,3 +25,14 @@ def local_run(ctx):
 def redeploy(ctx):
     ctx.run(f'sudo /my/proj/ansible/playbook -l bang -t {ANSIBLE_TAG}')
     ctx.run(f'supervisorctl -s http://bang:9001/ restart {JOB}_{PORT}')
+
+@task
+def program_board_over_usb(ctx):
+    tag = 'esphome/esphome'
+    ctx.run(f"docker pull {tag}")
+    ctx.run(f"docker run --rm -v `pwd`:/config --device=/dev/ttyUSB0 -it {tag} door.yaml run", pty=True)
+
+@task
+def monitor_usb(ctx):
+    tag = 'esphome/esphome'
+    ctx.run(f"docker run --rm -v `pwd`:/config --device=/dev/ttyUSB0 -it {tag} door.yaml logs", pty=True)
