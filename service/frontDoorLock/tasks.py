@@ -36,3 +36,16 @@ def program_board_over_usb(ctx):
 def monitor_usb(ctx):
     tag = 'esphome/esphome'
     ctx.run(f"docker run --rm -v `pwd`:/config --device=/dev/ttyUSB0 -it {tag} door.yaml logs", pty=True)
+
+@task
+def tail_mqtt(ctx):
+    ctx.run(f'mosquitto_sub -h bang -p 10010 -d -v -t \#')
+
+@task
+def mqtt_force_open(ctx):
+    ctx.run(f'mosquitto_pub -h bang -p 10010 -t frontdoorlock/switch/strike/command -m ON')
+
+@task
+def mqtt_force_lock(ctx):
+    ctx.run(f'mosquitto_pub -h bang -p 10010 -t frontdoorlock/switch/strike/command -m OFF')
+    
