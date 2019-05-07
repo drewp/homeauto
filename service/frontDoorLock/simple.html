@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+  <head>
+    <title>front door lock simple</title>
+    <meta charset="utf-8" />
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+
+    <style>
+     button {
+         min-width: 60px;
+         min-height: 40px;
+     }
+    </style>
+    
+    <p>Simple door control:</p>
+    
+    <button id="lock">Lock now</button> <button id="unlock">Unlock now</button>
+
+    <div id="result"></div>
+    
+    <script>
+     (()=>{
+
+       const send = (state) => {
+         const resultReport = document.querySelector('#result');
+         resultReport.innerText = 'sending..';
+         fetch('../simpleState', {
+           method: 'POST',
+           body: state,
+           headers: new Headers({
+             'Content-type': 'text/plain'
+           })}).then((resp) => {
+             resultReport.innerText = `ok=${resp.ok}`;
+           });
+         resultReport.innerText = 'sending....';
+       };      
+       document.querySelector('#lock').addEventListener('click', () => { send('lock'); });
+       document.querySelector('#unlock').addEventListener('click', () => { send('unlock'); });
+     })();
+    </script>
+
+    <style>
+     .served-resources {
+         margin-top: 4em;
+         border-top: 1px solid gray;
+         padding-top: 1em;
+     }
+     .served-resources a {
+         padding-right: 2em;
+     }
+    </style>
+
+    <div class="served-resources">
+      <a href="../">root</a>
+      <a href="../simple">/simple/</a>
+      <a href="../stats/">/stats/</a>
+      <a href="../graph">/graph</a>
+      <a href="../graph/events">/graph/events</a>
+      <a href="../output">(post) output</a>
+    </div>
+  </body>
+</html>

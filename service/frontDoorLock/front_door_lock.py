@@ -76,6 +76,16 @@ class OutputPage(cyclone.web.RequestHandler):
             return
         log.warn("ignoring %s", stmt)
 
+class SimpleState(cyclone.web.RequestHandler):
+    def post(self):
+        state = self.request.body.strip().decode('ascii')
+        if state == 'unlock':
+            self.settings.autoLock.onUnlockedStmt()
+            self.settings.mqtt.publish(espName + b"/switch/strike/command", b'ON')
+        if state == 'lock':
+            self.settings.autoLock.onLockedStmt()
+            self.settings.mqtt.publish(espName + b"/switch/strike/command", b'OFF')
+        
 
 class AutoLock(object):
     def __init__(self, masterGraph, mqtt):
@@ -97,7 +107,7 @@ class AutoLock(object):
         if lockIn < 0:
             state = g._graph.value(self.subj, ROOM['state'])
             log.warn(f"timeUnlocked {self.timeUnlocked}, state {state}, "
-                     "unlockedFor {unlockedFor}, lockIn {lockIn}")
+                     f"unlockedFor {unlockedFor}, lockIn {lockIn}")
             lockIn = 0
         g.patchObject(ctx, self.subj, ROOM['unlockedForSec'],
                       Literal(int(unlockedFor)))
@@ -184,11 +194,14 @@ if __name__ == '__main__':
         [
             (r"/()", cyclone.web.StaticFileHandler,
              {"path": ".", "default_filename": "index.html"}),
+            (r"/simple/()", cyclone.web.StaticFileHandler,
+             {"path": ".", "default_filename": "simple.html"}),
             (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
             (r"/graph/events", CycloneGraphEventsHandler,
              {'masterGraph': masterGraph}),
             (r'/output', OutputPage),
             (r'/bluetoothButton', BluetoothButton),
+            (r'/simpleState', SimpleState),
         ],
         mqtt=mqtt,
         masterGraph=masterGraph,
