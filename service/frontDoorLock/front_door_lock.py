@@ -39,13 +39,17 @@ def stateFromMqtt(msg: bytes):
         b'OFF': ROOM['locked'],
         b'ON': ROOM['unlocked'],
     }[bytes(msg)]
+
+def requestUser(req):
+    # what happened to the case-insens dict?
+    h = dict((k.lower(), v) for k,v in req.headers.items())
+    return URIRef(h['x-foaf-agent'])
     
+
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
         try:
-            # what happened to the case-insens dict?
-            h = dict((k.lower(), v) for k,v in self.request.headers.items())
-            user = URIRef(h['x-foaf-agent'])
+            user = requestUser(self.request)
         except KeyError:
             log.warn('request without x-foaf-agent: %s', h)
             self.set_status(403, 'need x-foaf-agent')
@@ -78,6 +82,13 @@ class OutputPage(cyclone.web.RequestHandler):
 
 class SimpleState(cyclone.web.RequestHandler):
     def post(self):
+        try:
+            user = requestUser(self.request)
+        except KeyError:
+            log.warn('request without x-foaf-agent: %s', h)
+            self.set_status(403, 'need x-foaf-agent')
+            return
+        
         state = self.request.body.strip().decode('ascii')
         if state == 'unlock':
             self.settings.autoLock.onUnlockedStmt()
