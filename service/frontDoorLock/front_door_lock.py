@@ -171,6 +171,14 @@ if __name__ == '__main__':
                                 stateFromMqtt(payload))
 
     mqtt.subscribe(espName + b"/switch/strike/state").subscribe(on_next=toGraph)
+
+    def setEspState(payload):
+        log.info('esp state change %r', payload)
+        masterGraph.patchObject(ctx, ROOM['frontDoorLock'], ROOM['espMqttConnection'],
+                                ROOM['mqtt' + payload.decode('ascii').capitalize()])
+    
+    mqtt.subscribe(espName + b"/status").subscribe(on_next=setEspState)
+    
     port = 10011
     reactor.listenTCP(port, cyclone.web.Application(
         [

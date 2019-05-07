@@ -18,9 +18,10 @@ wifi:
 mqtt:
   broker: '10.2.0.1'
   port: 10010
+  keepalive: 5
   username: ''
   password: ''
-
+  
 logger:
   baud_rate: 115200
   level: DEBUG
