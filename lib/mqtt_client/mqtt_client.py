@@ -30,6 +30,8 @@ class MQTTService(ClientService):
 
     def _subscribeAll(self):
         topics = list(self.observersByTopic)
+        if not topics:
+            return
         log.info('subscribing %r', topics)
         self.protocol.subscribe(topics=[(topic.decode('utf8'), 2) for topic in topics])
 
