@@ -9,4 +9,4 @@ cycloneerr
 patchablegraph==0.6.0
 rdfdb==0.8.0
 standardservice==0.5.0
-mqtt_client==0.5.0
+mqtt_client==0.7.0
