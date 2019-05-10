@@ -1,11 +1,14 @@
+import json
+
 from docopt import docopt
-from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from rdflib import Namespace, URIRef, Literal, Graph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor
 import cyclone.web
-import sys, logging, json
+
 from mqtt_client import MqttClient
+from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
+from standardservice.logsetup import log, verboseLogging
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
@@ -19,9 +22,6 @@ devs = {
         'ctx': ROOM['kitchenH801']
     },
 }
-
-logging.basicConfig()
-log = logging.getLogger()
 
 def rdfGraphBody(body, headers):
     g = Graph()
@@ -73,11 +73,7 @@ if __name__ == '__main__':
 
     -v   Verbose
     """)
-    log.setLevel(logging.WARN)
-    if arg['-v']:
-        from twisted.python import log as twlog
-        twlog.startLogging(sys.stdout)
-        log.setLevel(logging.DEBUG)
+    verboseLogging(arg['-v'])
 
     masterGraph = PatchableGraph()
 
@@ -97,6 +93,5 @@ if __name__ == '__main__':
     for dev, attrs in devs.items():
         masterGraph.patchObject(attrs['ctx'],
                                 dev, ROOM['brightness'], Literal(0.0))
-    
     
     reactor.run()
