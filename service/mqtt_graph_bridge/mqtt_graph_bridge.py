@@ -54,12 +54,13 @@ class OutputPage(cyclone.web.RequestHandler):
                                     ('r', 1),
                                     ('g', .8),
                                     ('b', .8)]:
-                    out = stmt[2].toPython() * scale 
+                    out = stmt[2].toPython() * scale
+                    topic = f"{attrs['root']}/light/kit_{chan}/command"
                     self.settings.mqtt.publish(
-                        "%s/light/kit_%s/command" % (attrs['root'], chan),
+                        topic.encode('ascii'),
                         json.dumps({
                             'state': 'ON',
-                            'brightness': int(out * 255)}))
+                            'brightness': int(out * 255)}).encode('ascii'))
                 self.settings.masterGraph.patchObject(
                     attrs['ctx'],
                     stmt[0], stmt[1], stmt[2])
@@ -77,7 +78,7 @@ if __name__ == '__main__':
 
     masterGraph = PatchableGraph()
 
-    mqtt = MqttClient(brokerPort=1883)
+    mqtt = MqttClient(clientId='mqtt_graph_bridge', brokerPort=1883)
 
     port = 10008
     reactor.listenTCP(port, cyclone.web.Application([
