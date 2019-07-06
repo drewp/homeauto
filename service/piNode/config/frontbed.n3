@@ -89,8 +89,8 @@ pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
 :loftDeskStatus
   :startIndex 0;
   :endIndex 0;
-  :src "rainbow.png";
-  :x 199;
+  :src "crib50.png";
+  :x 0;
   :y 0;
   :height 1;
   :interpolate :slide;
@@ -98,7 +98,7 @@ pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
 :loftDeskStrip
   :startIndex 1;
   :endIndex 50;
-  :src "rainbow.png";
+  :src "crib50.png";
   :x 0;
   :y 0;
   :height 50;
