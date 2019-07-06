@@ -5,13 +5,11 @@ WORKDIR /opt
 RUN apt-get install -y vim
 
 COPY requirements.txt ./
-RUN pip3 install -Ur requirements.txt
+RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -Ur requirements.txt
 # not sure why this doesn't work from inside requirements.txt
-RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip'
-RUN touch /usr/local/lib/python3.6/dist-packages/greplin/__init__.py
+RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -U 'https://github.com/drewp/cyclone/archive/python3.zip'
 
 COPY stubs ./stubs
-COPY twisted_sse_demo ./twisted_sse_demo
 COPY *.py req* *.ini ./
 
 EXPOSE 9072

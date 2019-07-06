@@ -6,7 +6,7 @@ TAG=bang6:5000/${JOB}_x86:latest
 build_image:
 	rm -rf tmp_ctx
 	mkdir -p tmp_ctx
-	cp -a Dockerfile ../../lib/*.py ../../lib/twisted_sse_demo *.py req* *.ini stubs tmp_ctx
+	cp -a Dockerfile *.py req* *.ini ../../stubs tmp_ctx
 	docker build --network=host -t ${TAG} tmp_ctx
 
 push_image: build_image
