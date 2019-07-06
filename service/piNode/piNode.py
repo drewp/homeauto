@@ -5,6 +5,7 @@ from cyclone.httpclient import fetch
 from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
+from twisted.internet.defer import inlineCallbacks, maybeDeferred, gatherResults
 from twisted.internet.threads import deferToThread
 from docopt import docopt
 import etcd3
@@ -13,8 +14,8 @@ from greplin.scales.cyclonehandler import StatsHandler
 
 logging.basicConfig(level=logging.DEBUG)
 
-sys.path.append("../../lib")
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
+from cycloneerr import PrettyErrorHandler
 
 from rdfdb.rdflibpatch import inContext
 from rdfdb.patch import Patch
@@ -149,34 +150,44 @@ class Board(object):
         except Exception:
             STATS.pollException += 1
             log.exception("During poll:")
+
+
+    @inlineCallbacks
+    def _pollOneDev(self, i, pollTime):
+        now = time.time()
+        if (hasattr(i, 'pollPeriod') and
+            self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
+            return
+        #need something like:
+        #  with i.pollTiming.time():
+        new = yield maybeDeferred(i.poll)
+        pollTime[i.uri] = time.time() - now
+        if isinstance(new, dict): # new style
+            oneshot = new['oneshot']
+            new = new['latest']
+        else:
+            oneshot = None
+
+        self._updateMasterWithNewPollStatements(i.uri, new)
+
+        if oneshot:
+            self._sendOneshot(oneshot)
+        self._lastPollTime[i.uri] = now
             
+    @inlineCallbacks
     def _pollMaybeError(self):
         pollTime = {} # uri: sec
-        for i in self._devs:
-            now = time.time()
-            if (hasattr(i, 'pollPeriod') and
-                self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
-                continue
-            #need something like:
-            #  with i.pollTiming.time():
-            new = i.poll()
-            pollTime[i.uri] = time.time() - now
-            if isinstance(new, dict): # new style
-                oneshot = new['oneshot']
-                new = new['latest']
-            else:
-                oneshot = None
+        start = time.time()
+        yield gatherResults([self._pollOneDev(i, pollTime)
+                             for i in self._devs], consumeErrors=True)
 
-            self._updateMasterWithNewPollStatements(i.uri, new)
-
-            if oneshot:
-                self._sendOneshot(oneshot)
-            self._lastPollTime[i.uri] = now
         if log.isEnabledFor(logging.DEBUG):
             log.debug('poll times:')
             for u, s in sorted(pollTime.items()):
                 log.debug("  %.4f ms %s", s * 1000, u)
-            log.debug('total poll time: %f ms', sum(pollTime.values()) * 1000)
+            log.debug('total poll time: %f ms done in %f ms elapsed',
+                      sum(pollTime.values()) * 1000,
+                      (time.time() - start) * 1000)
             
         pollResults = map(set, self._statementsFromInputs.values())
         if pollResults:

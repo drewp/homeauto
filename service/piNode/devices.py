@@ -5,7 +5,9 @@ from __future__ import division
 
 import time, logging, os
 from rdflib import Namespace, URIRef, Literal
-from twisted.internet import reactor
+from twisted.internet import reactor, threads
+from twisted.internet.defer import inlineCallbacks, returnValue
+from greplin import scales
 
 from devices_shared import RgbPixelsAnimation
 
@@ -375,21 +377,22 @@ class OneWire(DeviceType):
             # differently or what.
             s.uri = URIRef(os.path.join(self.uri, 'dev-%s' % s.id))
             log.info('  found temperature sensor %s' % s.uri)
-        
+
+    @inlineCallbacks
     def poll(self):
         try:
             stmts = []
             for sensor in self._sensors:
                 stmts.append((self.uri, ROOM['connectedTo'], sensor.uri))
                 try:
-                    tempF = sensor.get_temperature(sensor.DEGREES_F)
+                    tempF = yield threads.deferToThread(sensor.get_temperature, sensor.DEGREES_F)
                     stmts.append((sensor.uri, ROOM['temperatureF'],
                                   # see round() note in arduinoNode/devices.py
                                   Literal(round(tempF, 2))))
                 except (self.SensorNotReadyError, self.ResetValueError) as e:
                     log.warning(e)
 
-            return stmts
+            returnValue(stmts)
         except Exception as e:
             log.error(e)
             os.abort()
@@ -513,6 +516,12 @@ class OnboardTemperature(DeviceType):
         return [(self.uri, ROOM['temperatureF']),
                 ]
 
+pixelStats = scales.collection('/rgbPixels',
+                               scales.PmfStat('updateOutput'),
+                               scales.PmfStat('currentColors'),
+                               scales.PmfStat('poll'),
+                               )
+    
 @register
 class RgbPixels(DeviceType):
     """chain of ws2812 rgb pixels on pin GPIO18"""
@@ -529,18 +538,24 @@ class RgbPixels(DeviceType):
     def sendOutput(self, statements):
         self.anim.onStatements(statements)
 
+    @pixelStats.updateOutput.time()
     def updateOutput(self):
         if 0:
             for _, _, sg in self.anim.groups.values():
                 print sg.uri, sg.current
             print list(self.anim.currentColors())
             return
+
+        with pixelStats.currentColors.time():
+            colors = self.anim.currentColors()
         
-        for idx, (r, g, b) in self.anim.currentColors():
-            log.debug('out color %s (%s,%s,%s)', idx, r, g, b)
+        for idx, (r, g, b) in colors:
+            if idx < 4:
+                log.debug('out color %s (%s,%s,%s)', idx, r, g, b)
             self.neo.setPixelColorRGB(idx, r, g, b)
         self.neo.show()
 
+    @pixelStats.poll.time()
     def poll(self):
         self.anim.step()
         return []
