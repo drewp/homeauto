@@ -1,4 +1,4 @@
-import logging
+import logging, time
 import traceback
 from rdflib import ConjunctiveGraph
 from rdflib.parser import StringInputSource
@@ -23,6 +23,8 @@ class PatchSource(object):
         
         self._listeners = set()
         log.info('start read from %s', url)
+        self._startReadTime = time.time()
+        self._patchesReceived = 0 # including fullgraph
         # note: fullGraphReceived isn't guaranteed- the stream could
         # start with patches
         self._fullGraphReceived = False
@@ -38,6 +40,13 @@ class PatchSource(object):
         return {
             'url': self.url,
             'fullGraphReceived': self._fullGraphReceived,
+            'patchesReceived': self._patchesReceived,
+            'time': {
+                'open': getattr(self, '_startReadTime', None),
+                'fullGraph': getattr(self, '_fullGraphTime', None),
+                'latestPatch': getattr(self, '_latestPatchTime', None),
+            },
+            'closed': self._eventSource is None,
         }
         
     def addPatchListener(self, func):
@@ -76,6 +85,8 @@ class PatchSource(object):
             log.error(traceback.format_exc())
             raise
         self._fullGraphReceived = True
+        self._fullGraphTime = time.time()
+        self._patchesReceived += 1
             
     def _onPatch(self, message):
         try:
@@ -84,6 +95,8 @@ class PatchSource(object):
         except:
             log.error(traceback.format_exc())
             raise
+        self._latestPatchTime = time.time()
+        self._patchesReceived += 1
 
     def _sendPatch(self, p, fullGraph):
         log.debug('PatchSource %s received patch %s (fullGraph=%s)',
