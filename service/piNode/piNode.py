@@ -267,7 +267,7 @@ class Board(object):
             'graph': 'http://sticker:9059/graph', #todo
             }
         
-class Dot(cyclone.web.RequestHandler):
+class Dot(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         configGraph = self.settings.config.configGraph
         dot = dotrender.render(configGraph, self.settings.config.boards)
@@ -278,7 +278,7 @@ def rdfGraphBody(body, headers):
     g.parse(StringInputSource(body), format='nt')
     return g
 
-class OutputPage(cyclone.web.RequestHandler):
+class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
     def put(self):
         arg = self.request.arguments
         if arg.get('s') and arg.get('p'):
@@ -298,7 +298,7 @@ class OutputPage(cyclone.web.RequestHandler):
         for b in self.settings.config.boards:
             b.outputStatements([stmt])
 
-class Boards(cyclone.web.RequestHandler):
+class Boards(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header('Content-type', 'application/json')
         self.write(json.dumps({
