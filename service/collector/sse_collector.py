@@ -25,13 +25,11 @@ from typing import Callable, Dict, NewType, Tuple, Union, Any, Sequence, Set, Li
 import cyclone.web, cyclone.sse
 import logging, collections, json, time
 
-from logsetup import log, enableTwistedLog
+from standardservice.logsetup import log, enableTwistedLog
 from patchablegraph import jsonFromPatch
 from rdfdb.patch import Patch
 
-# workaround for broken import in twisted_sse_demo/eventsourcee.py
-import sys; sys.path.append('twisted_sse_demo')
-from patchsource import ReconnectingPatchSource
+from patchablegraph.patchsource import ReconnectingPatchSource
 
 from sse_collector_config import config
 
@@ -417,12 +415,12 @@ class State(cyclone.web.RequestHandler):
     def get(self) -> None:
         try:
             state = self.settings.graphClients.state()
-        except:
+            self.write(json.dumps({'graphClients': state}, indent=2,
+                                  default=lambda obj: '<unserializable>'))
+        except Exception:
             import traceback; traceback.print_exc()
             raise
         
-        self.write(json.dumps({'graphClients': state}, indent=2))
-
         
 class Root(cyclone.web.RequestHandler):
     def get(self) -> None:
