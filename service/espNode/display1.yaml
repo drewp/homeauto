@@ -1,0 +1,43 @@
+substitutions:
+  location: display1
+  board: d1_mini
+
+<<: !include esp8266_nightlight.yaml
+  
+i2c:
+  sda: D6
+  scl: D5
+
+font:
+  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
+    id: font_big
+    size: 24
+  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
+    id: font_small
+    size: 12
+
+text_sensor:
+  - platform: mqtt_subscribe
+    name: "Data from topic"
+    id: mysensor
+    topic: display1/text
+    
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    address: 0x3c
+    lambda: |-
+      it.rectangle(0, 0, 127, 63);
+      it.printf(64, 5, id(font_big), TextAlign::TOP_CENTER, id(mysensor).state.c_str());
+      it.printf(64, 63-5, id(font_small), TextAlign::BOTTOM_CENTER, "left today");
+      
+      
+spi:
+  clk_pin: D0
+  miso_pin: D1
+  mosi_
+  pin: D2
+  
+pn532:
+  cs_pin: D3
+  update_interval: 1s

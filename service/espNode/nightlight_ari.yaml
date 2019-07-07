@@ -1,0 +1,19 @@
+substitutions:
+  location: ari
+
+<<: !include esp8266_nightlight.yaml
+
+dallas:
+  - pin: GPIO5
+sensor:
+  - platform: dallas
+    index: 0
+    name: temperature
+
+light:
+  - platform: fastled_clockless
+    chipset: WS2812B
+    pin: GPIO4
+    num_leds: 16
+    rgb_order: GRB
+    name: "rgb16"

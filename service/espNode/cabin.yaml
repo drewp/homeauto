@@ -1,0 +1,58 @@
+# https://cdn.hackaday.io/files/269911154782944/Heltec_WIFI-LoRa-32_DiagramPinout.jpg
+
+esphome:
+  name: cabin
+  platform: ESP32
+  board: lolin32
+  build_path: build
+  esphome_core_version: latest
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: ''
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+
+
+#dallas:
+#  - pin: GPIO16
+#sensor:
+#  - platform: dallas
+#    index: 0
+#    name: temperature
+
+light:
+  - platform: fastled_clockless
+    chipset: WS2812B
+    pin: GPIO21
+    num_leds: 16
+    rgb_order: GRB
+    name: "rgb"
+    
+i2c:
+  sda: 4
+  scl: 15
+
+font:
+  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
+    id: font_vera
+    size: 14
+    
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    reset_pin: 16
+    address: 0x3C
+    lambda: |-
+      it.print(0, 0, id(font_vera), "cabin 1.0: running");
