@@ -1,3 +1,9 @@
+"""
+We get output statements that are like light9's deviceAttrs (:dev1 :color "#ff0000"),
+convert those to outputAttrs (:dev1 :red 255; :green 0; :blue 0) and post them to mqtt.
+
+This is like light9/bin/collector.
+"""
 import json
 
 from docopt import docopt

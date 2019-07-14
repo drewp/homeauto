@@ -1,0 +1,54 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:kitchenSkylight a :Device;
+  :mqttTopicHead ("h801_skylight" "light");
+  :convertedAttr [
+    :deviceAttr :white;
+    :mqttTopicTail ("kit_w1" "command");
+    :valueConversion :to8Bit;
+    :message '{"state":"ON","brightness":%value%}'
+  ],
+  :convertedAttr [
+    :deviceAttr :color;
+    :mqttTopicTail ("kit_r" "command");
+    :valueConversion :extractRed8Bit;
+    :message '{"state":"ON","brightness":%value%}'
+   ],
+  :convertedAttr [
+    :deviceAttr :color;
+    :mqttTopicTail ("kit_g" "command");
+    :valueConversion :extractGreen8Bit;
+    :message '{"state":"ON","brightness":%value%}'
+   ],
+  :convertedAttr [
+    :deviceAttr :color;
+    :mqttTopicTail ("kit_r" "command");
+    :valueConversion :extractBlue8Bit;
+    :message '{"state":"ON","brightness":%value%}'
+   ],
+
+:nightlightAriTemperature a :ExportedMeasurement;
+  :mqttTopicHead ("nightlight_ari" "sensor" "temperature" "state");
+
+  :missingAfterSec 150;
+  :ignoreInputValueBelow -999;
+
+  :valueProcess [
+    :conversion :celsiusToFarenheit; #and round(x,2)
+    ];
+
+  :graphStatements [
+    :outputPredicate :temperatureF;  
+    :statementLifetime :untilReplaced;
+
+    # is this just another valueProcess?
+    :outputRecentPredicate :recentLowTemperatureF; :recentPeriodSec 30;
+  ],
+  
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "nightlight_ari"],
+         [:key "location"; :value "ariRoom"]] .

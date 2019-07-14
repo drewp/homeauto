@@ -1,5 +1,5 @@
 substitutions:
-  pwm_freq: 500 Hz
+  pwm_freq: 310 Hz
   
 esphomeyaml:
   name: h801_skylight

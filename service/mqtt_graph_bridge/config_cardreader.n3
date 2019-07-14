@@ -1,0 +1,14 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:cardReader a :MqttStatementSource;
+  :mqttTopicHead ("nightlight_display1" "tag");
+  :valueProcess [
+    :conversion :tagIdToUri  # AA-BB-CC-DD to <http://bigasterisk.com/rfidCard/aabbccdd>
+  ];
+  :graphStatements [
+     :outputPredicate :currentRead;
+     :statementLifetime "5s";
+  ]
+  .
