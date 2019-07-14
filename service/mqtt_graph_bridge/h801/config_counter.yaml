@@ -1,5 +1,14 @@
 substitutions:
-  pwm_freq: 500 Hz
+  pwm_freq: 310 Hz
+
+#310 low buzz, nicer than 520
+#520 low pitch buzz, ok
+#600 sound is present but might be ok
+#800 bad sound
+#1500 sound is bad but we had it like that
+#3000 very bad snd
+#6000 bad snd and flicker
+#9000 flicker
   
 esphomeyaml:
   name: h801_counter
