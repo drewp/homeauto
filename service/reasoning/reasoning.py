@@ -19,7 +19,6 @@ no_setup()
 
 import json, time, traceback, sys
 from logging import getLogger, DEBUG, WARN
-sys.path.append('/opt') # docker is putting lib/ here
 
 from colorlog import ColoredFormatter
 from docopt import docopt
@@ -35,8 +34,8 @@ from inference import infer, readRules
 from actions import Actions
 from inputgraph import InputGraph
 from escapeoutputstatements import unquoteOutputStatements
-
-from standardservice.logsetup import log
+ 
+from standardservice.logsetup import log, verboseLogging
 
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
@@ -271,7 +270,7 @@ class Application(cyclone.web.Application):
 def configLogging(arg):
     log.setLevel(WARN)
     
-    if arg['-i'] or arg['-r'] or arg['-o']:
+    if arg['-i'] or arg['-r'] or arg['-o'] or arg['-v']:
         log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s %(name)-6s %(filename)-12s:%(lineno)-3s %(funcName)-20s%(reset)s %(white)s%(message)s",
         datefmt=None,
         reset=True,
@@ -304,6 +303,7 @@ if __name__ == '__main__':
     -i                Verbose log on the input phase
     -r                Verbose log on the reasoning phase and web stuff
     -o                Verbose log on the actions/output phase
+    -v                Everywhere verbose
     """)
     
     r = Reasoning()

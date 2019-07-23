@@ -12,7 +12,7 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 class Actions(object):
     def __init__(self, sendToLiveClients):
         self.sendToLiveClients = sendToLiveClients
-        
+
     def putResults(self, deviceGraph, inferred):
         """
         some conclusions in the inferred graph lead to PUT requests
@@ -51,6 +51,7 @@ class Actions(object):
                       deviceGraph.qname(pred))
             inferredObjects = list(inferred.objects(dev, pred))
             if len(inferredObjects) == 0:
+                # rm this- use activated instead
                 self._putZero(deviceGraph, dev, pred, url)
             elif len(inferredObjects) == 1:
                 log.debug('  inferredObject: %s %s %r',
@@ -74,7 +75,7 @@ class Actions(object):
           ?osp a :OneShotPost
           ?osp :subject ?s
           ?osp :predicate ?p
-        this will cause a post to ?o 
+        this will cause a post to ?o
         """
         # nothing in this actually makes them one-shot yet. they'll
         # just fire as often as we get in here, which is not desirable
@@ -101,11 +102,14 @@ class Actions(object):
             if stmt[1] == ROOM['putAgent']:
                 agentFor[stmt[0]] = stmt[2]
         for stmt in inferred:
+            log.info('inferred stmt we might PUT: %s', stmt)
             putUrl = deviceGraph.value(stmt[0], ROOM['putUrl'])
             putPred = deviceGraph.value(stmt[0], ROOM['putPredicate'])
             matchPred = deviceGraph.value(stmt[0], ROOM['matchPredicate'],
                                           default=putPred)
             if putUrl and matchPred == stmt[1]:
+                log.info('putDevices: stmt %r %r %r leds to putting at %r',
+                         stmt[0], stmt[1], stmt[2], putUrl)
                 self._put(putUrl + '?' + urllib.urlencode([
                     ('s', str(stmt[0])),
                     ('p', str(putPred))]),
@@ -125,7 +129,7 @@ class Actions(object):
         else:
             log.warn("    don't know what payload to put for %s. obj=%r",
                         putUrl, obj)
-                
+
     def _putZero(self, deviceGraph, dev, pred, putUrl):
         # zerovalue should be a function of pred as well.
         value = deviceGraph.value(dev, ROOM.zeroValue)
@@ -134,7 +138,7 @@ class Actions(object):
             self._put(putUrl, payload=str(value))
             # this should be written back into the inferred graph
             # for feedback
-        
+
     def _put(self, url, payload, agent=None):
         assert isinstance(payload, bytes)
         def err(e):
