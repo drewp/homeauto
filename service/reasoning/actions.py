@@ -44,6 +44,7 @@ class Actions(object):
                 (ROOM['kitchenCounterLight'], ROOM.brightness),
                 (ROOM['livingRoomLamp1'], ROOM.brightness),
                 (ROOM['livingRoomLamp2'], ROOM.brightness),
+                (ROOM['loftDeskStrip'], ROOM.x),
                 (ROOM['bedLedStrip'], ROOM.color),
             ]:
             url = deviceGraph.value(dev, ROOM.putUrl)
