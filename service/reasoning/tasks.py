@@ -15,12 +15,12 @@ def push_image(ctx):
 
 @task
 def shell(ctx):
-    ctx.run(f'docker run --rm -it --cap-add SYS_PTRACE --net=host {TAG}  /bin/bash')
+    ctx.run(f'docker run --rm -it --cap-add SYS_PTRACE  --dns 10.2.0.1 --dns-search bigasterisk.com --net=host {TAG}  /bin/bash', pty=True)
 
 @task(pre=[build_image])
 def local_run(ctx):
-    ctx.run(f'docker run --rm -it -p {PORT}:{PORT} -v `pwd`:/mnt --net=host {TAG} python /mnt/{JOB}.py -iro', pty=True)
+    ctx.run(f'docker run --rm -it -p {PORT}:{PORT} -v `pwd`:/mnt  --dns 10.2.0.1 --dns-search bigasterisk.com --net=host {TAG} python /mnt/{JOB}.py -iro', pty=True)
 
-@task(pre=[build_image])
-def redeploy(ctx): 
+@task(pre=[push_image])
+def redeploy(ctx):
     ctx.run(f'supervisorctl -s http://bang:9001/ restart {JOB}_{PORT}')
