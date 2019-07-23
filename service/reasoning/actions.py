@@ -8,6 +8,7 @@ log.setLevel(logging.WARN)
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
+REASONING = Namespace("http://projects.bigasterisk.com/ns/reasoning/")
 
 class Actions(object):
     def __init__(self, sendToLiveClients):
@@ -26,7 +27,8 @@ class Actions(object):
         If the graph doesn't contain any matches, we use (?d
         :zeroValue ?val) for the value and PUT that.
         """
-        self._putDevices(deviceGraph, inferred)
+        activated = set()  # (subj,pred) pairs for which we're currently putting some value
+        activated.update(self._putDevices(deviceGraph, inferred))
         self._oneShotPostActions(deviceGraph, inferred)
         for dev, pred in [
                 #(URIRef('http://bigasterisk.com/host/bang/monitor'), ROOM.powerState),
@@ -58,12 +60,39 @@ class Actions(object):
                           deviceGraph.qname(dev),
                           deviceGraph.qname(pred),
                           inferredObjects[0].toPython())
+                activated.add((dev, pred))
                 self._putInferred(deviceGraph, url, inferredObjects[0])
             elif len(inferredObjects) > 1:
                 log.info("  conflict, ignoring: %s has %s of %s" %
                          (dev, pred, inferredObjects))
                 # write about it to the inferred graph?
-        
+        self.putDefaults(deviceGraph, activated)
+
+    def putDefaults(self, deviceGraph, activated):
+        """
+        If inferring (:a :b :c) would cause a PUT, you can say
+
+        reasoning:defaultOutput reasoning:default [
+          :subject :a
+          :predicate :b
+          :defaultObject :c
+        ]
+
+        and we'll do that PUT if no rule has put anything else with
+        (:a :b *).
+        """
+
+        defaultStmts = set()
+        for defaultDesc in deviceGraph.objects(REASONING['defaultOutput'],
+                                               REASONING['default']):
+            s = deviceGraph.value(defaultDesc, ROOM['subject'])
+            p = deviceGraph.value(defaultDesc, ROOM['predicate'])
+            if (s, p) not in activated:
+                obj = deviceGraph.value(defaultDesc, ROOM['defaultObject'])
+
+                defaultStmts.add((s, p, obj))
+        self._putDevices(deviceGraph, defaultStmts)
+
     def _oneShotPostActions(self, deviceGraph, inferred):
         """
         Inferred graph may contain some one-shot statements. We'll send
@@ -97,6 +126,7 @@ class Actions(object):
                 fetch(postTarget, method="POST", timeout=2).addErrback(err)
 
     def _putDevices(self, deviceGraph, inferred):
+        activated = set()
         agentFor = {}
         for stmt in inferred:
             if stmt[1] == ROOM['putAgent']:
@@ -115,6 +145,11 @@ class Actions(object):
                     ('p', str(putPred))]),
                           str(stmt[2].toPython()),
                           agent=agentFor.get(stmt[0], None))
+                activated.add((stmt[0],
+                               # didn't test that this should be
+                               # stmt[1] and not putPred
+                               stmt[1]))
+        return activated
 
     def _putInferred(self, deviceGraph, putUrl, obj):
         """
