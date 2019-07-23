@@ -1,0 +1,135 @@
+@prefix : <http://projects.bigasterisk.com/room/>.
+@prefix lights: <http://projects.bigasterisk.com/room/lights/>.
+@prefix device: <http://projects.bigasterisk.com/device/>.
+@prefix control: <http://projects.bigasterisk.com/control/>.
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix slashport: <http://slash.bigasterisk.com/parport/3bc#> .
+@prefix port: <http://bang.bigasterisk.com/parport/parport0#> .
+@prefix onewire: <http://bigasterisk.com/onewire/> .
+@prefix cmd: <http://bigasterisk.com/magma/cmd/> .
+@prefix bang1: <http://bigasterisk.com/bang/arduino/pin/> .
+@prefix cl: <http://bigasterisk.com/ns/command/v1#> .
+@prefix bang: <http://bigasterisk.com/host/bang/> .
+
+:putUrl rdfs:comment "this pin can be set by calling PUT on the given url with a body of '0' or '1'" .
+# no longer parport; needs upgrade to whatever the arduino pin is:
+#device:frontLights a :ParportPin; :putUrl "http://slash:9014/otherBit?bit=1" .
+
+device:heater :putUrl "http://bang:9056/pin/d4" .
+
+# these are the bedroom red light, untested
+bang1:d7 :putUrl "http://bang:9056/pin/d7" .
+bang1:d8 :putUrl "http://bang:9056/pin/d8" .
+
+:pulse rdfs:comment "number of seconds this pin should stay high when it is set to 1. Then the pin automatically goes back to 0." .
+
+port:pin3 rdfs:label "heater power" .
+ 
+# .1 second pulse was too short for redlight, once
+
+device:deckLightOff :putUrl "http://bang:9056/pin/d5"; rdfs:label "outdoor off (x1)"; :pulse ".4" . 
+device:deckLightOn :putUrl "http://bang:9056/pin/d6"; rdfs:label "outdoor on (x2)"; :pulse ".4" . 
+
+cmd:deckLightOff :oneShot device:deckLightOff .
+cmd:deckLightOn :oneShot device:deckLightOn .
+
+#port:pin_d7 rdfs:label "bedroomred off? (y1)"; :pulse ".8" . 
+cmd:bedroomRedLightOff :oneShot device:bedroomRedLightOff .
+#port:pin_d8 rdfs:label "bedroomred on? (y2)"; :pulse ".8" . 
+cmd:bedroomRedLightOn :oneShot device:bedroomRedLightOn .
+
+port:unfinished1 :putUrl "http://bang:9056/pin/d12"; rdfs:label "heater sense" .
+
+device:frontLights rdfs:label "front light" . 
+cmd:frontLightOff :clearPin device:frontLights .
+cmd:frontLightOn :setPin device:frontLights .
+
+#drew's phone = friendly phone
+#kelsi phone = friendly phone
+#bluetooth senses friendly phone   ->   all doors are unlocked
+#all locks = device:lock1
+:drewsPhone :bluetoothAddr "...." .
+
+# maybe each tool should have its own little graph, and it announces
+# changes to that graph. the listener tools make a combined-graph of
+# the sources, and draw their conclusions on that
+
+onewire:addr104F718D00080038 :graphiteName "sens1"; rdfs:label "downstairsCeiling" .
+onewire:addr1014958D0008002B :graphiteName "sens2"; rdfs:label "downstairsFloor" .
+onewire:addr10CB6CBE0008005E :graphiteName "sens3"; rdfs:label "bedroom" .
+onewire:addr109AA2BE000800C7 :graphiteName "sens4"; rdfs:label "livingRoom" .
+
+device:theaterDoorOutsideMotion rdfs:label "theater door outside motion" .
+device:theaterDoorOpen rdfs:label "theater door open" .
+
+device:theaterDoorLock rdfs:label "theater door lock";
+		       :putUrl "http://bang:9056/pin/d3"; :zeroValue "0".
+
+:unlocked :putValue "1" .
+:on :putValue "on" .
+:off :putValue "off" .
+
+
+<http://bigasterisk.com/host/bang/monitor>      :putUrl "http://bang:9095/monitor"; :zeroValue "off" .
+<http://bigasterisk.com/host/dash/monitor>      :putUrl "http://dash:9095/monitor" .
+<http://bigasterisk.com/host/frontdoor/monitor> :putUrl "http://frontdoor:9095/monitor" .
+
+device:heater cl:valueMapping
+  [cl:value cl:on; cl:putUrl <http://bang:9056/pin/d4>; cl:putBody "1"  ],
+  [cl:value cl:off; cl:putUrl <http://bang:9056/pin/d4>; cl:putBody "0" ] . 
+
+device:frontLight cl:valueMapping
+  [cl:value cl:on; cl:putUrl <http://slash:9080/yardLight>; cl:putBody "true"  ],
+  [cl:value cl:off; cl:putUrl <http://slash:9080/yardLight>; cl:putBody "false" ] .
+
+:storageCeilingLedCross
+  :putUrl <http://bang:9059/output?s=http://projects.bigasterisk.com/room/storageCeilingLedCross&p=http://projects.bigasterisk.com/room/brightness>;
+  :zeroValue 0.0 .
+
+:storageCeilingLedLong
+  :putUrl <http://bang:9059/output?s=http://projects.bigasterisk.com/room/storageCeilingLedLong&p=http://projects.bigasterisk.com/room/brightness>;
+  :zeroValue 0.0 .
+
+:garageOverhead
+  :putUrl <http://garage.vpn-home.bigasterisk.com:9059/output?s=http://projects.bigasterisk.com/room/garageOverhead&p=http://projects.bigasterisk.com/room/brightness> .
+:headboardWhite
+  :putUrl <http://bed.vpn-home.bigasterisk.com:9059/output?s=http://projects.bigasterisk.com/room/headboardWhite&p=http://projects.bigasterisk.com/room/brightness> .
+:bedLedStrip
+  :putUrl <http://bed.vpn-home.bigasterisk.com:9059/output?s=http://projects.bigasterisk.com/room/bedLedStrip&p=http://projects.bigasterisk.com/room/color> .
+  
+:starTrekLight
+  :putUrl <http://frontbed:9059/output?s=http://projects.bigasterisk.com/room/starTrekLight&p=http://projects.bigasterisk.com/room/brightness> .
+
+:kitchenLight
+  :putUrl <http://bang:10008/output?s=http://projects.bigasterisk.com/room/kitchenLight&p=http://projects.bigasterisk.com/room/brightness> .
+
+:kitchenCounterLight
+  :putUrl <http://bang:10008/output?s=http://projects.bigasterisk.com/room/kitchenCounterLight&p=http://projects.bigasterisk.com/room/brightness> .
+
+:changingWhite
+  :putUrl <http://changing:9059/output?s=http://projects.bigasterisk.com/room/changingWhite&p=http://projects.bigasterisk.com/room/brightness> .
+
+:changingCamPost a :OneShotPost; :subject :changingCam; :predicate :grab .
+bang: a :OneShotPost; :subject bang:; :predicate :postAction .
+
+:livingRoomLamp1
+  :putUrl <http://living:9059/output?s=http://projects.bigasterisk.com/room/livingRoomLamp1&p=http://projects.bigasterisk.com/room/brightness> .
+
+:livingRoomLamp2
+  :putUrl <http://living:9059/output?s=http://projects.bigasterisk.com/room/livingRoomLamp2&p=http://projects.bigasterisk.com/room/brightness> .
+
+:loftDeskStrip
+  :putUrl <http://frontbed:9059/output?s=http://projects.bigasterisk.com/room/loftDeskStrip&p=http://projects.bigasterisk.com/room/x> .
+
+
+:frontDoorOled :putUrl <http://frontdoor:10013/output>; :putPredicate :state .
+:frontWindow :putPredicate :line1; :putUrl <http://bang:10008/output> .
+:frontWindow :putPredicate :line2; :putUrl <http://bang:10008/output> .
+:frontWindow :putPredicate :line3; :putUrl <http://bang:10008/output> .
+:frontWindow :putPredicate :line4; :putUrl <http://bang:10008/output> .
+
+# newer style, with distinct :putState.
+:frontDoorLock
+  :matchPredicate :putState;
+  :putUrl <http://bang:10011/output>;
+  :putPredicate :state .
