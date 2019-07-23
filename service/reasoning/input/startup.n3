@@ -47,37 +47,18 @@
 <http://bigasterisk.com/homeauto/thermostatSetTemp> :temperatureF 70 .
 # run rdfdb, put it in there
 
-<http://bigasterisk.com/rfidCard/9327861a28> :cardText "UVOLLTJJEDBZTYBRPCRSFHJMEJGOQAIG"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
-<http://bigasterisk.com/rfidCard/93a7591a77> :cardText "XXGDUPSVAVJJLMZD" ;                :owner <http://bigasterisk.com/foaf.rdf#drewp> .
-<http://bigasterisk.com/rfidCard/93cd401a04> :cardText "JMQHDQZXENVZRYXUGQPYZCPJFJKIZWAS"; :owner <http://bigasterisk.com/foaf.rdf#drewp>, :mj .
-<http://bigasterisk.com/rfidCard/a3aa6b1a78> :cardText "UOHQPTMTGSHLETGLYOMPMNJXDYINHHIF"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
 
-<http://bigasterisk.com/rfidCard/f6b85bfa> :cardText "1*LBKBQDYKFAZRHM"; rdfs:label "gray keychain id 10"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
-<http://bigasterisk.com/rfidCard/16f8dff8> :cardText "1*BHJWCUGQWPWSKT"; rdfs:label "gray keychain id 11"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
-<http://bigasterisk.com/rfidCard/46cb33fa> :cardText "1*HDMYMUHHTVGLKY"; rdfs:label "gray keychain id 12"; :owner <http://bigasterisk.com/foaf.rdf#drewp>, :kelsi .
-<http://bigasterisk.com/rfidCard/46e2dcf8> :cardText "1*NUIRKGJCOZHFOH"; rdfs:label "gray keychain id 13"; :owner <http://bigasterisk.com/foaf.rdf#drewp> .
-<http://bigasterisk.com/rfidCard/6619e5f8> :cardText "1*RMTMEEXYVIHRUM"; rdfs:label "gray keychain id 14"; :owner <http://bigasterisk.com/foaf.rdf#drewp>, :dv .
+@prefix reasoning: <http://projects.bigasterisk.com/ns/reasoning/>.
 
-<http://bigasterisk.com/rfidCard/e7654b26> :cardText "1*TXRXJXBZPXSKGZ"; rdfs:label "blue keychain id 20" .
-<http://bigasterisk.com/rfidCard/89fbaf2b> :cardText "1*IKLSYRIVCNFTTM"; rdfs:label "blue keychain id 21" .
-<http://bigasterisk.com/rfidCard/a3aa6b1a> :cardText "1*WAGLJFYAYDJCNE"; rdfs:label "white card id 22" .
-<http://bigasterisk.com/rfidCard/93a7591a> :cardText "1*WTKUGJOQXUNGUS"; rdfs:label "white card id 23" .
-<http://bigasterisk.com/rfidCard/9327861a> :cardText "1*WFMZKVPQIZIMCF"; rdfs:label "white card id 24" .
-<http://bigasterisk.com/rfidCard/5732ea1b> :cardText "1*BPNHEXJJCWQSFJ"; rdfs:label "white card id 25" .
-<http://bigasterisk.com/rfidCard/d678781a> :cardText "1*ECDFYGDLKZEGLD"; rdfs:label "white card id 26" .
-<http://bigasterisk.com/rfidCard/5bb4ed29> :cardText "1*UEFBUDDVFRFSUU"; rdfs:label "white card id 27" .
-<http://bigasterisk.com/rfidCard/560b62fa> :cardText "1*WKAPIEMNHOHMOK"; rdfs:label "gray keychain id 28" .
-<http://bigasterisk.com/rfidCard/96b1dcf8> :cardText "1*ZNBUEMOFPSIURI"; rdfs:label "gray keychain id 29" .
-<http://bigasterisk.com/rfidCard/c6f864fa> :cardText "1*PYJEJIBSETLHXW"; rdfs:label "gray keychain id 30" .
-<http://bigasterisk.com/rfidCard/5969e420> :cardText "1*ZXHYTKKWMCMDKV"; rdfs:label "blue keychain id 31" .
-<http://bigasterisk.com/rfidCard/c9f6f720> :cardText "1*QIPGMRPVRPZAQJ"; rdfs:label "blue keychain id 32" .
-<http://bigasterisk.com/rfidCard/67234b26> :cardText "1*CZGXULDJLHFJCB"; rdfs:label "blue keychain id 33" .
-<http://bigasterisk.com/rfidCard/49d30321> :cardText "1*RIHIHTWVIEZPZP"; rdfs:label "blue keychain id 34" .
-<http://bigasterisk.com/rfidCard/77f34626> :cardText "1*BKWNUZNWNWKBLY"; rdfs:label "blue keychain id 35"; :owner fr:ada .
-
-
-
-
-
+reasoning:defaultOutput reasoning:default
+[:subject :frontWindow; :predicate :line1;
+  :defaultObject "Scan card..." 
+  ],
+[:subject :frontWindow; :predicate :line2;
+  :defaultObject "Locked" 
+  ],
+[:subject :frontWindow; :predicate :line3;
+  :defaultObject "Closed" 
+  ] .
 
 
