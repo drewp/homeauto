@@ -123,6 +123,18 @@
   :starTrekLight :brightness 0.0 .
 } .
 
+{ :frontBedPostSwitch1 :buttonState :press . } => { :loftDeskStrip :x 99.0
+. } .
+{ :frontBedPostSwitch2 :buttonState :press . } => { :loftDeskStrip :x 15
+#84.0
+. } .
+{ :frontBedPostSwitch3 :buttonState :press . } => { :loftDeskStrip :x 15
+#53.0
+. } .
+{ :frontBedPostSwitch4 :buttonState :press . } => { :loftDeskStrip :x 15
+#30.0
+. } .
+{ :frontBedPostSwitch5 :buttonState :press . } => { :loftDeskStrip :x 0.0 . } .
 
 #{  :change :down . } => { star:slideshow :postAction <http://brace:9049/effects/beep1> . } .
 #{ sensor:kitchenCounterButton1 :buttonState :press . } => {
@@ -152,7 +164,7 @@
 { sensor:motionBed :sees :motion . } => { :anim1 :playback :start . } .
 
 
-{ sensor:motionFrontdoorInside :seesRecently30 :motion } => {
+{ sensor:motionFrontDoorInside :seesRecently30 :motion } => {
   <http://bigasterisk.com/host/frontdoor/monitor> :powerState :on .
 } .
 
@@ -177,13 +189,31 @@ bang: :postAction <http://10.2.0.62/rpc/motor> .
 } .
 
 {:frontDoorLock :state :locked .} => {:frontDoorOled :state :locked .}.
-{:frontDoorLock :state :unlocked .} => {:frontDoorOled :state :unlockNews .}.
+{:frontDoorLock :state :unlocked .} => {
+:frontDoorOled :state :unlockNews .
+  :frontWindow :line2 "Unlocked" .
+}.
 
 {
-  :frontDoorWindowRfid :reading ?card .
-  ?card :cardText ?text .
+  :cardReader :currentRead ?card .  # mailslot reader
+} => {
+  :frontWindow :line1 "Card found" .
+}.
+
+{
+:cardReader :currentRead ?card .  # mailslot reader
+#  :frontDoorWindowRfid :reading ?card .  # glass reader
+#  ?card :cardText ?text . # id only
   ?card :owner ?agent .
 } => {
+ # :frontWindow :line2 "Access granted" .
   :frontDoorLock :putState :unlocked .
   :frontDoorLock :putAgent ?agent .
 } .
+
+{
+  :frontDoorOpenSwitch :buttonState :pressed .
+} => {
+  :frontWindow :line3 "Open" .
+} .
+
