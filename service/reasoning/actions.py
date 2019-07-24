@@ -19,13 +19,29 @@ class HttpPutOutput(object):
         self.payload = None
         self.foafAgent = None
         self.nextCall = None
+        self.lastErr = None
         self.numRequests = 0
 
+    def report(self):
+        return {
+            'url': self.url,
+            'urlAbbrev': self.url
+            .replace('http%3A%2F%2Fprojects.bigasterisk.com%2Froom%2F', ':')
+            .replace('http://projects.bigasterisk.com/room/', ':')
+            .replace('.vpn-home.bigasterisk.com', '.vpn-home'),
+            'payload': self.payload,
+            'numRequests': self.numRequests,
+            'lastChangeTime': round(self.lastChangeTime, 2),
+            'lastErr': str(self.lastErr) if self.lastErr is not None else None,
+            }
+
     def setPayload(self, payload, foafAgent):
-        if self.numRequests > 0 and (self.payload == payload or self.foafAgent == foafAgent):
+        if self.numRequests > 0 and (self.payload == payload and
+                                     self.foafAgent == foafAgent):
             return
         self.payload = payload
         self.foafAgent = foafAgent
+        self.lastChangeTime = time.time()
         self.makeRequest()
 
     def makeRequest(self):
@@ -52,13 +68,13 @@ class HttpPutOutput(object):
         log.debug("  PUT %s ok", self.url)
         self.lastErr = None
         self.currentRequest = None
-        self.nextCall = reactor.callLater(3, self.makeRequest)
+        self.nextCall = reactor.callLater(30, self.makeRequest)
 
     def onError(self, err):
         self.lastErr = err
         log.debug('  PUT %s failed: %s', self.url, err)
         self.currentRequest = None
-        self.nextCall = reactor.callLater(5, self.makeRequest)
+        self.nextCall = reactor.callLater(50, self.makeRequest)
 
 class HttpPutOutputs(object):
     """these grow forever"""
@@ -155,6 +171,7 @@ class Actions(object):
                 obj = deviceGraph.value(defaultDesc, ROOM['defaultObject'])
 
                 defaultStmts.add((s, p, obj))
+                log.debug('defaultStmts %s %s %s', s, p, obj)
         self._putDevices(deviceGraph, defaultStmts)
 
     def _oneShotPostActions(self, deviceGraph, inferred):
@@ -242,3 +259,27 @@ class Actions(object):
     def _put(self, url, payload, agent=None):
         assert isinstance(payload, bytes)
         self.putOutputs.put(url, payload, agent)
+
+import cyclone.sse
+
+class PutOutputsTable(cyclone.sse.SSEHandler):
+    def __init__(self, application, request):
+        cyclone.sse.SSEHandler.__init__(self, application, request)
+        self.actions = self.settings.reasoning.actions
+
+    def bind(self, *args, **kwargs):
+        self.bound = True
+        self.loop()
+
+    def unbind(self):
+        self.bound = False
+
+    def loop(self):
+        if not self.bound:
+            return
+
+        self.sendEvent(message=json.dumps({
+            'puts': [row.report() for _, row in
+                     sorted(self.actions.putOutputs.state.items())],
+        }), event='update')
+        reactor.callLater(1, self.loop)

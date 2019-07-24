@@ -31,11 +31,12 @@ from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
 
 from inference import infer, readRules
-from actions import Actions
+from actions import Actions, PutOutputsTable
 from inputgraph import InputGraph
 from escapeoutputstatements import unquoteOutputStatements
- 
+
 from standardservice.logsetup import log, verboseLogging
+from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
@@ -56,8 +57,9 @@ class Reasoning(object):
 
         self.rulesN3 = "(not read yet)"
         self.inferred = Graph() # gets replaced in each graphChanged call
+        self.outputGraph = PatchableGraph() # copy of inferred, for now
 
-        self.inputGraph = InputGraph([], self.graphChanged)      
+        self.inputGraph = InputGraph([], self.graphChanged)
         self.inputGraph.updateFileData()
 
     @STATS.updateRules.time()
@@ -81,6 +83,7 @@ class Reasoning(object):
             self.inferred = Graph()
             self.inferred.add((ROOM['reasoner'], ROOM['ruleParseError'],
                                Literal(traceback.format_exc())))
+            self.copyOutput()
             raise
         return [(ROOM['reasoner'], ROOM['ruleParseTime'],
                  Literal(ruleParseTime))], ruleParseTime
@@ -127,6 +130,11 @@ class Reasoning(object):
                   ruleParseSec * 1000,
                   inferSec * 1000,
                   putResultsTime * 1000))
+        if not oneShot:
+            self.copyOutput()
+
+    def copyOutput(self):
+        self.outputGraph.setToGraph((s,p,o,ROOM['inferred']) for s,p,o in self.inferred)
 
     def _makeInferred(self, inputGraph):
         t1 = time.time()
@@ -141,7 +149,7 @@ class Reasoning(object):
         return out, inferenceTime
 
 
-        
+
 class Index(cyclone.web.RequestHandler):
     def get(self):
         self.set_header("Content-Type", "text/html")
@@ -185,7 +193,7 @@ class OneShot(cyclone.web.RequestHandler):
             traceback.print_exc()
             log.error(e)
             raise
-            
+
 # for reuse
 class GraphResource(cyclone.web.RequestHandler):
     def get(self, which):
@@ -257,8 +265,13 @@ class Application(cyclone.web.Application):
             (r"/", Index),
             (r"/immediateUpdate", ImmediateUpdate),
             (r"/oneShot", OneShot),
+            (r'/putOutputs', PutOutputsTable),
             (r'/(jquery.min.js)', Static),
             (r'/(lastInput|lastOutput)Graph', GraphResource),
+
+            (r"/graph/output", CycloneGraphHandler, {'masterGraph': reasoning.outputGraph}),
+            (r"/graph/output/events", CycloneGraphEventsHandler, {'masterGraph': reasoning.outputGraph}),
+
             (r'/ntGraphs', NtGraphs),
             (r'/rules', Rules),
             (r'/status', Status),
@@ -269,7 +282,7 @@ class Application(cyclone.web.Application):
 
 def configLogging(arg):
     log.setLevel(WARN)
-    
+
     if arg['-i'] or arg['-r'] or arg['-o'] or arg['-v']:
         log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s %(name)-6s %(filename)-12s:%(lineno)-3s %(funcName)-20s%(reset)s %(white)s%(message)s",
         datefmt=None,
