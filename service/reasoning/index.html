@@ -2,20 +2,10 @@
 <html>
   <head>
     <title>reasoning</title>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
-    <script>
-     window.NS = {
-       room: "http://projects.bigasterisk.com/room/",
-       dev: "http://projects.bigasterisk.com/device/",
-       dcterms: "http://purl.org/dc/terms/",
-       rdfs: "http://www.w3.org/2000/01/rdf-schema#",
-       map: "http://bigasterisk.com/map#",
-       rdf: "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-     };
-    </script>
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
 
@@ -31,63 +21,47 @@
          font-family: 'Allerta', sans-serif;
          font-size: 12px;
      }
+     pre {
+         font-family: 'Allerta', sans-serif;
+     }
      a {
          color: #b1b1fd;
          text-shadow: 1px 1px 0px #0400ff94;
          text-decoration-color: #00007714;
      }
-     #subjectRequest {
-         width: 50em;
-     }
+
      .pane > h2 {
          background: #3f738a61;
          border-top-left-radius: 23px;
          border-top-right-radius: 23px;
          border-top: 3px solid #2a4b58;
          padding: 14px 0 5px 11px;
-
          margin-top:  10px;
      }
-     pre {
-         font-family: sans-serif;
-     }
-     pre div {
-         border-bottom: 1px solid #ccc;
-     }
-
-
 
      #out > section { background: #1d23314a; }
      #out2 > section { background: #4222134a; }
-         /* ]]> */
+     /* ]]> */
     </style>
     <link rel="import" href="/supdebug/bang/service-rows/main.html">
-
+    <link rel="import" href="/rdf/rdf-uri.html">
   </head>
   <body>
-
-    <link rel="import" href="/rdf/rdf-uri.html">
-
-
     <h1>reasoning service</h1>
     <div class="pane">
       <h2>Service</h2>
       <service-rows name-substrs="reasoning"></service-rows>
     </div>
 
-
-    <div  class="pane">
+    <div class="pane">
       <h2>Input</h2>
-
       <streamed-graph id="inGraph" url="/sse_collector/graph/home"></streamed-graph>
-      <div id="out"></div>
-      <script type="module" src="/rdf/streamed_graph_view.js"></script>
-
+      <div id="inGraphView"></div>
     </div>
 
-    <div  class="pane">
+    <div class="pane">
       <h2>Rules</h2>
-      <div style="">
+      <div>
         <pre id="rules"></pre>
       </div>
       <label><input id="auto" type="checkbox"> auto refresh</label>
@@ -96,7 +70,6 @@
       <script type="text/javascript">
        // <![CDATA[
        $(function () {
-
          function update() {
 	   $.get("rules", function (txt) {
 	     $("#rules").empty().text(txt);
@@ -115,57 +88,19 @@
       </script>
     </div>
 
-
-    <div  class="pane">
+    <div class="pane">
       <h2>Output</h2>
 
       <streamed-graph id="outGraph" url="graph/output/events"></streamed-graph>
-      <div id="out2"></div>
-
-
-      <script type="module">
-       import { render } from '/lib/lit-html/1.0.0/lit-html.js';
-       import { graphView } from '/rdf/browse/graphView.js';
-
-       const sg = document.querySelector('#outGraph');
-
-       const out = document.querySelector('#out2');
-       const startPainting = () => {
-         if (!sg.graph || !sg.graph.graph) {
-           setTimeout(startPainting, 100);
-           return;
-         }
-
-         let dirty = true;
-
-         const repaint = () => {
-           if (!dirty) {
-             return;
-           }
-           render(graphView(sg.graph.graph), out);
-           dirty = false;
-         };
-
-         sg.addEventListener('graph-changed', (ev) => {
-           dirty = true;
-           requestAnimationFrame(repaint);
-         });
-         repaint();
-       };
-       setTimeout(startPainting, 10);
-
-      </script>
-
-
+      <div id="outGraphView"></div>
     </div>
 
-    <div  class="pane">
-
+    <div class="pane">
       <h2>put outputs</h2>
       <style>
-       .recent2  { background: #ffff55; }
-       .recent10 { background: #ffff88; }
-       .recent60 { background: #ffffdd; }
+       .recent2  { background: #71710a; }
+       .recent10 { background: #40401c; }
+       .recent60 { background: #212116; }
        #putOutputs th, #putOutputs td { text-align: left; padding-left: 5px; }
       </style>
       <table id="putOutputs">
@@ -213,7 +148,38 @@
          });
        });
       </script>
-        </div>
+    </div>
+
+    <script type="module">
+     import { render } from '/lib/lit-html/1.0.0/lit-html.js';
+     import { graphView } from '/rdf/browse/graphView.js';
+
+     function keepGraphFresh(sg, outElem) {
+       const startPainting = () => {
+         if (!sg.graph || !sg.graph.graph) {
+           setTimeout(startPainting, 100);
+           return;
+         }
+         let dirty = true;
+         const repaint = () => {
+           if (!dirty) return;
+           render(graphView(sg.graph.graph), outElem);
+           dirty = false;
+         };
+
+         sg.addEventListener('graph-changed', (ev) => {
+           dirty = true;
+           requestAnimationFrame(repaint);
+         });
+         repaint();
+       };
+       setTimeout(startPainting, 10);
+     }
+     keepGraphFresh(document.querySelector('#inGraph'),
+                    document.querySelector('#inGraphView'));
+     keepGraphFresh(document.querySelector('#outGraph'),
+                    document.querySelector('#outGraphView'));
+    </script>
 
   </body>
 </html>
