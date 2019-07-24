@@ -3,7 +3,7 @@
 send a statement to the reasoning server for one update cycle. Args
 are s/p/o in n3 notation, with many prefixes predefined here.
 """
-import sys, requests, time
+import sys, requests, time, os
 s, p, o = sys.argv[1:]
 
 prefixes = {
@@ -26,7 +26,7 @@ print "Sending: %s" % stmt
 
 t1 = time.time()
 ret = requests.post(
-    'http://bang:9071/oneShot',
+    'http://%s/oneShot' % os.environ.get('REASONING', 'bang:9071'),
     headers={"content-type": "text/n3"},
     data=stmt.encode('ascii'))
 g = float(ret.headers['x-graph-ms'])
