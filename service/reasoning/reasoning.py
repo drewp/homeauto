@@ -49,10 +49,10 @@ STATS = scales.collection('/web',
 )
 
 class Reasoning(object):
-    def __init__(self):
+    def __init__(self, mockOutput=False):
         self.prevGraph = None
 
-        self.actions = Actions(sendToLiveClients)
+        self.actions = Actions(sendToLiveClients, mockOutput=mockOutput)
 
         self.rulesN3 = "(not read yet)"
         self.inferred = Graph() # gets replaced in each graphChanged call
@@ -304,9 +304,10 @@ if __name__ == '__main__':
     -r                Verbose log on the reasoning phase and web stuff
     -o                Verbose log on the actions/output phase
     -v                Everywhere verbose
+    --mockoutput      Don't make outgoing requests
     """)
-    
-    r = Reasoning()
+
+    r = Reasoning(arg['--mockoutput'])
     configLogging(arg)
     reactor.listenTCP(9071, Application(r), interface='::')
     reactor.run()
