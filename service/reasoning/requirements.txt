@@ -4,6 +4,7 @@ cyclone
 docopt
 ipdb
 service_identity
+treq==18.6.0
 twisted
 
 rdflib==4.2.2

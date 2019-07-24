@@ -13,19 +13,20 @@ REASONING = Namespace("http://projects.bigasterisk.com/ns/reasoning/")
 class HttpPutOutput(object):
     def __init__(self, url):
         self.url = url
-        self.body = None
+        self.payload = None
         self.foafAgent = None
         self.nextCall = None
         self.numRequests = 0
 
-    def setBody(self, body, foafAgent):
-        if self.numRequests > 0 and (self.body == body or self.foafAgent == foafAgent):
+    def setPayload(self, payload, foafAgent):
+        if self.numRequests > 0 and (self.payload == payload or self.foafAgent == foafAgent):
             return
+        self.payload = payload
         self.foafAgent = foafAgent
         self.makeRequest()
 
     def makeRequest(self):
-        if self.body is None:
+        if self.payload is None:
             log.info("PUT None to %s - waiting", self.url)
             return
         h = {}
@@ -35,8 +36,8 @@ class HttpPutOutput(object):
             self.nextCall.cancel()
             self.nextCall = None
         self.lastErr = None
-        log.info("PUT %s payload=%s agent=%s", self.url, self.body, self.foafAgent)
-        self.currentRequest = treq.put(self.url, data=self.body, headers=h, timeout=3)
+        log.info("PUT %s payload=%s agent=%s", self.url, self.payload, self.foafAgent)
+        self.currentRequest = treq.put(self.url, data=self.payload, headers=h, timeout=3)
         self.currentRequest.addCallback(self.onResponse).addErrback(self.onError)
         self.numRequests += 1
 
@@ -57,10 +58,10 @@ class HttpPutOutputs(object):
     def __init__(self):
         self.state = {} # url: HttpPutOutput
 
-    def put(self, url, body, foafAgent):
+    def put(self, url, payload, foafAgent):
         if url not in self.state:
             self.state[url] = HttpPutOutput(url)
-        self.state[url].setBody(body, foafAgent)
+        self.state[url].setPayload(payload, foafAgent)
         log.info('PutOutputs has %s urls', len(self.state))
 
 class Actions(object):
