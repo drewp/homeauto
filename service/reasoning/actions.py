@@ -27,7 +27,7 @@ class HttpPutOutput(object):
 
     def makeRequest(self):
         if self.payload is None:
-            log.info("PUT None to %s - waiting", self.url)
+            log.debug("PUT None to %s - waiting", self.url)
             return
         h = {}
         if self.foafAgent:
@@ -36,20 +36,20 @@ class HttpPutOutput(object):
             self.nextCall.cancel()
             self.nextCall = None
         self.lastErr = None
-        log.info("PUT %s payload=%s agent=%s", self.url, self.payload, self.foafAgent)
+        log.debug("PUT %s payload=%s agent=%s", self.url, self.payload, self.foafAgent)
         self.currentRequest = treq.put(self.url, data=self.payload, headers=h, timeout=3)
         self.currentRequest.addCallback(self.onResponse).addErrback(self.onError)
         self.numRequests += 1
 
     def onResponse(self, resp):
-        log.info("  PUT %s ok", self.url)
+        log.debug("  PUT %s ok", self.url)
         self.lastErr = None
         self.currentRequest = None
         self.nextCall = reactor.callLater(3, self.makeRequest)
 
     def onError(self, err):
         self.lastErr = err
-        log.info('  PUT %s failed: %s', self.url, err)
+        log.debug('  PUT %s failed: %s', self.url, err)
         self.currentRequest = None
         self.nextCall = reactor.callLater(5, self.makeRequest)
 
@@ -62,7 +62,6 @@ class HttpPutOutputs(object):
         if url not in self.state:
             self.state[url] = HttpPutOutput(url)
         self.state[url].setPayload(payload, foafAgent)
-        log.info('PutOutputs has %s urls', len(self.state))
 
 class Actions(object):
     def __init__(self, sendToLiveClients):
@@ -164,7 +163,7 @@ class Actions(object):
         """
         # nothing in this actually makes them one-shot yet. they'll
         # just fire as often as we get in here, which is not desirable
-        log.info("_oneShotPostActions")
+        log.debug("_oneShotPostActions")
         def err(e):
             log.warn("post %s failed", postTarget)
         for osp in deviceGraph.subjects(RDF.type, ROOM['OneShotPost']):
@@ -174,11 +173,11 @@ class Actions(object):
                 continue
             #log.info("checking for %s %s", s, p)
             for postTarget in inferred.objects(s, p):
-                log.info("post target %r", postTarget)
+                log.debug("post target %r", postTarget)
                 # this packet ought to have 'oneShot' in it somewhere
                 self.sendToLiveClients({"s":s, "p":p, "o":postTarget})
 
-                log.info("    POST %s", postTarget)
+                log.debug("    POST %s", postTarget)
                 treq.post(postTarget, timeout=2).addErrback(err)
 
     def _putDevices(self, deviceGraph, inferred):
@@ -188,13 +187,13 @@ class Actions(object):
             if stmt[1] == ROOM['putAgent']:
                 agentFor[stmt[0]] = stmt[2]
         for stmt in inferred:
-            log.info('inferred stmt we might PUT: %s', stmt)
+            log.debug('inferred stmt we might PUT: %s', stmt)
             putUrl = deviceGraph.value(stmt[0], ROOM['putUrl'])
             putPred = deviceGraph.value(stmt[0], ROOM['putPredicate'])
             matchPred = deviceGraph.value(stmt[0], ROOM['matchPredicate'],
                                           default=putPred)
             if putUrl and matchPred == stmt[1]:
-                log.info('putDevices: stmt %r %r %r leds to putting at %r',
+                log.debug('putDevices: stmt %r %r %r leds to putting at %r',
                          stmt[0], stmt[1], stmt[2], putUrl)
                 self._put(putUrl + '?' + urllib.urlencode([
                     ('s', str(stmt[0])),
@@ -225,7 +224,7 @@ class Actions(object):
         # zerovalue should be a function of pred as well.
         value = deviceGraph.value(dev, ROOM.zeroValue)
         if value is not None:
-            log.info("    put zero (%r) to %s", value.toPython(), putUrl)
+            log.debug("    put zero (%r) to %s", value.toPython(), putUrl)
             self._put(putUrl, payload=str(value))
             # this should be written back into the inferred graph
             # for feedback
