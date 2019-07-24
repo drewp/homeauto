@@ -2,6 +2,8 @@ from rdflib import URIRef, Namespace, RDF, Literal
 from twisted.internet import reactor
 import logging
 import urllib
+import json
+import time
 
 import treq
 log = logging.getLogger('output')
@@ -11,8 +13,9 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 REASONING = Namespace("http://projects.bigasterisk.com/ns/reasoning/")
 
 class HttpPutOutput(object):
-    def __init__(self, url):
+    def __init__(self, url, mockOutput=False):
         self.url = url
+        self.mockOutput = mockOutput
         self.payload = None
         self.foafAgent = None
         self.nextCall = None
@@ -37,8 +40,12 @@ class HttpPutOutput(object):
             self.nextCall = None
         self.lastErr = None
         log.debug("PUT %s payload=%s agent=%s", self.url, self.payload, self.foafAgent)
-        self.currentRequest = treq.put(self.url, data=self.payload, headers=h, timeout=3)
-        self.currentRequest.addCallback(self.onResponse).addErrback(self.onError)
+        if not self.mockOutput:
+            self.currentRequest = treq.put(self.url, data=self.payload, headers=h, timeout=3)
+            self.currentRequest.addCallback(self.onResponse).addErrback(self.onError)
+        else:
+            reactor.callLater(.2, self.onResponse, None)
+
         self.numRequests += 1
 
     def onResponse(self, resp):
@@ -55,17 +62,19 @@ class HttpPutOutput(object):
 
 class HttpPutOutputs(object):
     """these grow forever"""
-    def __init__(self):
+    def __init__(self, mockOutput=False):
+        self.mockOutput = mockOutput
         self.state = {} # url: HttpPutOutput
 
     def put(self, url, payload, foafAgent):
         if url not in self.state:
-            self.state[url] = HttpPutOutput(url)
+            self.state[url] = HttpPutOutput(url, mockOutput=self.mockOutput)
         self.state[url].setPayload(payload, foafAgent)
 
 class Actions(object):
-    def __init__(self, sendToLiveClients):
-        self.putOutputs = HttpPutOutputs()
+    def __init__(self, sendToLiveClients, mockOutput=False):
+        self.mockOutput = mockOutput
+        self.putOutputs = HttpPutOutputs(mockOutput=mockOutput)
         self.sendToLiveClients = sendToLiveClients
 
     def putResults(self, deviceGraph, inferred):
@@ -178,7 +187,8 @@ class Actions(object):
                 self.sendToLiveClients({"s":s, "p":p, "o":postTarget})
 
                 log.debug("    POST %s", postTarget)
-                treq.post(postTarget, timeout=2).addErrback(err)
+                if not self.mockOutput:
+                    treq.post(postTarget, timeout=2).addErrback(err)
 
     def _putDevices(self, deviceGraph, inferred):
         activated = set()
