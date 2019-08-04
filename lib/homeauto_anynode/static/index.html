@@ -8,17 +8,17 @@
     <script src="/lib/require/require-2.3.3.js"></script>
     <script>
      requirejs.config({
-         paths: {
-             "streamed-graph": "/rdf/streamed-graph",
-             "quadstore": "/rdf/quadstore",
-             "async-module": "/lib/async/80f1793/async",
-             "async": "/lib/async/80f1793/async",
-             "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
-             "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
-             "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
-             "moment": "/lib/moment.min",
-             "underscore": "/lib/underscore-1.5.2.min",
-         }
+       paths: {
+         "streamed-graph": "/rdf/streamed-graph",
+         "quadstore": "/rdf/quadstore",
+         "async-module": "/lib/async/80f1793/async",
+         "async": "/lib/async/80f1793/async",
+         "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
+         "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
+         "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
+         "moment": "/lib/moment.min",
+         "underscore": "/lib/underscore-1.5.2.min",
+       }
      });
     </script>
 
@@ -33,11 +33,11 @@
     <link rel="import" href="static/output-widgets.html">
     <style>
      body {
-       font-family: monospace;
-       display: flex;
-       flex-direction: column;
-       margin: 0;
-       height: 100vh;
+         font-family: monospace;
+         display: flex;
+         flex-direction: column;
+         margin: 0;
+         height: 100vh;
      }
     </style>
   </head>
@@ -96,8 +96,8 @@
              streamedGraph.graph.quadStore.quads({subject: env.createNamedNode(this.subj),
                                                   predicate: env.createNamedNode(this.pred)},
                                                  function(quad) {
-               this.out = quad.object.valueOf();
-             }.bind(this));
+                                                   this.out = quad.object.valueOf();
+                                                 }.bind(this));
            },
            formatted: function (obj) {
              if (typeof(obj) == 'string') {
@@ -114,30 +114,30 @@
     <dom-module id="arduinonode-boards">
       <style>
        h1 {
-         margin: 0;
-         font-size: 130%;
+           margin: 0;
+           font-size: 130%;
        }
        ul {
-         padding-left: 5px;
+           padding-left: 5px;
        }
        .board, .device {
-         border: 1px solid gray;
-         border-radius: 10px;
-         margin: 13px;
-         padding: 7px;
-         box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
+           border: 1px solid gray;
+           border-radius: 10px;
+           margin: 13px;
+           padding: 7px;
+           box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
        }
        .board {
-         background: rgb(244, 244, 244);
+           background: rgb(244, 244, 244);
        }
        .device {
-         background: #fff;
+           background: #fff;
        }
        .devs {
-         -webkit-column-width: 440px;
+           -webkit-column-width: 440px;
        }
        .devs .device {
-         -webkit-column-break-inside: avoid;
+           -webkit-column-break-inside: avoid;
        }
       </style>
       <template>
