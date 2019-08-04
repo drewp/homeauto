@@ -2,25 +2,12 @@
 <html>
   <head>
     <title>ha - </title>
-    <meta name=viewport content="width=device-width, initial-scale=1">
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
-    <script>
-     requirejs.config({
-       paths: {
-         "streamed-graph": "/rdf/streamed-graph",
-         "quadstore": "/rdf/quadstore",
-         "async-module": "/lib/async/80f1793/async",
-         "async": "/lib/async/80f1793/async",
-         "jsonld-module": "/lib/jsonld.js/0.4.11/js/jsonld",
-         "jsonld": "/lib/jsonld.js/0.4.11/js/jsonld",
-         "rdfstore": "/lib/rdf_store/0.9.7/dist/rdfstore",
-         "moment": "/lib/moment.min",
-         "underscore": "/lib/underscore-1.5.2.min",
-       }
-     });
-    </script>
+    <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="stylesheet" href="/rdf/browse/style.css">
 
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
     <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
@@ -30,27 +17,8 @@
     <link rel="import" href="/rdf/rdf-uri.html">
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="static/output-widgets.html">
-    <style>
-     body {
-         font-family: monospace;
-         display: flex;
-         flex-direction: column;
-         margin: 0;
-         height: 100vh;
-     }
-    </style>
   </head>
-  <body>
-    <script>
-     window.NS = {
-       dev: 'http://projects.bigasterisk.com/device/',
-       room: 'http://projects.bigasterisk.com/room/',
-       rdfs: 'http://www.w3.org/2000/01/rdf-schema#',
-       sensor: 'http://bigasterisk.com/homeauto/sensor/',
-       b0: 'http://bigasterisk.com/homeauto/board0/',
-     };
-    </script>
-
+  <body class="rdfBrowsePage">
     <dom-module id="linked-uri">
       <template>
         <a href$="{{href}}">{{compactUri(href)}}</a>
@@ -126,18 +94,7 @@
            padding: 7px;
            box-shadow: 2px 5px 5px rgba(0, 0, 0, 0.14);
        }
-       .board {
-           background: rgb(244, 244, 244);
-       }
-       .device {
-           background: #fff;
-       }
-       .devs {
-           -webkit-column-width: 440px;
-       }
-       .devs .device {
-           -webkit-column-break-inside: avoid;
-       }
+
       </style>
       <template>
         <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
