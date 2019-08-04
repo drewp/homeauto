@@ -28,7 +28,6 @@
     <link rel="import" href="/lib/polymer/1.0.9/paper-button/paper-button.html">
     <link rel="import" href="/rdf/rdf-oneshot.html">
     <link rel="import" href="/rdf/rdf-uri.html">
-    <link rel="import" href="/rdf/graph-view.html">
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="static/output-widgets.html">
     <style>
@@ -179,7 +178,7 @@
             </ul>
           </div>
         </template>
-        <graph-view graph="{{graph}}"></graph-view>
+
       </template>
       <script>
        HTMLImports.whenReady(function () {
@@ -197,5 +196,10 @@
       </script>
     </dom-module>
     <arduinonode-boards></arduinonode-boards>
+
+    <div id="out"></div>
+    <script type="module" src="/rdf/streamed_graph_view.js"></script>
+
+
   </body>
 </html>
