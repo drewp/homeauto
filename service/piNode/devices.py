@@ -133,6 +133,20 @@ def register(deviceType):
     _knownTypes.add(deviceType)
     return deviceType
 
+def setPud(pi, pinNumber, p):
+    import socket
+    if socket.gethostname() == 'frontdoor':
+        log.warn(
+            'pud currently broken on pi4, using RPi.GPIO.'
+            ' https://github.com/joan2937/pigpio/issues/278#issuecomment-506650549',
+            )
+        import RPi.GPIO as GPIO
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(pinNumber, GPIO.IN, pull_up_down={pigpio.PUD_UP:GPIO.PUD_UP,pigpio.PUD_DOWN:GPIO.PUD_DOWN}[p])
+        log.warn('  RPi.GPIO says pin %s is %r', pinNumber, GPIO.input(pinNumber))
+        return
+    pi.set_pull_up_down(pinNumber, p)
+
 @register
 class MotionSensorInput(DeviceType):
     """
@@ -155,7 +169,7 @@ class MotionSensorInput(DeviceType):
     def __init__(self, graph, uri, pi, pinNumber):
         super(MotionSensorInput, self).__init__(graph, uri, pi, pinNumber)
         self.pi.set_mode(pinNumber, pigpio.INPUT)
-        self.pi.set_pull_up_down(pinNumber, pigpio.PUD_DOWN)
+        setPud(self.pi, pinNumber, pigpio.PUD_DOWN)
 
     def hostStateInit(self):
         self.lastRead = None
@@ -327,7 +341,7 @@ class PushbuttonInput(DeviceType):
         DeviceType.__init__(self, *a, **kw)
         log.debug("setup switch on %r", self.pinNumber)
         self.pi.set_mode(self.pinNumber, pigpio.INPUT)
-        self.pi.set_pull_up_down(self.pinNumber, pigpio.PUD_UP)
+        setPud(self.pi, self.pinNumber, pigpio.PUD_UP)
         self.lastClosed = None
         self.invert = (self.uri, ROOM['style'],
                        ROOM['inverted']) in self.graph
