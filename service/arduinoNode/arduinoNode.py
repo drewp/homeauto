@@ -178,23 +178,24 @@ class Board(object):
         t1 = time.time()
         self.ser.write("\x60\x00") # "poll everything"
         for i in self._polledDevs:
-            try:
-                now = time.time()
-                new = i.readFromPoll(self.ser.read)
-                if isinstance(new, dict): # new style
-                    oneshot = new['oneshot']
-                    new = new['latest']
-                else:
-                    oneshot = None
+            with i._stats.poll.time():
+                try:
+                    now = time.time()
+                    new = i.readFromPoll(self.ser.read)
+                    if isinstance(new, dict): # new style
+                        oneshot = new['oneshot']
+                        new = new['latest']
+                    else:
+                        oneshot = None
 
-                self._updateMasterWithNewPollStatements(i.uri, new)
+                    self._updateMasterWithNewPollStatements(i.uri, new)
 
-                if oneshot:
-                    self._sendOneshot(oneshot)
-                self._lastPollTime[i.uri] = now
-            except:
-                log.warn('while polling %r:', i.uri)
-                raise
+                    if oneshot:
+                        self._sendOneshot(oneshot)
+                    self._lastPollTime[i.uri] = now
+                except:
+                    log.warn('while polling %r:', i.uri)
+                    raise
         #plus statements about succeeding or erroring on the last poll
         byte = self.ser.read(1)
         if byte != 'x':
@@ -249,12 +250,13 @@ class Board(object):
                         unused.discard(stmt)
             if stmtsForDev:
                 log.info("output goes to action handler for %s" % dev.uri)
-                self.ser.write("\x60" + chr(self._devCommandNum[dev.uri]))
-                dev.sendOutput(stmtsForDev, self.ser.write, self.ser.read)
-                if self.ser.read(1) != 'k':
-                    raise ValueError(
-                        "%s sendOutput/generateActionCode didn't use "
-                        "matching output bytes" % dev.__class__)
+                with dev._stats.output.time():
+                    self.ser.write("\x60" + chr(self._devCommandNum[dev.uri]))
+                    dev.sendOutput(stmtsForDev, self.ser.write, self.ser.read)
+                    if self.ser.read(1) != 'k':
+                        raise ValueError(
+                            "%s sendOutput/generateActionCode didn't use "
+                            "matching output bytes" % dev.__class__)
                 # Dev *could* change hostStatements at any time, and
                 # we're not currently tracking that, but the usual is
                 # to change them in response to sendOutput so this

@@ -32,3 +32,7 @@ def redeploy(ctx):
 @task
 def lightsout(ctx):
     ctx.run(rf'curl http://bang:9059/output\?s\=http://projects.bigasterisk.com/room/speakersStrips\&p\=http://projects.bigasterisk.com/room/x -XPUT -v -d 199')
+
+@task
+def lightstest(ctx):
+    ctx.run(rf'curl http://bang:9059/output\?s\=http://projects.bigasterisk.com/room/speakersStrips\&p\=http://projects.bigasterisk.com/room/x -XPUT -v -d 100; sleep 3; curl http://bang:9059/output\?s\=http://projects.bigasterisk.com/room/speakersStrips\&p\=http://projects.bigasterisk.com/room/x -XPUT -v -d 199')
