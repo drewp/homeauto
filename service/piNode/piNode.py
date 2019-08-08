@@ -105,8 +105,8 @@ class Config(object):
         # config graph is too noisy; maybe make it a separate resource
         #masterGraph.patch(Patch(addGraph=self.configGraph))
         self.setupBoards()
-        
-    def setupBoards(self):       
+
+    def setupBoards(self):
         thisHost = Literal(hostname)
         for row in self.configGraph.query(
                 'SELECT ?board WHERE { ?board a :PiBoard; :hostname ?h }',
@@ -139,7 +139,7 @@ class Board(object):
         self._influx = InfluxExporter(self.graph)
         for d in self._devs:
             self.syncMasterGraphToHostStatements(d)
-            
+
     def startPolling(self):
         task.LoopingCall(self._poll).start(.05)
 
@@ -173,7 +173,7 @@ class Board(object):
         if oneshot:
             self._sendOneshot(oneshot)
         self._lastPollTime[i.uri] = now
-            
+
     @inlineCallbacks
     def _pollMaybeError(self):
         pollTime = {} # uri: sec
@@ -266,13 +266,13 @@ class Board(object):
             'devices': [d.description() for d in self._devs],
             'graph': 'http://sticker:9059/graph', #todo
             }
-        
+
 class Dot(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         configGraph = self.settings.config.configGraph
         dot = dotrender.render(configGraph, self.settings.config.boards)
         self.write(dot)
-        
+
 def rdfGraphBody(body, headers):
     g = Graph()
     g.parse(StringInputSource(body), format='nt')
@@ -305,7 +305,7 @@ class Boards(PrettyErrorHandler, cyclone.web.RequestHandler):
             'host': hostname,
             'boards': [b.description() for b in self.settings.config.boards]
         }, indent=2))
-        
+
 def main():
     arg = docopt("""
     Usage: piNode.py [options]
@@ -326,10 +326,10 @@ def main():
         for stmt in devices.OneWire().poll():
             print stmt
         return
-        
+
     masterGraph = PatchableGraph()
     config = Config(masterGraph, arg['--hub'])
-    
+
     static = pkg_resources.resource_filename('homeauto_anynode', 'static/')
 
     reactor.listenTCP(9059, cyclone.web.Application([

@@ -66,7 +66,7 @@ class DeviceType(object):
         If you don't want to use __init__, you can use this to set up
         whatever storage you might need for hostStatements
         """
-        
+
     def description(self):
         return {
             'uri': self.uri,
@@ -86,7 +86,7 @@ class DeviceType(object):
         be fast.
         """
         return []
-        
+
     def watchPrefixes(self):
         """
         subj,pred pairs of the statements that might be returned from
@@ -98,7 +98,7 @@ class DeviceType(object):
 
     def poll(self):
         return [] # statements
-    
+
     def outputPatterns(self):
         """
         Triple patterns, using None as a wildcard, that should be routed
@@ -112,17 +112,17 @@ class DeviceType(object):
         handler you have in sendOutput
         """
         return []
-        
+
     def sendOutput(self, statements):
         """
         If we got statements that match this class's outputPatterns, this
-        will be called with the statements that matched. 
+        will be called with the statements that matched.
 
         Todo: it would be fine to read back confirmations or
         whatever. Just need a way to collect them into graph statements.
         """
         raise NotImplementedError
-        
+
 _knownTypes = set()
 def register(deviceType):
     _knownTypes.add(deviceType)
@@ -132,9 +132,9 @@ def register(deviceType):
 class MotionSensorInput(DeviceType):
     """
     Triggering all the time? Try 5V VCC, per https://electronics.stackexchange.com/a/416295
-    
+
                     0          30s          60s         90s                    10min
-                    |           |           |           |          ...          |          
+                    |           |           |           |          ...          |
     Sensor input    ******** ** ******* ****
     :sees output    ........ .. ....... ....
     :seesRecently   .............................................................
@@ -160,7 +160,7 @@ class MotionSensorInput(DeviceType):
     def poll(self):
         motion = self.pi.read(self.pinNumber)
         now  = time.time()
-        
+
         oneshot = []
         if self.lastRead is not None and motion != self.lastRead:
             oneshot = [(self.uri, ROOM['sees'], ROOM['motionStart'])]
@@ -169,7 +169,7 @@ class MotionSensorInput(DeviceType):
                     oneshot.append((self.uri, ROOM['sees'], ROOM['motionStart%s' % t]))
                     setattr(self, v, now)
         self.lastRead = motion
-        
+
         return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
@@ -186,7 +186,7 @@ class MotionSensorInput(DeviceType):
                  ROOM['motion'] if (dt < 60 * 10) else ROOM['noMotion']),
                 (self.uri, ROOM['seesRecently30'],
                  ROOM['motion'] if (dt < 30) else ROOM['noMotion'])]
-    
+
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['sees']),
@@ -202,7 +202,7 @@ class RgbStrip(DeviceType):
     # https://github.com/RPi-Distro/python-gpiozero/blob/59ba7154c5918745ac894ea03503667d6473c760/gpiozero/output_devices.py#L213
     # can also apparently do PWM
     deviceType = ROOM['RgbStrip']
-    
+
     @classmethod
     def findInstances(cls, graph, board, pi):
         for row in graph.query("""SELECT DISTINCT ?dev ?r ?g ?b  WHERE {
@@ -227,21 +227,21 @@ class RgbStrip(DeviceType):
         self.graph, self.uri, self.pi = graph, uri, pi
         self.rgb = map(int, [r, g, b])
         self.value = '#000000'
-            
+
     def setup(self):
         for i in self.rgb:
             setupPwm(self.pi, i)
-            
+
     def hostStatements(self):
         return [(self.uri, ROOM['color'], Literal(self.value))]
-        
+
     def outputPatterns(self):
         return [(self.uri, ROOM['color'], None)]
 
     def _rgbFromHex(self, h):
         rrggbb = h.lstrip('#')
         return [int(x, 16) for x in [rrggbb[0:2], rrggbb[2:4], rrggbb[4:6]]]
-    
+
     def sendOutput(self, statements):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['color'])
@@ -251,7 +251,7 @@ class RgbStrip(DeviceType):
 
         for (i, v) in zip(self.rgb, rgb):
             self.pi.set_PWM_dutycycle(i, v)
-        
+
     def outputWidgets(self):
         return [{
             'element': 'output-rgb',
@@ -274,7 +274,7 @@ class TempHumidSensor(DeviceType):
         self.sens = DHT22.sensor(self.pi, self.pinNumber)
         self.recentLowTemp = (0, None) # time, temp
         self.recentPeriodSec = 30
-    
+
     def poll(self):
         stmts = set()
 
@@ -302,11 +302,11 @@ class TempHumidSensor(DeviceType):
 
         if self.recentLowTemp[1] is not None:
             stmts.add((self.uri, ROOM['recentLowTemperatureF'], Literal(self.recentLowTemp[1])))
-            
+
         self.sens.trigger()
-       
+
         return stmts
-        
+
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['temperatureF']),
@@ -341,18 +341,18 @@ class PushbuttonInput(DeviceType):
         else:
             oneshot = []
         self.lastClosed = closed
-            
+
         return {'latest': [
             (self.uri, ROOM['buttonState'],
              ROOM['pressed'] if closed else ROOM['notPressed']),
         ],
                 'oneshot':oneshot}
-        
+
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['buttonState']),
         ]
-        
+
 @register
 class OneWire(DeviceType):
     """
@@ -396,7 +396,7 @@ class OneWire(DeviceType):
         except Exception as e:
             log.error(e)
             os.abort()
-            
+
     def watchPrefixes(self):
         return [(s.uri, ROOM['temperatureF']) for s in self._sensors]
 
@@ -407,7 +407,7 @@ class FilteredValue(object):
     ):
         self.setter = setter
         self.slew, self.accel = slew, accel
-        
+
         self.x = None
         self.dx = 0
         self.goal = self.x
@@ -440,7 +440,7 @@ class FilteredValue(object):
 
         #print "x= %(x)s dx= %(dx)s goal= %(goal)s" % self.__dict__
         self.setter(self.x)
-        
+
 @register
 class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
@@ -457,13 +457,13 @@ class LedOutput(DeviceType):
                     _setPwm(goal)
             self.fv = Instant()
         self.gamma = float(self.graph.value(self.uri, ROOM['gamma'], default=1))
-    
+
     def setup(self):
         setupPwm(self.pi, self.pinNumber)
 
     def outputPatterns(self):
         return [(self.uri, ROOM['brightness'], None)]
-    
+
     def sendOutput(self, statements):
         assert len(statements) == 1
         assert statements[0][:2] == (self.uri, ROOM['brightness'])
@@ -475,8 +475,8 @@ class LedOutput(DeviceType):
         self.pi.set_PWM_dutycycle(self.pinNumber, v)
 
     def hostStatements(self):
-        return [(self.uri, ROOM['brightness'], Literal(self.value))]       
-        
+        return [(self.uri, ROOM['brightness'], Literal(self.value))]
+
     def outputWidgets(self):
         return [{
             'element': 'output-slider',
@@ -487,7 +487,7 @@ class LedOutput(DeviceType):
             'pred': ROOM['brightness'],
         }]
 
-        
+
 @register
 class OnboardTemperature(DeviceType):
     deviceType = ROOM['OnboardTemperature']
@@ -496,12 +496,12 @@ class OnboardTemperature(DeviceType):
     def findInstances(cls, graph, board, pi):
         log.debug('graph has any connected devices of type OnboardTemperature on %r?', board)
         for row in graph.query('''SELECT DISTINCT ?uri WHERE {
-          ?board :onboardDevice ?uri . 
+          ?board :onboardDevice ?uri .
           ?uri a :OnboardTemperature .
         }''', initBindings=dict(board=board)):
             log.debug('  found %s', row.uri)
             yield cls(graph, row.uri, pi, pinNumber=None)
-    
+
     def poll(self):
         milliC = open('/sys/class/thermal/thermal_zone0/temp').read().strip()
         c = float(milliC) / 1000.
@@ -521,7 +521,7 @@ pixelStats = scales.collection('/rgbPixels',
                                scales.PmfStat('currentColors'),
                                scales.PmfStat('poll'),
                                )
-    
+
 @register
 class RgbPixels(DeviceType):
     """chain of ws2812 rgb pixels on pin GPIO18"""
@@ -532,9 +532,9 @@ class RgbPixels(DeviceType):
         log.debug('%s maxIndex = %s', self.uri, self.anim.maxIndex())
         self.neo = rpi_ws281x.Adafruit_NeoPixel(self.anim.maxIndex() + 1, pin=18)
         self.neo.begin()
-        
+
         colorOrder, stripType = self.anim.getColorOrder(self.graph, self.uri)
-      
+
     def sendOutput(self, statements):
         self.anim.onStatements(statements)
 
@@ -548,7 +548,7 @@ class RgbPixels(DeviceType):
 
         with pixelStats.currentColors.time():
             colors = self.anim.currentColors()
-        
+
         for idx, (r, g, b) in colors:
             if idx < 4:
                 log.debug('out color %s (%s,%s,%s)', idx, r, g, b)
@@ -562,7 +562,7 @@ class RgbPixels(DeviceType):
 
     def hostStatements(self):
         return self.anim.hostStatements()
-        
+
     def outputPatterns(self):
         return self.anim.outputPatterns()
 
@@ -573,7 +573,7 @@ class RgbPixels(DeviceType):
 class Lcd8544(DeviceType):
     """PCD8544 lcd (nokia 5110)"""
     deviceType = ROOM['RgbStrip']
-    
+
     @classmethod
     def findInstances(cls, graph, board, pi):
         for row in graph.query("""
@@ -605,11 +605,11 @@ class Lcd8544(DeviceType):
                 sclk=clk,
                 mosi=din))
         self.lcd.begin(contrast=60)
-            
+
     def hostStatements(self):
         return []
         return [(self.uri, ROOM['color'], Literal(self.value))]
-        
+
     def outputPatterns(self):
         return []
         return [(self.uri, ROOM['color'], None)]
@@ -624,7 +624,7 @@ class Lcd8544(DeviceType):
 
         for (i, v) in zip(self.rgb, rgb):
             self.pi.set_PWM_dutycycle(i, v)
-        
+
     def outputWidgets(self):
         return []
         return [{
@@ -660,7 +660,7 @@ class PwmBoard(DeviceType):
             }""", initBindings=dict(dev=row.dev), initNs={'': ROOM}):
                 outs[out.area] = out.chan.toPython()
             yield cls(graph, row.dev, pi, outs)
-        
+
     def __init__(self, graph, dev, pi, outs):
         super(PwmBoard, self).__init__(graph, dev, pi, pinNumber=None)
         import PCA9685
@@ -683,7 +683,7 @@ class PwmBoard(DeviceType):
         value = float(statements[0][2])
         self.values[statements[0][0]] = value
         self.pwm.set_duty_cycle(chan, value * 100)
-            
+
     def outputWidgets(self):
         return [{
             'element': 'output-slider',
@@ -694,10 +694,9 @@ class PwmBoard(DeviceType):
             'pred': ROOM['brightness'],
         } for area in self.outs]
 
-        
+
 def makeDevices(graph, board, pi):
     out = []
     for dt in sorted(_knownTypes, key=lambda cls: cls.__name__):
         out.extend(dt.findInstances(graph, board, pi))
     return out
-        
