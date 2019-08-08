@@ -17,7 +17,7 @@ def readLine(read):
     for c in iter(lambda: read(1), '\n'):
         buf += c
     return buf
-            
+
 class DeviceType(object):
     deviceType = None
     @classmethod
@@ -66,7 +66,7 @@ class DeviceType(object):
             'watchPrefixes': self.watchPrefixes(),
             'outputWidgets': self.outputWidgets(),
         }
-        
+
     def readFromPoll(self, read):
         """
         read an update message returned as part of a poll bundle. This may
@@ -78,10 +78,10 @@ class DeviceType(object):
 
     def wantIdleOutput(self):
         return False
-        
+
     def outputIdle(self, write):
         return
-        
+
     def hostStatements(self):
         """
         Like readFromPoll but these statements come from the host-side
@@ -91,7 +91,7 @@ class DeviceType(object):
         be fast.
         """
         return []
-        
+
     def watchPrefixes(self):
         """
         subj,pred pairs of the statements that might be returned from
@@ -100,7 +100,7 @@ class DeviceType(object):
         always watch the whole tree of statements starting self.uri
         """
         return []
-        
+
     def generateIncludes(self):
         """filenames of .h files to #include"""
         return []
@@ -108,22 +108,22 @@ class DeviceType(object):
     def generateArduinoLibs(self):
         """names of libraries for the ARDUINO_LIBS line in the makefile"""
         return []
-        
+
     def generateGlobalCode(self):
-        """C code to emit in the global section. 
+        """C code to emit in the global section.
 
         Note that 'frame' (uint8) is available and increments each frame.
         """
         return ''
-        
+
     def generateSetupCode(self):
         """C code to emit in setup()"""
         return ''
-        
+
     def generateIdleCode(self):
         """C code to emit in the serial-read loop"""
         return ''
-        
+
     def generatePollCode(self):
         """
         C code to run a poll update. This should Serial.write its output
@@ -140,7 +140,7 @@ class DeviceType(object):
         calls in here.
         """
         return ''
-       
+
     def outputPatterns(self):
         """
         Triple patterns, using None as a wildcard, that should be routed
@@ -154,7 +154,7 @@ class DeviceType(object):
         handler you have in sendOutput
         """
         return []
-        
+
     def sendOutput(self, statements, write, read):
         """
         If we got statements that match this class's outputPatterns, this
@@ -166,7 +166,7 @@ class DeviceType(object):
         whatever. Just need a way to collect them into graph statements.
         """
         raise NotImplementedError
-        
+
 _knownTypes = set()
 def register(deviceType):
     _knownTypes.add(deviceType)
@@ -177,10 +177,10 @@ class PingInput(DeviceType):
     @classmethod
     def findInstances(cls, graph, board):
         return [cls(graph, board, None)]
-    
+
     def generatePollCode(self):
         return "Serial.write('k');"
-        
+
     def readFromPoll(self, read):
         byte = read(1)
         if byte != 'k':
@@ -196,17 +196,17 @@ class MotionSensorInput(DeviceType):
     def __init__(self, graph, uri, pinNumber):
         DeviceType.__init__(self, graph, uri, pinNumber)
         self.lastRead = None
-        
+
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, INPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
         }
-        
+
     def generatePollCode(self):
         return "Serial.write(digitalRead(%(pin)d) ? 'y' : 'n');" % {
             'pin': self.pinNumber
         }
-        
+
     def readFromPoll(self, read):
         b = read(1)
         if b not in 'yn':
@@ -217,7 +217,7 @@ class MotionSensorInput(DeviceType):
         if self.lastRead is not None and motion != self.lastRead:
             oneshot = [(self.uri, ROOM['sees'], ROOM['motionStart'])]
         self.lastRead = motion
-        
+
         return {'latest': [
             (self.uri, ROOM['sees'],
              ROOM['motion'] if motion else ROOM['noMotion']),
@@ -235,7 +235,7 @@ class MotionSensorInput(DeviceType):
                  ROOM['motion'] if (dt < 60 * 10) else ROOM['noMotion']),
                 (self.uri, ROOM['seesRecently30'],
                  ROOM['motion'] if (dt < 30) else ROOM['noMotion'])]
-    
+
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['sees']),
@@ -250,18 +250,18 @@ class PushbuttonInput(DeviceType):
     def __init__(self, graph, uri, pinNumber):
         DeviceType.__init__(self, graph, uri, pinNumber)
         self.lastClosed = None
-        
+
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, INPUT); digitalWrite(%(pin)d, HIGH);' % {
             'pin': self.pinNumber,
         }
-        
+
     def generatePollCode(self):
         # note: pulldown means unpressed reads as a 1
         return "Serial.write(digitalRead(%(pin)d) ? '0' : '1');" % {
             'pin': self.pinNumber
         }
-        
+
     def readFromPoll(self, read):
         b = read(1)
         if b not in '01':
@@ -276,13 +276,13 @@ class PushbuttonInput(DeviceType):
         else:
             oneshot = []
         self.lastClosed = closed
-            
+
         return {'latest': [
             (self.uri, ROOM['buttonState'],
              ROOM['pressed'] if closed else ROOM['notPressed']),
         ],
                 'oneshot': oneshot}
-    
+
     def watchPrefixes(self):
         return [
             (self.uri, ROOM['buttonState']),
@@ -298,7 +298,7 @@ class OneWire(DeviceType):
     happens only at device startup (not even program startup, yet).
 
     self.uri is a resource representing the bus.
-    
+
     DS18S20 pin 1: ground, pin 2: data and pull-up with 4.7k.
     """
     deviceType = ROOM['OneWire']
@@ -311,28 +311,28 @@ class OneWire(DeviceType):
 
     def generateArduinoLibs(self):
         return ['OneWire', 'DallasTemperature']
-        
+
     def generateGlobalCode(self):
         # not yet isolated to support multiple OW buses
         return '''
-OneWire oneWire(%(pinNumber)s); 
+OneWire oneWire(%(pinNumber)s);
 DallasTemperature sensors(&oneWire);
 #define MAX_DEVICES 8
 DeviceAddress tempSensorAddress[MAX_DEVICES];
 
-void initSensors() {      
+void initSensors() {
   sensors.begin();
-  sensors.setResolution(12);        
+  sensors.setResolution(12);
   sensors.setWaitForConversion(false);
   for (uint8_t i=0; i < sensors.getDeviceCount(); ++i) {
     sensors.getAddress(tempSensorAddress[i], i);
   }
 }
         ''' % dict(pinNumber=self.pinNumber)
-    
+
     def generateSetupCode(self):
         return 'initSensors();'
-    
+
     def generatePollCode(self):
         return r'''
   sensors.requestTemperatures();
@@ -346,7 +346,7 @@ void initSensors() {
   Serial.write((uint8_t)sensors.getDeviceCount());
   for (uint8_t i=0; i < sensors.getDeviceCount(); ++i) {
     float newTemp = sensors.getTempF(tempSensorAddress[i]);
- 
+
     Serial.write(tempSensorAddress[i], 8);
     Serial.write((uint8_t*)(&newTemp), 4);
   }
@@ -391,12 +391,12 @@ class LedOutput(DeviceType):
     deviceType = ROOM['LedOutput']
     def hostStateInit(self):
         self.value = 0
-        
+
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, OUTPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
         }
- 
+
     def outputPatterns(self):
         return [(self.uri, ROOM['brightness'], None)]
 
@@ -410,7 +410,7 @@ class LedOutput(DeviceType):
 
     def hostStatements(self):
         return [(self.uri, ROOM['brightness'], Literal(self.value))]
-        
+
     def generateActionCode(self):
         return r'''
           while(Serial.available() < 1) NULL;
@@ -432,12 +432,12 @@ class DigitalOutput(DeviceType):
     deviceType = ROOM['DigitalOutput']
     def hostStateInit(self):
         self.value = 0
-        
+
     def generateSetupCode(self):
         return 'pinMode(%(pin)d, OUTPUT); digitalWrite(%(pin)d, LOW);' % {
             'pin': self.pinNumber,
         }
- 
+
     def outputPatterns(self):
         return [(self.uri, ROOM['level'], None)]
 
@@ -450,13 +450,13 @@ class DigitalOutput(DeviceType):
     def hostStatements(self):
         return [(self.uri, ROOM['level'],
                  Literal('high' if self.value else 'low'))]
-        
+
     def generateActionCode(self):
         return r'''
           while(Serial.available() < 1) NULL;
           digitalWrite(%(pin)d, Serial.read());
         ''' % dict(pin=self.pinNumber)
-        
+
     def outputWidgets(self):
         return [{
             'element': 'output-switch',
@@ -464,7 +464,7 @@ class DigitalOutput(DeviceType):
             'pred': ROOM['level'],
         }]
 
-       
+
 @register
 class PwmBoard(DeviceType):
     deviceType = ROOM['PwmBoard']
@@ -487,7 +487,7 @@ class PwmBoard(DeviceType):
             }""", initBindings=dict(dev=row.dev), initNs={'': ROOM}):
                 outs[out.area] = out.chan.toPython()
             yield cls(graph, row.dev, outs=outs)
-        
+
     def __init__(self, graph, dev, outs):
         self.codeVals = {'pwm': 'pwm%s' % (hash(str(dev)) % 99999)}
         self.outs = outs
@@ -499,24 +499,24 @@ class PwmBoard(DeviceType):
     def hostStatements(self):
         return [(uri, ROOM['brightness'], Literal(b))
                 for uri, b in self.values.items()]
-        
+
     def generateIncludes(self):
         return ['Wire.h', 'Adafruit_PWMServoDriver.h']
 
     def generateArduinoLibs(self):
         return ['Wire', 'Adafruit-PWM-Servo-Driver-Library']
-        
+
     def generateGlobalCode(self):
         return r'''
           Adafruit_PWMServoDriver %(pwm)s = Adafruit_PWMServoDriver(0x40);
         ''' % self.codeVals
-    
+
     def generateSetupCode(self):
         return '''
           %(pwm)s.begin();
           %(pwm)s.setPWMFreq(1200);
         ''' % self.codeVals
-        
+
     def generateActionCode(self):
         return r'''
           while(Serial.available() < 3) NULL;
@@ -537,7 +537,7 @@ class PwmBoard(DeviceType):
         self.values[statements[0][0]] = value
         v12 = int(min(4095, max(0, value * 4095)))
         write(chr(chan) + chr(v12 >> 8) + chr(v12 & 0xff))
-            
+
     def outputWidgets(self):
         return [{
             'element': 'output-slider',
@@ -580,7 +580,7 @@ class ST7576Lcd(DeviceType):
 
     def generateArduinoLibs(self):
         return ['ST7565']
-        
+
     def generateGlobalCode(self):
         return '''
           ST7565 glcd(%(SID)d, %(SCLK)d, %(A0)d, %(RST)d, %(CS)d);
@@ -591,14 +591,14 @@ class ST7576Lcd(DeviceType):
                    A0=self.connections[ROOM['lcdA0']],
                    RST=self.connections[ROOM['lcdRST']],
                    CS=self.connections[ROOM['lcdCS']])
-                   
+
     def generateSetupCode(self):
         return '''
           glcd.st7565_init();
           glcd.st7565_command(CMD_DISPLAY_ON);
           glcd.st7565_command(CMD_SET_ALLPTS_NORMAL);
           glcd.st7565_set_brightness(0x18);
-        
+
           glcd.display(); // show splashscreen
         '''
 
@@ -614,7 +614,7 @@ class ST7576Lcd(DeviceType):
 
     def hostStatements(self):
         return [(self.uri, ROOM['text'], Literal(self.text))]
-        
+
     def outputWidgets(self):
         return [{
                 'element': 'output-fixed-text',
@@ -623,7 +623,7 @@ class ST7576Lcd(DeviceType):
                 'subj': self.uri,
                 'pred': ROOM['text'],
             }]
-        
+
     def generateActionCode(self):
         return '''
           while(Serial.available() < 1) NULL;
@@ -636,7 +636,7 @@ class ST7576Lcd(DeviceType):
             newtxt[i] = 0;
           }
           glcd.clear();
-          glcd.drawstring(0,0, newtxt); 
+          glcd.drawstring(0,0, newtxt);
           glcd.display();
         '''
 
@@ -648,13 +648,13 @@ class RgbPixels(DeviceType):
     def __init__(self, graph, uri, pinNumber):
         super(RgbPixels, self).__init__(graph, uri, pinNumber)
         self.anim = RgbPixelsAnimation(graph, uri, self.updateOutput)
-        
+
         self.replace = {'ledArray': 'leds_%s' % self.pinNumber,
                         'ledCount': self.anim.maxIndex() - 1,
                         'pin': self.pinNumber,
                         'ledType': 'WS2812',
         }
-    
+
     def generateIncludes(self):
         """filenames of .h files to #include"""
         return ['FastLED.h']
@@ -665,13 +665,13 @@ class RgbPixels(DeviceType):
 
     def myId(self):
         return 'rgb_%s' % self.pinNumber
-    
+
     def generateGlobalCode(self):
         return 'CRGB {ledArray}[{ledCount}];'.format(**self.replace)
 
     def generateSetupCode(self):
         return 'FastLED.addLeds<{ledType}, {pin}>({ledArray}, {ledCount});'.format(**self.replace)
-    
+
     def sendOutput(self, statements, write, read):
         log.info('sendOutput start')
         self.write = write
@@ -688,14 +688,14 @@ class RgbPixels(DeviceType):
 
     def wantIdleOutput(self):
         return True
-            
+
     def outputIdle(self, write):
         self.write = write
-        self.updateOutput()        
-            
+        self.updateOutput()
+
     def hostStatements(self):
         return self.anim.hostStatements()
-        
+
     def outputPatterns(self):
         return self.anim.outputPatterns()
 
@@ -719,16 +719,15 @@ byte count = Serial.read();
 
           while(Serial.available() < 1) NULL;
           byte b = Serial.read();
-          
+
         {ledArray}[id] = CRGB(r, g, b);
         }}
         FastLED.show();
 
         '''.format(**self.replace)
-    
+
 def makeDevices(graph, board):
     out = []
     for dt in sorted(_knownTypes, key=lambda cls: cls.__name__):
         out.extend(dt.findInstances(graph, board))
     return out
-        
