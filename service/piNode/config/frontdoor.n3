@@ -7,22 +7,37 @@
 
 @prefix pin: <http://bigasterisk.com/homeauto/piFrontdoor/pin/> .
 
+# beware of frontdoor vs frontDoor
+
+# 26 gry  cs
+# 18 grn  dc
+# 19 blu  sda oled
+# 23 vio  scl
+#  3 org  txd/sda rfid
+#  5 yel  rxd/sda
+
 ha:piFrontdoor a :PiBoard;
   :hostname "frontdoor";
   :onboardDevice ha:frontdoorPiTemp;
   :hasPin
     pin:GPIO4, # open
-    pin:GPIO5, # motion
-    pin:GPIO17, # OW temp
-    pin:GPIO18 .   # rgb
+    pin:GPIO5, # 
+    pin:GPIO17, #
+    pin:GPIO22, #
+    pin:GPIO27, #
+    pin:GPIO18 .   #
 
 ha:frontdoorPiTemp a :OnboardTemperature;
   :influxMeasurement "temperatureF";
   :influxTag [:key "location"; :value "frontdoorPi"] .
 
-pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
-:frontdoorOpenSwitch a :Pushbutton; :style :inverted;
-:influxMeasurement [
+pin:GPIO22 :gpioNumber 22; :connectedTo :frontDoorScreenButton1 . :frontDoorScreenButton1 a :Pushbutton .
+pin:GPIO27 :gpioNumber 27; :connectedTo :frontDoorScreenButton2 . :frontDoorScreenButton2 a :Pushbutton .
+pin:GPIO17 :gpioNumber 17; :connectedTo :frontDoorScreenButton3 . :frontDoorScreenButton3 a :Pushbutton .
+
+pin:GPIO4 :gpioNumber 4; :connectedTo :frontDoorOpenSwitch .
+:frontDoorOpenSwitch a :Pushbutton; :style :inverted;
+c:influxMeasurement [
     :measurement "state";
     :predicate :buttonState;
     :tag [:key "host"; :value "frontdoor"],
@@ -30,8 +45,8 @@ pin:GPIO4 :gpioNumber 4; :connectedTo :frontdoorOpenSwitch .
       [:key "location"; :value "frontDoor"]];.
 
 
-pin:GPIO5 :gpioNumber 5; :connectedTo sensor:motionFrontdoorInside .
-sensor:motionFrontdoorInside a :MotionSensor;
+pin:GPIO5 :gpioNumber 5; :connectedTo sensor:motionFrontDoorInside .
+sensor:motionFrontDoorInside a :MotionSensor;
   :influxMeasurement [
     :measurement "presence";
     :predicate :sees;
@@ -43,12 +58,12 @@ sensor:motionFrontdoorInside a :MotionSensor;
 # 23 GPIO11 through 100R, and signal->220R->LED->gnd
 # 25 gnd
 
-pin:GPIO18 :gpioNumber 18; :connectedTo :frontdoorRgb .
-:frontdoorRgb a :RgbPixels;
+pin:GPIO18 :gpioNumber 18; :connectedTo :frontDoorRgb .
+:frontDoorRgb a :RgbPixels_disabled_pending_pi4_support;
   :colorOrder order:GRB;
-  :pixelGroup :frontdoorRgb .
+  :pixelGroup :frontDoorRgb .
 
-:frontdoorRgb
+:frontDoorRgb
   :startIndex 0;
   :endIndex 2;
   :src "rainbow.png";

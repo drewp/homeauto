@@ -59,6 +59,11 @@ class DeviceType(object):
     def __init__(self, graph, uri, pi, pinNumber):
         self.graph, self.uri, self.pi = graph, uri, pi
         self.pinNumber = pinNumber
+        scales.init(self, self.__class__.__name__)
+        self.stats = scales.collection(self.__class__.__name__,
+                                       scales.PmfStat('poll'),
+                                       scales.PmfStat('output'),
+        )
         self.hostStateInit()
 
     def hostStateInit(self):
@@ -542,8 +547,8 @@ class RgbPixels(DeviceType):
     def updateOutput(self):
         if 0:
             for _, _, sg in self.anim.groups.values():
-                print sg.uri, sg.current
-            print list(self.anim.currentColors())
+                print (sg.uri, sg.current)
+            print (list(self.anim.currentColors()))
             return
 
         with pixelStats.currentColors.time():
