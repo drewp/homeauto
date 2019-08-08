@@ -1,8 +1,8 @@
-RPi.GPIO==0.6.2
+RPi.GPIO==0.6.5
 cryptography
 cyclone
 docopt
-etcd3==0.8.1
+etcd3==0.10.0
 git+git://github.com/adafruit/Adafruit_Nokia_LCD
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 http://abyz.me.uk/rpi/pigpio/pigpio.zip
@@ -19,7 +19,8 @@ w1thermsensor
 cycloneerr
 devices_shared==0.3.0
 export_to_influxdb==0.1.0
-homeauto_anynode==0.5.0
+homeauto_anynode==0.8.0
 patchablegraph==0.5.0
 rdfdb==0.8.0
-standardservice==0.4.0
+standardservice==0.6.0
+patchablegraph==0.5.0
