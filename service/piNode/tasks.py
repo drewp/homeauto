@@ -13,11 +13,9 @@ def build_image(ctx):
 def push_image(ctx):
     ctx.run(f'docker push {TAG}')
 
-#	(cd /my/proj/homeauto/service/arduinoNode; tar czf /my/site/projects/rdfdb/more2.tgz static)
-
 @task(pre=[build_image])
 def shell(ctx):
-    ctx.run(f'docker run --name={JOB}_shell --rm -it --cap-add SYS_PTRACE --net=host {TAG} /bin/bash', pty=True)
+    ctx.run(f'docker run --name={JOB}_shell --rm -it --cap-add SYS_PTRACE --net=host --uts=host --cap-add SYS_RAWIO --device /dev/mem  --privileged {TAG} /bin/bash', pty=True)
 
 
 @task(pre=[build_image])

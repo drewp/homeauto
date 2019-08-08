@@ -325,7 +325,7 @@ def main():
     static = pkg_resources.resource_filename('homeauto_anynode', 'static/')
 
     reactor.listenTCP(9059, cyclone.web.Application([
-        (r"/()", cyclone.web.StaticFileHandler, {
+        (r"/(|output-widgets.html)", cyclone.web.StaticFileHandler, {
             "path": static, "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": static}),
         (r'/stats/(.*)', StatsHandler, {'serverName': 'piNode'}),
