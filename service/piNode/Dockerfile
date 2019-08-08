@@ -1,7 +1,7 @@
 FROM bang6:5000/base_pi
 
 # super slow build
-RUN pip install grpcio==1.18.0
+RUN pip install grpcio==1.22.0
 
 WORKDIR /opt
 
@@ -15,5 +15,7 @@ RUN pip install --index-url https://projects.bigasterisk.com/ --extra-index-url 
 
 COPY *.py ./
 COPY config/ ./config/
+
+EXPOSE 9059
 
 CMD [ "python", "./piNode.py" ]

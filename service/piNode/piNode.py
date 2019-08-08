@@ -43,6 +43,7 @@ CTX = ROOM['pi/%s' % hostname]
 STATS = scales.collection('/root',
                           scales.PmfStat('configReread'),
                           scales.IntStat('pollException'),
+                          scales.PmfStat('pollAll'),
                           scales.PmfStat('boardPoll'),
                           scales.PmfStat('sendOneshot'),
                           scales.PmfStat('outputStatements'),
@@ -153,15 +154,14 @@ class Board(object):
 
 
     @inlineCallbacks
-    def _pollOneDev(self, i, pollTime):
+    def _pollOneDev(self, i):
         now = time.time()
         if (hasattr(i, 'pollPeriod') and
             self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
             return
-        #need something like:
-        #  with i.pollTiming.time():
-        new = yield maybeDeferred(i.poll)
-        pollTime[i.uri] = time.time() - now
+        with i.stats.poll.time():
+            new = yield maybeDeferred(i.poll)
+
         if isinstance(new, dict): # new style
             oneshot = new['oneshot']
             new = new['latest']
@@ -176,19 +176,10 @@ class Board(object):
 
     @inlineCallbacks
     def _pollMaybeError(self):
-        pollTime = {} # uri: sec
-        start = time.time()
-        yield gatherResults([self._pollOneDev(i, pollTime)
-                             for i in self._devs], consumeErrors=True)
+        with STATS.pollAll.time():
+            yield gatherResults([self._pollOneDev(i)
+                                 for i in self._devs], consumeErrors=True)
 
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug('poll times:')
-            for u, s in sorted(pollTime.items()):
-                log.debug("  %.4f ms %s", s * 1000, u)
-            log.debug('total poll time: %f ms done in %f ms elapsed',
-                      sum(pollTime.values()) * 1000,
-                      (time.time() - start) * 1000)
-            
         pollResults = map(set, self._statementsFromInputs.values())
         if pollResults:
             self._influx.exportToInflux(set.union(*pollResults))
@@ -236,7 +227,8 @@ class Board(object):
                         unused.discard(stmt)
             if stmtsForDev:
                 log.info("output goes to action handler for %s" % dev.uri)
-                dev.sendOutput(stmtsForDev)
+                with dev.stats.output.time():
+                    dev.sendOutput(stmtsForDev)
 
                 # Dev *could* change hostStatements at any time, and
                 # we're not currently tracking that, but the usual is
