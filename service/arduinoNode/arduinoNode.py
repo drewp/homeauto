@@ -1,5 +1,5 @@
 from __future__ import division
-import glob, sys, logging, subprocess, socket, hashlib, time, tempfile
+import glob, sys, logging, subprocess, socket, hashlib, time, tempfile, pkg_resources
 import shutil, json
 import serial
 import cyclone.web
@@ -24,11 +24,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 from loggingserial import LoggingSerial
 
-sys.path.append("../../lib")
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from export_to_influxdb import InfluxExporter
 
-sys.path.append("/my/proj/rdfdb")
 from rdfdb.patch import Patch
 from rdfdb.rdflibpatch import inContext
 
@@ -57,7 +55,7 @@ class Config(object):
         self.configGraph = ConjunctiveGraph()
 
         self.etcPrefix = 'arduino/'
-        
+
         self.boards = []
         self.reread()
 
@@ -78,7 +76,7 @@ class Config(object):
         if getattr(self, 'rereadLater', None):
             self.rereadLater.cancel()
         self.rereadLater = None
-        
+
     def reread(self):
         self.cancelRead()
         log.info('read config')
@@ -117,7 +115,7 @@ class Config(object):
         for b in self.boards:
             b.startPolling(period=.1 if not self.slowMode else 10)
 
-        
+
 class Board(object):
     """an arduino connected to this computer"""
     baudrate = 115200
@@ -138,7 +136,7 @@ class Board(object):
         self._devCommandNum = dict((dev.uri, ACTION_BASE + devIndex)
                                    for devIndex, dev in enumerate(self._devs))
         self._polledDevs = [d for d in self._devs if d.generatePollCode()]
-        
+
         self._statementsFromInputs = {} # input device uri: latest statements
         self._lastPollTime = {} # input device uri: time()
         self._influx = InfluxExporter(self.configGraph)
@@ -154,14 +152,14 @@ class Board(object):
             'baudrate': self.baudrate,
             'devices': [d.description() for d in self._devs],
             }
-        
+
     def open(self):
         self.ser = LoggingSerial(port=self.dev, baudrate=self.baudrate,
                                  timeout=2)
-        
+
     def startPolling(self, period=.5):
         task.LoopingCall(self._poll).start(period)
-            
+
     def _poll(self):
         """
         even boards with no inputs need some polling to see if they're
@@ -175,7 +173,7 @@ class Board(object):
         except Exception as e:
             import traceback; traceback.print_exc()
             log.warn("poll: %r" % e)
-            
+
     def _pollWork(self):
         t1 = time.time()
         self.ser.write("\x60\x00") # "poll everything"
@@ -229,7 +227,7 @@ class Board(object):
         self.masterGraph.patch(Patch.fromDiff(inContext(prev, dev),
                                               inContext(new, dev)))
         self._statementsFromInputs[dev] = new
-              
+
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
@@ -309,13 +307,13 @@ class Board(object):
         except Exception as e:
             log.info("can't get code version from board: %r" % e)
         return False
-        
+
     def deployToArduino(self):
         code, cksum = self.generateArduinoCode()
 
         if self._boardIsCurrent(cksum):
             return
-        
+
         try:
             if hasattr(self, 'ser'):
                 self.ser.close()
@@ -338,11 +336,11 @@ class Board(object):
             main.write(code)
 
         subprocess.check_call(['make', 'upload'], cwd=workDir)
-        
+
 
     def currentGraph(self):
         g = Graph()
-        
+
 
         for dev in self._devs:
             for stmt in dev.hostStatements():
@@ -354,7 +352,7 @@ class Dot(cyclone.web.RequestHandler):
         configGraph = self.settings.config.graph
         dot = dotrender.render(configGraph, self.settings.config.boards)
         self.write(dot)
-        
+
 class ArduinoCode(cyclone.web.RequestHandler):
     def get(self):
         board = [b for b in self.settings.config.boards if
@@ -374,7 +372,7 @@ class OutputPage(cyclone.web.RequestHandler):
         stmts = list(rdfGraphBody(self.request.body, self.request.headers))
         for b in self.settings.config.boards:
             b.outputStatements(stmts)
-            
+
     def put(self):
         subj = URIRef(self.get_argument('s'))
         pred = URIRef(self.get_argument('p'))
@@ -388,8 +386,8 @@ class OutputPage(cyclone.web.RequestHandler):
         stmt = (subj, pred, obj)
         for b in self.settings.config.boards:
             b.outputStatements([stmt])
-        
-        
+
+
 class Boards(cyclone.web.RequestHandler):
     def get(self):
         self.set_header('Content-type', 'application/json')
@@ -397,11 +395,11 @@ class Boards(cyclone.web.RequestHandler):
             'host': hostname,
             'boards': [b.description() for b in self.settings.config.boards]
         }, indent=2))
-            
+
 def currentSerialDevices():
     log.info('find connected boards')
     return glob.glob('/dev/serial/by-id/*')
-        
+
 def main():
     arg = docopt("""
     Usage: arduinoNode.py [options]
@@ -421,10 +419,11 @@ def main():
 
     masterGraph = PatchableGraph()
     config = Config(masterGraph, slowMode=arg['-l'])
+    static = pkg_resources.resource_filename('homeauto_anynode', 'static/')
 
     reactor.listenTCP(9059, cyclone.web.Application([
-        (r"/()", cyclone.web.StaticFileHandler, {
-            "path": "static", "default_filename": "index.html"}),
+        (r"/(|output-widgets.html)", cyclone.web.StaticFileHandler, {
+            "path": static, "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "static"}),
         (r'/stats/(.*)', StatsHandler, {'serverName': 'arduinoNode'}),
         (r'/boards', Boards),
