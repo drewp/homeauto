@@ -23,7 +23,7 @@ def local_run(ctx):
 
 @task
 def push_config(ctx):
-    ctx.run(f'docker run --rm --net=host -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py arduino/')
+    ctx.run(f'docker run --rm --net=host --dns 10.2.0.1 --dns-search bigasterisk.com -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py arduino/')
 
 @task(pre=[push_image])
 def redeploy(ctx):
