@@ -1,0 +1,15 @@
+FROM bang6:5000/base_x86
+
+RUN pip install grpcio==1.22.0
+
+WORKDIR /opt
+
+COPY requirements.txt ./
+RUN egrep -v ws281 requirements.txt > requirements_x86_ok.txt
+
+RUN pip install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements_x86_ok.txt
+
+RUN pip install pytype
+
+COPY *.py ./
+COPY config/ ./config/
