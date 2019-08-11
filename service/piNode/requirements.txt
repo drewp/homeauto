@@ -21,6 +21,6 @@ devices_shared==0.3.0
 export_to_influxdb==0.1.0
 homeauto_anynode==0.8.0
 patchablegraph==0.5.0
-rdfdb==0.8.0
+rdfdb==0.21.0
 standardservice==0.6.0
 patchablegraph==0.5.0

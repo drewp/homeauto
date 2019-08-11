@@ -5,10 +5,11 @@ from cyclone.httpclient import fetch
 from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor, task
-from twisted.internet.defer import inlineCallbacks, maybeDeferred, gatherResults
+from twisted.internet.defer import inlineCallbacks, maybeDeferred, gatherResults, returnValue
 from twisted.internet.threads import deferToThread
 from docopt import docopt
-import etcd3
+from typing import Any
+import etcd3 # type: Any
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
 
@@ -72,6 +73,7 @@ class Config(object):
         self.configGraph = ConjunctiveGraph()
         self.boards = []
         self.etcPrefix = 'pi/'
+        self.rereadLater = None
 
         self.reread()
 
@@ -89,7 +91,7 @@ class Config(object):
         self.rereadLater = reactor.callLater(.1, self.reread)
 
     def cancelRead(self):
-        if getattr(self, 'rereadLater', None):
+        if self.rereadLater:
             self.rereadLater.cancel()
         self.rereadLater = None
 
@@ -125,6 +127,24 @@ class Config(object):
         self.boards[0].startPolling()
 
 
+class DeviceRunner(object):
+    def __init__(self, dev):
+        self.dev = dev
+        self.period = getattr(self.dev, 'pollPeriod', .05)
+        #self._lastPollTime.get(i.uri, 0) + self.pollPeriod > now):
+
+        reactor.callLater(0, self.poll)
+
+    @inlineCallbacks
+    def poll(self):
+        now = time.time()
+        try:
+            with self.dev.stats.poll.time():
+                new = yield maybeDeferred(self.dev.poll)
+        finally:
+            reactor.callLater(max(0, time.time() - (now + self.period)), self.poll)
+        returnValue(new)
+
 class Board(object):
     """similar to arduinoNode.Board but without the communications stuff"""
     def __init__(self, graph, masterGraph, uri, hubHost):
@@ -133,13 +153,13 @@ class Board(object):
         self.masterGraph = masterGraph
         self.masterGraph.setToGraph(self.staticStmts())
         self.pi = pigpio.pi()
-        self._devs = devices.makeDevices(graph, self.uri, self.pi)
+        self._devs = [DeviceRunner(d) for d in devices.makeDevices(graph, self.uri, self.pi)]
         log.debug('found %s devices', len(self._devs))
         self._statementsFromInputs = {} # input device uri: latest statements
         self._lastPollTime = {} # input device uri: time()
         self._influx = InfluxExporter(self.graph)
         for d in self._devs:
-            self.syncMasterGraphToHostStatements(d)
+            self.syncMasterGraphToHostStatements(d.dev)
 
     def startPolling(self):
         task.LoopingCall(self._poll).start(.05)
@@ -156,12 +176,8 @@ class Board(object):
     @inlineCallbacks
     def _pollOneDev(self, i):
         now = time.time()
-        if (hasattr(i, 'pollPeriod') and
-            self._lastPollTime.get(i.uri, 0) + i.pollPeriod > now):
-            return
-        with i.stats.poll.time():
-            new = yield maybeDeferred(i.poll)
 
+        new = i.poll()
         if isinstance(new, dict): # new style
             oneshot = new['oneshot']
             new = new['latest']
@@ -176,9 +192,9 @@ class Board(object):
 
     @inlineCallbacks
     def _pollMaybeError(self):
-        with STATS.pollAll.time():
-            yield gatherResults([self._pollOneDev(i)
-                                 for i in self._devs], consumeErrors=True)
+        pollTime = {} # uri: sec
+        yield gatherResults([self._pollOneDev(i.dev, pollTime)
+                             for i in self._devs], consumeErrors=True)
 
         pollResults = map(set, self._statementsFromInputs.values())
         if pollResults:
@@ -216,7 +232,8 @@ class Board(object):
     @STATS.outputStatements.time()
     def outputStatements(self, stmts):
         unused = set(stmts)
-        for dev in self._devs:
+        for devRunner in self._devs:
+            dev = devRunner.dev
             stmtsForDev = []
             for pat in dev.outputPatterns():
                 if [term is None for term in pat] != [False, False, True]:
@@ -255,15 +272,9 @@ class Board(object):
         """for web page"""
         return {
             'uri': self.uri,
-            'devices': [d.description() for d in self._devs],
+            'devices': [d.dev.description() for d in self._devs],
             'graph': 'http://sticker:9059/graph', #todo
-            }
-
-class Dot(PrettyErrorHandler, cyclone.web.RequestHandler):
-    def get(self):
-        configGraph = self.settings.config.configGraph
-        dot = dotrender.render(configGraph, self.settings.config.boards)
-        self.write(dot)
+        }
 
 def rdfGraphBody(body, headers):
     g = Graph()
@@ -333,7 +344,6 @@ def main():
         (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
-        (r'/dot', Dot),
     ], config=config, debug=arg['-v']), interface='::')
     log.warn('serving on 9059')
     reactor.run()
