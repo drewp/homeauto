@@ -10,7 +10,7 @@ setup(
         'imageio',
         'rdflib',
     ],
-    url='https://projects.bigasterisk.com/devices_shared/devices_shared-0.3.0.tar.gz',
+    url='https://projects.bigasterisk.com/devices-shared/devices_shared-0.3.0.tar.gz',
     author='Drew Perttula',
     author_email='drewp@bigasterisk.com',
 )
