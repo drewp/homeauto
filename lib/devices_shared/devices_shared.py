@@ -1,10 +1,10 @@
-from __future__ import division
 import time
 import numpy
 import logging
 import imageio
 from rdflib import Namespace, RDF, URIRef, Literal
 
+XS = Namespace('http://www.w3.org/2001/XMLSchema#double')
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 log = logging.getLogger()
 
@@ -58,6 +58,9 @@ class AnimChannel(object):
             self.x = (self.end - now) / dur * self.x0 + (now - self.start) / dur * self.x2
         return self.x
 
+def roundedLit(x):
+    return Literal('%g' % x, datatype=XS['double'])
+
 class ScanGroup(object):
 
     def __init__(self, uri, numLeds):
@@ -86,12 +89,12 @@ class ScanGroup(object):
         except IOError as e:
             log.warn('getPixelColumn %r', e)
         log.debug('current = %r', self.current)
-        
+
     def currentStatements(self):
         return [
             (self.uri, RDF.type, ROOM['ScanGroup']),
-            (self.uri, ROOM['xValue'], Literal(self.x.get())),
-            (self.uri, ROOM['yValue'], Literal(self.y.get())),
+            (self.uri, ROOM['xValue'], roundedLit(self.x.get())),
+            (self.uri, ROOM['yValue'], roundedLit(self.y.get())),
             (self.uri, ROOM['heightValue'], Literal(self.height.get())),
             (self.uri, ROOM['src'], Literal(self.src)),
         ]
@@ -100,14 +103,14 @@ class ScanGroup(object):
         return list(self.current[i,:])
 
 args = {ROOM['src']: ('src', str),
-        ROOM['x']: ('x', int),
-        ROOM['y']: ('y', int),
-        ROOM['height']: ('height', int),
+        ROOM['x']: ('x', float),
+        ROOM['y']: ('y', float),
+        ROOM['height']: ('height', float),
         ROOM['interpolate']: ('interpolate', lambda x: x),
         ROOM['rate']: ('rate', float),
         }
 
-    
+
 class RgbPixelsAnimation(object):
 
     def __init__(self, graph, uri, updateOutput):
@@ -116,7 +119,7 @@ class RgbPixelsAnimation(object):
         self.uri = uri
         self.updateOutput = updateOutput
         self.setupGroups()
-        
+
     def setupGroups(self):
         self.groups = {}
         self.groupWithIndex = {}
@@ -131,15 +134,15 @@ class RgbPixelsAnimation(object):
                 self.groupWithIndex[i] = sg, i - s
             attrStatements.update(self.graph.triples((grp, None, None)))
         self.onStatements(attrStatements, _groups=False)
-            
+
     def maxIndex(self):
-        return max(v[1] for v in self.groups.itervalues())
+        return max(v[1] for v in self.groups.values())
 
     def hostStatements(self):
         return (
             [(self.uri, ROOM['pixelGroup'], grp) for grp in self.groups.keys()] +
             sum([v[2].currentStatements()
-                 for v in self.groups.itervalues()], []) +
+                 for v in self.groups.values()], []) +
             [] # current
         )
 
@@ -151,11 +154,11 @@ class RgbPixelsAnimation(object):
             raise NotImplementedError('%r colorOrder %r' % (uri, colorOrder))
         stripType = None
         return colorOrder, stripType
-        
+
     def step(self):
         # if animating...
         self.updateOutput()
-        
+
     def onStatements(self, statements, _groups=True):
         needSetup = False
         animateCalls = {} # group uri : kw for animateTo
