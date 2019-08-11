@@ -9,6 +9,10 @@ ANSIBLE_TAG = 'raspi_io_node'
 def build_image(ctx):
     ctx.run(f'docker build --network=host -t {TAG} .')
 
+@task
+def build_image_check(ctx):
+    ctx.run(f'docker build --network=host -f Dockerfile.check -t bang6:5000/pinode_check:latest .')
+
 @task(pre=[build_image])
 def push_image(ctx):
     ctx.run(f'docker push {TAG}')
@@ -16,6 +20,14 @@ def push_image(ctx):
 @task(pre=[build_image])
 def shell(ctx):
     ctx.run(f'docker run --name={JOB}_shell --rm -it --cap-add SYS_PTRACE --net=host --uts=host --cap-add SYS_RAWIO --device /dev/mem  --privileged {TAG} /bin/bash', pty=True)
+
+@task(pre=[build_image_check])
+def check(ctx):
+    ctx.run(f'docker run --name={JOB}_check --rm -it -v `pwd`:/opt --net=host bang6:5000/pinode_check:latest pytype -d import-error mypkg/piNode.py', pty=True)
+
+@task(pre=[build_image_check])
+def check_shell(ctx):
+    ctx.run(f'docker run --name={JOB}_check --rm -it -v `pwd`:/opt --net=host bang6:5000/pinode_check:latest /bin/bash', pty=True)
 
 
 @task(pre=[build_image])
