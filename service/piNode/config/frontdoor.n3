@@ -37,7 +37,7 @@ pin:GPIO17 :gpioNumber 17; :connectedTo :frontDoorScreenButton3 . :frontDoorScre
 
 pin:GPIO4 :gpioNumber 4; :connectedTo :frontDoorOpenSwitch .
 :frontDoorOpenSwitch a :Pushbutton; :style :inverted;
-c:influxMeasurement [
+  :influxMeasurement [
     :measurement "state";
     :predicate :buttonState;
     :tag [:key "host"; :value "frontdoor"],
