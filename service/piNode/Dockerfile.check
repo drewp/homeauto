@@ -1,15 +1,21 @@
 FROM bang6:5000/base_x86
 
-RUN pip install grpcio==1.22.0
+RUN pip3 install grpcio==1.22.0
 
 WORKDIR /opt
 
 COPY requirements.txt ./
 RUN egrep -v ws281 requirements.txt > requirements_x86_ok.txt
 
-RUN pip install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements_x86_ok.txt
+RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements_x86_ok.txt
+RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 
-RUN pip install pytype
+
+RUN pip3 install pytype
+RUN pip3 install mypy
+
 
 COPY *.py ./
 COPY config/ ./config/
+
+# mypy piNode.py
