@@ -14,23 +14,13 @@ import treq
 
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from cycloneerr import PrettyErrorHandler
-
+from standardservice.logsetup import log, verboseLogging
 from rdfdb.rdflibpatch import inContext
 from rdfdb.patch import Patch
-
-try:
-    import pigpio
-except ImportError:
-    class pigpio(object):
-        @staticmethod
-        def pi():
-            return None
-
-import devices
+from rdflib_pi_opt import patchRandid
 from export_to_influxdb import InfluxExporter
 
-log = logging.getLogger()
-logging.getLogger('serial').setLevel(logging.WARN)
+import devices
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 HOST = Namespace('http://bigasterisk.com/ruler/host/')
@@ -301,18 +291,15 @@ def main():
     --ow         Just report onewire device URIs and readings, then exit.
     --hub=HOST   Hostname for etc3 and oneshot posts. [default: bang.vpn-home.bigasterisk.com]
     """)
-    log.setLevel(logging.WARN)
-    if arg['-v']:
-        from twisted.python import log as twlog
-        twlog.startLogging(sys.stdout)
-
-        log.setLevel(logging.DEBUG)
+    verboseLogging(arg['-v'])
 
     if arg['--ow']:
         log.setLevel(logging.INFO)
         for stmt in devices.OneWire().poll():
             print(stmt)
         return
+
+    patchRandid()
 
     masterGraph = PatchableGraph()
     config = Config(masterGraph, arg['--hub'])
