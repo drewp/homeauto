@@ -1,6 +1,5 @@
 import logging, socket, json, time, pkg_resources
 import cyclone.web
-from cyclone.httpclient import fetch
 from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
 from twisted.internet import reactor
@@ -48,19 +47,6 @@ STATS = scales.collection('/root',
                           scales.PmfStat('outputStatements'),
 
 )
-def patchRandid():
-    """
-    I'm concerned urandom is slow on raspberry pi, and I'm adding to
-    graphs a lot. Unclear what the ordered return values might do to
-    the balancing of the graph.
-    """
-    _id_serial = [1000]
-    def randid():
-        _id_serial[0] += 1
-        return _id_serial[0]
-    import rdflib.plugins.memory
-    rdflib.plugins.memory.randid = randid
-patchRandid()
 
 class Config(object):
     def __init__(self, masterGraph, hubHost):
@@ -122,7 +108,6 @@ class Config(object):
 
         log.info("found config for board %r" % thisBoard)
         self.boards = [Board(self.configGraph, self.masterGraph, thisBoard, self.hubHost)]
-        self.boards[0].startPolling()
 
 
 class DeviceRunner(object):
