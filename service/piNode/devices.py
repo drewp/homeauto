@@ -243,8 +243,8 @@ class RgbStrip(DeviceType):
             yield cls(graph, row.dev, pi, row.r, row.g, row.b)
 
     def __init__(self, graph, uri, pi, r, g, b):
-        self.graph, self.uri, self.pi = graph, uri, pi
-        self.rgb = map(int, [r, g, b])
+        super(RgbStrip, self).__init__(graph, uri, pi, pinNumber='(multiple)')
+        self.rgb = list(map(int, [r, g, b]))
         self.value = '#000000'
 
     def setup(self):
