@@ -526,7 +526,7 @@ class OnboardTemperature(DeviceType):
         c = float(milliC) / 1000.
         f = c * 1.8 + 32
         return [
-            (self.uri, ROOM['temperatureF'], Literal(f, datatype=XSD['decimal'])),
+            (self.uri, ROOM['temperatureF'], Literal(round(f, 3), datatype=XSD['decimal'])),
             ]
 
     def watchPrefixes(self):
