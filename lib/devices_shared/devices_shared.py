@@ -4,7 +4,7 @@ import logging
 import imageio
 from rdflib import Namespace, RDF, URIRef, Literal
 
-XS = Namespace('http://www.w3.org/2001/XMLSchema#double')
+XS = Namespace('http://www.w3.org/2001/XMLSchema#')
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 log = logging.getLogger()
 
