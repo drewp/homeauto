@@ -1,19 +1,17 @@
-from __future__ import division
-import sys, logging, socket, json, time, pkg_resources
+import logging, socket, json, time, pkg_resources
 import cyclone.web
 from cyclone.httpclient import fetch
 from rdflib import Namespace, URIRef, Literal, Graph, RDF, ConjunctiveGraph
 from rdflib.parser import StringInputSource
-from twisted.internet import reactor, task
-from twisted.internet.defer import inlineCallbacks, maybeDeferred, gatherResults, returnValue
+from twisted.internet import reactor
+from twisted.internet.defer import inlineCallbacks, maybeDeferred, returnValue
 from twisted.internet.threads import deferToThread
 from docopt import docopt
-from typing import Any
-import etcd3 # type: Any
+import etcd3
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
-
-logging.basicConfig(level=logging.DEBUG)
+import pigpio
+import treq
 
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from cycloneerr import PrettyErrorHandler
@@ -151,6 +149,7 @@ class Board(object):
         self.graph, self.uri = graph, uri
         self.hubHost = hubHost
         self.masterGraph = masterGraph
+
         self.masterGraph.setToGraph(self.staticStmts())
         self.pi = pigpio.pi()
         self._devs = [DeviceRunner(d) for d in devices.makeDevices(graph, self.uri, self.pi)]
@@ -296,10 +295,10 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
         else:
             g = rdfGraphBody(self.request.body, self.request.headers)
             assert len(g) == 1, len(g)
-            stmt = g.triples((None, None, None)).next()
+            stmt = next(g.triples((None, None, None)))
 
         for b in self.settings.config.boards:
-            b.outputStatements([stmt])
+            b.outputStatements({stmt})
 
 class Boards(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
@@ -327,7 +326,7 @@ def main():
     if arg['--ow']:
         log.setLevel(logging.INFO)
         for stmt in devices.OneWire().poll():
-            print stmt
+            print(stmt)
         return
 
     masterGraph = PatchableGraph()

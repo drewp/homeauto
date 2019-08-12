@@ -1,8 +1,6 @@
 """
 https://github.com/juniorug/libsensorPy is a similar project
 """
-from __future__ import division
-
 import time, logging, os
 from rdflib import Namespace, URIRef, Literal
 from twisted.internet import reactor, threads
@@ -263,10 +261,11 @@ class RgbStrip(DeviceType):
 
     def sendOutput(self, statements):
         assert len(statements) == 1
-        assert statements[0][:2] == (self.uri, ROOM['color'])
+        stmt = list(statements)[0]
+        assert stmt[:2] == (self.uri, ROOM['color'])
 
-        rgb = self._rgbFromHex(statements[0][2])
-        self.value = statements[0][2]
+        rgb = self._rgbFromHex(stmt[2])
+        self.value = stmt[2]
 
         for (i, v) in zip(self.rgb, rgb):
             self.pi.set_PWM_dutycycle(i, v)
@@ -485,8 +484,9 @@ class LedOutput(DeviceType):
 
     def sendOutput(self, statements):
         assert len(statements) == 1
-        assert statements[0][:2] == (self.uri, ROOM['brightness'])
-        self.value = float(statements[0][2])
+        stmt = list(statements)[0]
+        assert stmt[:2] == (self.uri, ROOM['brightness'])
+        self.value = float(stmt[2])
         self.fv.set(self.value)
 
     def _setPwm(self, x):
@@ -571,7 +571,7 @@ class RgbPixels(DeviceType):
         for idx, (r, g, b) in colors:
             if idx < 4:
                 log.debug('out color %s (%s,%s,%s)', idx, r, g, b)
-            self.neo.setPixelColorRGB(idx, r, g, b)
+            self.neo.setPixelColorRGB(idx, int(r), int(g), int(b))
         self.neo.show()
 
     @pixelStats.poll.time()
@@ -697,10 +697,11 @@ class PwmBoard(DeviceType):
 
     def sendOutput(self, statements):
         assert len(statements) == 1
-        assert statements[0][1] == ROOM['brightness'];
-        chan = self.outs[statements[0][0]]
-        value = float(statements[0][2])
-        self.values[statements[0][0]] = value
+        stmt = list(statements)[0]
+        assert stmt[1] == ROOM['brightness'];
+        chan = self.outs[stmt[0]]
+        value = float(stmt[2])
+        self.values[stmt[0]] = value
         self.pwm.set_duty_cycle(chan, value * 100)
 
     def outputWidgets(self):
