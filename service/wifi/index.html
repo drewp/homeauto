@@ -1,82 +1,74 @@
 <!doctype html>
 <html>
-  <head>
-    <title>wifi</title>
-    <meta charset="utf-8" />
-    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
-    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
-    <script src="/lib/underscore-1.5.2.min.js"></script>
-    <link rel="import" href="/lib/polymer/1.0.9/iron-ajax/iron-ajax.html">
-    <link rel="import" href="/rdf/n3+polymer/trig-store.html">
-  </head>
-  <body>
-    <h1>Devices on wifi</h1>
-    <p><a href="../dhcpleases">go to dhcpleases</a></p>
-    <dom-module id="wifi-table">
-      <template>
-        <iron-ajax auto url="graph"
-                   handle-as="text"
-                   last-response="{{ajaxResponse}}"></iron-ajax>
-        <trig-store id="ts" trig-input="{{ajaxResponse}}"></trig-store>
 
-        <table>
-          <tr>
-            <th>name</th>
-            <th>MAC</th>
-            <th>Connected</th>
-          </tr>
-          <template is="dom-repeat" items="{{devices}}">
-            <tr>
-              <td>{{item.deviceName}}</td>
-              <td>{{item.mac}}</td>
-              <td>{{item.connectedAgo}}</td>
-            </tr>
-          </template>
-        </table>
-      </template>
-      
-      <script>
-       HTMLImports.whenReady(function () {
-       Polymer({
-         is: "wifi-table",
-         ready: function() {
-           this.$.ts.addEventListener('store-changed', this.storeChanged.bind(this));
-           this.devices = [];
-         },
-         storeChanged: function(ev) {
-           var store = ev.detail.value;
-           var find = function(s, p, o) { return store.findAllGraphs(s, p, o); };
-           var findOne = function(s, p, o) {
-             var rows = find(s, p, o);
-             return rows[0];
-           };
+<head>
+  <title>wifi</title>
+  <meta charset="utf-8">
+  <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+  <script src="/lib/require/require-2.3.3.js"></script>
+  <script src="/rdf/common_paths_and_ns.js"></script>
 
-           this.devices = [];
-           
-           find(null, "room:connectedToNetwork", "http://bigasterisk.com/wifiAccessPoints"
-                ).forEach(function(row) {
-             var out = {
-               mac: N3.Util.getLiteralValue(
-                 findOne(row.subject, "room:macAddress", null).object),
-               connectedAgo: N3.Util.getLiteralValue(
-                 findOne(row.subject, "room:connectedAgo", null).object)
-               
-             };
-             try {
-               var dev = findOne(row.subject, "room:deviceName", null).object;
-               out.deviceName = N3.Util.getLiteralValue(dev);
-             } catch(e) {
+  <link rel="stylesheet" href="/rdf/browse/style.css">
 
-             }           
-             
-             this.devices.push(out);
-           }.bind(this));
-           this.devices = _.sortBy(this.devices, 'deviceName');
-         }
-       });
-       });
-      </script>
-    </dom-module>
-    <wifi-table></wifi-table>
-  </body>
+  <link rel="import" href="/rdf/streamed-graph.html">
+  <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+</head>
+
+<body class="rdfBrowsePage">
+  <template id="t" is="dom-bind">
+    <style>
+     body {
+         background: black;
+         color: white;
+     }
+     a {
+         color: #b1b1fd;
+         text-shadow: 1px 1px 0px #0400ff94;
+         text-decoration-color: #00007714;
+     }
+     #subjectRequest {
+         width: 50em;
+     }
+    </style>
+
+    <streamed-graph url="/sse_collector/graph/network" graph="{{graph}}"></streamed-graph>
+    <div id="out">
+    </div>
+
+    <script type="module">
+      import { render } from '/lib/lit-html/1.0.0/lit-html.js';
+      import { graphView } from './wifi.js';
+      const sg = document.querySelector('streamed-graph');
+
+      const out = document.querySelector('#out');
+      const startPainting = () => {
+        if (!sg.graph || !sg.graph.graph) {
+          setTimeout(startPainting, 100);
+          return;
+        }
+
+        let dirty = true;
+
+        const repaint = () => {
+          if (!dirty) {
+            return;
+          }
+          render(graphView(sg.graph.graph), out);
+          dirty = false;
+        };
+
+        sg.addEventListener('graph-changed', (ev) => {
+          dirty = true;
+          requestAnimationFrame(repaint);
+        });
+        repaint();
+      };
+      setTimeout(startPainting, 10);
+    </script>
+  </template>
+  <script>
+
+  </script>
+</body>
+
 </html>
