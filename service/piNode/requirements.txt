@@ -14,10 +14,11 @@ rdflib-jsonld==0.3
 rdflib==4.2.2
 rpi_ws281x==3.1.0
 service_identity
+treq==18.6.0
 w1thermsensor
 
 cycloneerr
-devices_shared==0.3.0
+devices_shared==0.5.0
 export_to_influxdb==0.1.0
 homeauto_anynode==0.8.0
 patchablegraph==0.5.0

@@ -64,10 +64,11 @@ def loadOrbiData(config):
         
         if row['contype'] in ['2.4G', '5G']:
             orbi = macUri(row['conn_orbi_mac'])
-            triples.add((orbi, ROOM['wifiBand'],
-                           ROOM['wifiBand/%s' % row['contype']]))
+            ct = ROOM['wifiBand/%s' % row['contype']]
             triples.add((uri, ROOM['connectedToAp'], orbi))
+            triples.add((uri, ROOM['wifiBand'], ct))
             triples.add((orbi, RDF.type, ROOM['AccessPoint']))
+            triples.add((orbi, ROOM['wifiBand'], ct))
             triples.add((orbi, ROOM['macAddress'],
                            Literal(row['conn_orbi_mac'].lower())))
             triples.add((orbi, RDFS.label, Literal(row['conn_orbi_name'])))
