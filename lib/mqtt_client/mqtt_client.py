@@ -1,6 +1,6 @@
 import logging
 from mqtt.client.factory import MQTTFactory
-from rx.subjects import Subject
+import rx.subject
 from twisted.application.internet import ClientService
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
@@ -35,7 +35,7 @@ class MQTTService(ClientService):
         log.info('subscribing %r', topics)
         self.protocol.subscribe(topics=[(topic.decode('utf8'), 2) for topic in topics])
 
-        
+
     @inlineCallbacks
     def connectToBroker(self, protocol):
         self.protocol = protocol
@@ -49,19 +49,19 @@ class MQTTService(ClientService):
         except Exception as e:
             log.error(f"Connecting to {self.endpoint} raised {e!s}")
             return
-        
+
         log.info(f"Connected to {self.endpoint}")
 
         self.protocol.onPublish = self._onProtocolMessage
         self._subscribeAll()
-            
+
     def _onProtocolMessage(self, topic, payload, qos, dup, retain, msgId):
         topic = topic.encode('ascii')
         observers = self.observersByTopic.get(topic, [])
         log.debug(f'received {topic} payload {payload} ({len(observers)} obs)')
         for obs in observers:
             obs.on_next(payload)
-            
+
     def _onProtocolDisconnection(self, reason):
         log.warn("Connection to broker lost: %r", reason)
         self.whenConnected().addCallback(self.connectToBroker)
@@ -79,7 +79,7 @@ class MqttClient(object):
     def __init__(self, clientId, brokerHost='bang', brokerPort=1883):
 
         self.observersByTopic = {} # bytes: Set(observer)
-        
+
         factory = MQTTFactory(profile=MQTTFactory.PUBLISHER | MQTTFactory.SUBSCRIBER)
         myEndpoint = clientFromString(reactor, 'tcp:%s:%s' % (brokerHost, brokerPort))
         myEndpoint.__class__.__repr__ = lambda self: repr('%s:%s' % (self._host, self._port))
@@ -92,7 +92,7 @@ class MqttClient(object):
 
     def subscribe(self, topic: bytes):
         """returns rx.Observable of payload strings"""
-        ret = Subject()
+        ret = rx.subject.Subject()
         self.observersByTopic.setdefault(topic, set()).add(ret)
         self.serv.ensureSubscribed(topic)
         return ret
