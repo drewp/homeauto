@@ -2,7 +2,7 @@ FROM bang6:5000/base_x86
 
 WORKDIR /opt
 
-RUN apt-get install -y vim
+RUN apt-get install -y vim net-tools iputils-ping
 
 COPY requirements.txt ./
 RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -Ur requirements.txt
@@ -11,6 +11,7 @@ RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url
 
 COPY stubs ./stubs
 COPY *.py req* *.ini ./
+COPY static ./static
 
 EXPOSE 9072
 
