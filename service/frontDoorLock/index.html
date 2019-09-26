@@ -34,11 +34,7 @@
        
       </style>
       <template>
-        <div>
-          <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
-          <streamed-graph url="/store/graph/events" graph="{{storeGraph}}"></streamed-graph>
-        </div>
-
+        <h1>Front door lock</h1>
         <div id="form">
 
           <div>
@@ -89,6 +85,11 @@
             </template>
           </div>
         </div>
+        <div>
+          <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+          <streamed-graph url="/store/store/events" graph="{{storeGraph}}"></streamed-graph>
+        </div>
+
       </template>
       <script>
        HTMLImports.whenReady(function () {
