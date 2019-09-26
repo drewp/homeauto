@@ -44,7 +44,7 @@ def requestUser(req):
     # what happened to the case-insens dict?
     h = dict((k.lower(), v) for k,v in req.headers.items())
     return URIRef(h['x-foaf-agent'])
-    
+
 
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
@@ -66,7 +66,7 @@ class OutputPage(cyclone.web.RequestHandler):
             stmt = next(g.triples((None, None, None)))
         self._onStatement(user, stmt)
     post = put
-    
+
     def _onStatement(self, user, stmt):
         log.info('put statement %r', stmt)
         if stmt[0:2] == (ROOM['frontDoorLock'], ROOM['state']):
@@ -88,7 +88,7 @@ class SimpleState(cyclone.web.RequestHandler):
             log.warn('request without x-foaf-agent: %s', h)
             self.set_status(403, 'need x-foaf-agent')
             return
-        
+
         state = self.request.body.strip().decode('ascii')
         if state == 'unlock':
             self.settings.autoLock.onUnlockedStmt()
@@ -96,14 +96,14 @@ class SimpleState(cyclone.web.RequestHandler):
         if state == 'lock':
             self.settings.autoLock.onLockedStmt()
             self.settings.mqtt.publish(espName + b"/switch/strike/command", b'OFF')
-        
+
 
 class AutoLock(object):
     def __init__(self, masterGraph, mqtt):
         self.masterGraph = masterGraph
         self.mqtt = mqtt
         self.timeUnlocked = None
-        self.autoLockSec = 6 
+        self.autoLockSec = 6
         self.subj = ROOM['frontDoorLock']
         task.LoopingCall(self.pollCheck).start(1)
 
@@ -135,7 +135,7 @@ class AutoLock(object):
             self.check()
         except Exception:
             log.exception('poll failed')
-        
+
     def check(self):
         g = self.masterGraph
         now = time.time()
@@ -160,7 +160,7 @@ class AutoLock(object):
 
     def onUnlockedStmt(self):
         self.timeUnlocked = None
-        
+
     def onLockedStmt(self):
         pass
 
@@ -173,7 +173,7 @@ class BluetoothButton(cyclone.web.RequestHandler):
             self.settings.mqtt.publish(
                 espName + b"/switch/strike/command", b'ON')
 
-            
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: front_door_lock.py [options]
@@ -185,21 +185,22 @@ if __name__ == '__main__':
     masterGraph = PatchableGraph()
     mqtt = MqttClient(brokerPort=10010)
     autoclose = AutoLock(masterGraph, mqtt)
-
     def toGraph(payload):
         log.info('mqtt->graph %r', payload)
         masterGraph.patchObject(ctx, ROOM['frontDoorLock'], ROOM['state'],
                                 stateFromMqtt(payload))
 
-    mqtt.subscribe(espName + b"/switch/strike/state").subscribe(on_next=toGraph)
+    sub = mqtt.subscribe(espName + b"/switch/strike/state")
+    sub.subscribe(on_next=toGraph)
 
     def setEspState(payload):
         log.info('esp state change %r', payload)
         masterGraph.patchObject(ctx, ROOM['frontDoorLock'], ROOM['espMqttConnection'],
                                 ROOM['mqtt' + payload.decode('ascii').capitalize()])
-    
-    mqtt.subscribe(espName + b"/status").subscribe(on_next=setEspState)
-    
+
+    sub = mqtt.subscribe(espName + b"/status")
+    sub.subscribe(on_next=setEspState)
+
     port = 10011
     reactor.listenTCP(port, cyclone.web.Application(
         [

@@ -15,7 +15,9 @@ def push_image(ctx):
 
 @task(pre=[build_image])
 def shell(ctx):
-    ctx.run(f'docker run --name={JOB}_shell --rm -it --cap-add SYS_PTRACE --net=host {TAG} /bin/bash', pty=True)
+    ctx.run(f'docker run --name={JOB}_shell --rm -it --cap-add SYS_PTRACE --net=host '
+            f' -v `pwd`/../../stubs:/opt/stubs'
+            f' {TAG} /bin/bash', pty=True)
 
 @task(pre=[build_image])
 def local_run(ctx):
@@ -48,4 +50,14 @@ def mqtt_force_open(ctx):
 @task
 def mqtt_force_lock(ctx):
     ctx.run(f'mosquitto_pub -h bang -p 10010 -t frontdoorlock/switch/strike/command -m OFF')
+    
+
+@task(pre=[build_image])
+def mypy(ctx):
+    ctx.run(f'docker run --rm -it --name={JOB}_mypy --net=host'
+            f' -v `pwd`/.mypy_cache:/opt/.mypy_cache'
+            f' -v `pwd`/../../stubs:/opt/stubs'
+            f' -e MYPYPATH=/opt/stubs'
+            f' {TAG}'
+            f' /usr/local/bin/mypy -m front_door_lock', pty=True)
     
