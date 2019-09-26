@@ -15,11 +15,9 @@ from rdflib.parser import StringInputSource
 from twisted.internet import reactor
 from twisted.python.filepath import FilePath
 import cyclone.web
+from standardservice.logsetup import log, verboseLogging
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
-
-logging.basicConfig()
-log = logging.getLogger()
 
 CTX = ROOM['stored']
 
@@ -40,7 +38,7 @@ class ValuesResource(cyclone.web.RequestHandler):
         except ValueError:
             obj = Literal(turtleLiteral)
         self._onStatements([(subj, pred, obj)])
-        
+
     def _onGraphBodyStatements(self, body, headers):
         # maybe quads only so we can track who made the input and from what interface?
         # Or your input of triples gets wrapped in a new quad in here?
@@ -49,7 +47,7 @@ class ValuesResource(cyclone.web.RequestHandler):
         if not g:
             raise ValueError("expected graph body")
         self._onStatements(list(g.triples((None, None, None))))
-        
+
     def _onStatements(self, stmts):
         g = self.settings.masterGraph
         for s, p, o in stmts:
@@ -59,24 +57,20 @@ class ValuesResource(cyclone.web.RequestHandler):
             g.patch(patch)
         nquads = g.serialize(None, format='nquads')
         self.settings.dbFile.setContent(nquads)
-    
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: store.py [options]
 
     -v   Verbose
     """)
-    log.setLevel(logging.WARN)
-    if arg['-v']:
-        from twisted.python import log as twlog
-        twlog.startLogging(sys.stdout)
-        log.setLevel(logging.DEBUG)
+    verboseLogging(arg['-v'])
 
     masterGraph = PatchableGraph()
     dbFile = FilePath('/opt/homeauto_store/db.nquads')
     if dbFile.exists():
         masterGraph._graph.parse(dbFile.open(), format='nquads')
-    
+
     port = 10015
     reactor.listenTCP(port, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler,
