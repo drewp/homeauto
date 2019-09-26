@@ -19,7 +19,7 @@ class RetentionPolicies(object):
                                                 replication='1')
             self.createdPolicies.add(days)
         return name
-        
+
 class InfluxExporter(object):
     def __init__(self, configGraph, influxHost='bang6'):
         self.graph = configGraph
@@ -68,13 +68,24 @@ class InfluxExporter(object):
                     log.info('writing stats to %r', points)
                 self.lastExport = now
                 #print('send %r' % points)
-            
+
         task.LoopingCall(send).start(period_secs, now=False)
-            
+
     def exportToInflux(self, currentStatements):
+        """
+        looks for
+
+        ?subj ?p ?value;
+         :influxMeasurement [
+           :measurement ?name;
+           :predicate ?p;
+           :tag [:key ?k; :value ?v], ...
+         ]
+
+        """
         graph = self.graph
         now = int(time.time())
-      
+
         points = []
         for stmt in currentStatements:
             if (stmt[0], stmt[1]) in self.measurements:
@@ -89,11 +100,11 @@ class InfluxExporter(object):
                 pale = 3600
                 if graph.value(meas, ROOM['pointsAtLeastEvery'], default=None):
                     pale = graph.value(meas, ROOM['pointsAtLeastEvery']).toPython()
-                    
+
                 if not self.shouldSendNewPoint(now, stmt[0], measurementName,
                                                tags, value, pointsAtLeastEvery=pale):
                     continue
-                    
+
                 points.append({
                     'measurement': measurementName,
                     "tags": tags,
@@ -114,7 +125,7 @@ class InfluxExporter(object):
             if not isinstance(value, (int, float)):
                 raise NotImplementedError('value=%r' % value)
         return value
-            
+
     def shouldSendNewPoint(self, now, subj, measurementName, tags, value, pointsAtLeastEvery):
         key = (subj, measurementName, tuple(sorted(tags.items())))
         if key in self.lastSent:
