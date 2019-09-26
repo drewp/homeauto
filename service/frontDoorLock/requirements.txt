@@ -1,12 +1,13 @@
 cyclone
+mypy
 rdflib-jsonld==0.4.0
 rdflib==4.2.2
-twisted-mqtt==0.3.6
 rx==1.6.1
-git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
+twisted-mqtt==0.3.6
 
 cycloneerr
+git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
+mqtt_client==0.5.0
 patchablegraph==0.6.0
 rdfdb==0.8.0
 standardservice==0.5.0
-mqtt_client==0.4.0

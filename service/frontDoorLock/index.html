@@ -2,36 +2,44 @@
 <html>
   <head>
     <title>front door lock</title>
-    <meta charset="utf-8" />
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="stylesheet" href="/rdf/browse/style.css">
+
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
     <link rel="import" href="/rdf/rdf-oneshot.html">
     <link rel="import" href="/rdf/rdf-uri.html">
   </head>
-  <body>
+  <body class="rdfBrowsePage">
     <dom-module id="door-control">
       <style>
        button {
-           min-width: 60px;
-           min-height: 40px;
+           min-width: 12em;
+           min-height: 4em;
+       }
+       .fade {
+           color: #0000002b;
        }
        div#form {
            margin: 2px;
-           background: #dff5e5;
+           background: #454a47;
            padding: 10px;
            line-height: 30px;
            text-align: center;
            border: 2px groove white;
+           width: 20em;
+           margin-bottom: 6em;
        }
        .invis-true {
            visibility: hidden;
        }
-       
+
       </style>
       <template>
         <h1>Front door lock</h1>
@@ -49,11 +57,13 @@
             object="room:unlocked"
           ></rdf-oneshot>
           <button on-click="unlock"
-                  disabled$="[[!isLocked]]">Unlock 10 seconds</button>
-          
-            <div class$="invis-[[!autoLockIsComing]]">
-              Locking in {{autoLockInSec}}
-            </div>
+                  disabled$="[[!isLocked]]">
+            <span class="fade">⟪</span>&#128275;<span class="fade">⟫</span> Unlock 6 seconds
+          </button>
+
+          <div class$="invis-[[!autoLockIsComing]]">
+            Locking in {{autoLockInSec}}
+          </div>
 
           <div>
             <rdf-oneshot
@@ -64,7 +74,7 @@
               object="room:unlocked"
             ></rdf-oneshot>
             <template is="dom-if" if="{{!isHeld}}">
-              <button on-click="hold">Hold unlocked</button>
+              <button on-click="hold">&#128275; Hold unlocked</button>
             </template>
             <rdf-oneshot
               id="releaseHold"
@@ -81,7 +91,8 @@
               object="room:locked"
             ></rdf-oneshot>
             <template is="dom-if" if="{{isHeld}}">
-              <button on-click="releaseHold">Release hold; lock door</button>
+              <button on-click="releaseHold">
+                &#128274; Release hold; lock door</button>
             </template>
           </div>
         </div>
@@ -118,7 +129,7 @@
                  this.lockState = q.object.toString().replace(/.*\//, '');
                  this.isLocked = q.object.equals(locked) ? true : (q.object.equals(unlocked) ? false : null);
                });
-             
+
              this.autoLockIsComing = false;
              graph.graph.quadStore.quads(
                {subject: env.createNamedNode('room:frontDoorLock'),
@@ -127,7 +138,7 @@
                (q) => {
                  this.autoLockIsComing = true;
                  this.autoLockInSec = parseFloat(q.object.valueOf());
-               });          
+               });
            },
            _onStoreGraph: function(graph) {
              if (!graph.graph) return;
@@ -147,7 +158,7 @@
              this.$.unlockOneshot.go();
            },
            hold: function () {
-             this.$.hold.go(); 
+             this.$.hold.go();
            },
            releaseHold: function() {
              this.$.releaseHold.go();
@@ -165,16 +176,6 @@
       <script type="module" src="/rdf/streamed_graph_view.js"></script>
     </template>
 
-    <style>
-     .served-resources {
-         margin-top: 4em;
-         border-top: 1px solid gray;
-         padding-top: 1em;
-     }
-     .served-resources a {
-         padding-right: 2em;
-     }
-    </style>
 
     <div class="served-resources">
       <a href=".">root</a>
