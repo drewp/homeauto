@@ -120,7 +120,8 @@ class PatchSink(cyclone.sse.SSEHandler):
             'created': round(self.created, 2),
             'ageHours': round((time.time() - self.created) / 3600, 2),
             'streamId': self.streamId,
-            'remoteIp': self.request.remote_ip,
+            'remoteIp': self.request.remote_ip, # wrong, need some forwarded-for thing
+            'foafAgent': self.request.headers.get('X-Foaf-Agent'),
             'userAgent': self.request.headers.get('user-agent'),
         }
         
@@ -282,8 +283,10 @@ class GraphClients(object):
 
     def state(self) -> Dict:
         return {
-            'clients': [ps.state() for ps in self.clients.values()],
-            'sseHandlers': [h.state() for h in self.handlers],
+            'clients': sorted([ps.state() for ps in self.clients.values()],
+                              key=lambda r: r['reconnectedPatchSource']['url']),
+            'sseHandlers': sorted([h.state() for h in self.handlers],
+                                  key=lambda r: (r['streamId'],  r['created'])),
             'statements': self.statements.state(),
         }
 
@@ -420,13 +423,7 @@ class State(cyclone.web.RequestHandler):
         except Exception:
             import traceback; traceback.print_exc()
             raise
-        
-        
-class Root(cyclone.web.RequestHandler):
-    def get(self) -> None:
-        self.write('<html><body>sse_collector</body></html>')
-
-        
+              
 if __name__ == '__main__':
     arg = docopt("""
     Usage: sse_collector.py [options]
@@ -447,7 +444,9 @@ if __name__ == '__main__':
         9072,
         cyclone.web.Application(
             handlers=[
-                (r'/', Root),
+                (r"/()", cyclone.web.StaticFileHandler, {
+                    "path": "static", "default_filename": "index.html"}),
+                (r'/static/(.*)',cyclone.web.StaticFileHandler, {"path": "static"}), 
                 (r'/state', State),
                 (r'/graph/(.*)', PatchSink),
                 (r'/stats/(.*)', StatsHandler, {'serverName': 'collector'}),
