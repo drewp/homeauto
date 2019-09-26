@@ -27,7 +27,7 @@ config = {
              'http://bang:10018/graph/events', #  "frontwindow tag reader"
              'http://bang:10011/graph/events', #  "frontdoor lock"
              'http://bang:10008/graph/events', # kitchen H801
-             'http://bang:10015/graph/events', # store
+             'http://bang:10015/store/events', # store
              'http://bang:10018/mqtt/events', # rdf_from_mqtt
          ]},
         {'id': 'frontDoor',
@@ -40,7 +40,7 @@ config = {
              'http://bang:9105/countdownGraph/events', # calendar
              'http://bang:9059/graph/events', # "bang arduino"
              'http://frontbed.vpn-home.bigasterisk.com:9059/graph/events',
-             'http://bang:10015/graph/events', # store
+             'http://bang:10015/store/events', # store
              'http://bang:10018/graph/events', #  "frontwindow tag reader"
              'http://bang:10018/mqtt/events', # rdf_from_mqtt
          ]},
