@@ -17,15 +17,7 @@
 <body class="rdfBrowsePage">
   <template id="t" is="dom-bind">
     <style>
-     body {
-         background: black;
-         color: white;
-     }
-     a {
-         color: #b1b1fd;
-         text-shadow: 1px 1px 0px #0400ff94;
-         text-decoration-color: #00007714;
-     }
+
      #subjectRequest {
          width: 50em;
      }
@@ -53,7 +45,7 @@
           if (!dirty) {
             return;
           }
-          render(graphView(sg.graph.graph), out);
+          render(graphView(sg.graph.graph, /*showGroups=*/false), out);
           dirty = false;
         };
 
@@ -69,6 +61,10 @@
   <script>
 
   </script>
+
+  <form method="POST" action="remoteSuspend"><button>Suspend windows/VR machine</button></form>
+  <!-- also put wakeonlan actions down here -->
+
 </body>
 
 </html>

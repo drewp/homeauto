@@ -39,7 +39,7 @@ class Index(PrettyErrorHandler, cyclone.web.RequestHandler):
         age = time.time() - self.settings.poller.lastPollTime
         if age > 10:
             raise ValueError("poll data is stale. age=%s" % age)
-            
+
         self.set_header("Content-Type", "text/html")
         self.write(open("index.html").read())
 
@@ -59,7 +59,7 @@ def whenConnected(mongo, macThatIsNowConnected):
 
 def connectedAgoString(conn):
     return ago.human(conn.astimezone(tz.tzutc()).replace(tzinfo=None))
-    
+
 class Table(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         def rowDict(row):
@@ -107,7 +107,7 @@ class Poller(object):
         assert dt < 10, "last poll was %s sec ago" % dt
 
     @inlineCallbacks
-    def poll(self):     
+    def poll(self):
         try:
             newAddrs = yield self.wifi.getPresentMacAddrs()
             self.onNodes(newAddrs)
@@ -146,7 +146,7 @@ class Poller(object):
             'fields': {'value': value},
             'time': now,
         }
-        
+
     def computeActions(self, newWithSignal):
         actions = []
 
@@ -159,7 +159,7 @@ class Poller(object):
                 # wifi but don't have an ip yet. We'll record an
                 # action with no ip and then never record your ip.
                 d['ip'] = addr.ip
-            return d                             
+            return d
 
         for addr in newWithSignal:
             if addr.mac not in [r.mac for r in self.lastWithSignal]:
@@ -212,6 +212,11 @@ class Poller(object):
                 g.add((dev.uri, ROOM['connected'], Literal(conn), ctx))
         masterGraph.setToGraph(g)
 
+class RemoteSuspend(PrettyErrorHandler, cyclone.web.RequestHandler):
+    def post(self):
+        # windows is running shutter (https://www.den4b.com/products/shutter)
+        fetch('http://DESKTOP-GOU4AC4:8011/action', postdata={'id': 'Sleep'})
+
 
 if __name__ == '__main__':
     args = docopt.docopt('''
@@ -234,7 +239,7 @@ Options:
 
     config = ConjunctiveGraph()
     config.parse(open('private_config.n3'), format='n3')
-    
+
     masterGraph = PatchableGraph()
     wifi = Wifi(config)
     poller = Poller(wifi, mongo)
@@ -245,10 +250,12 @@ Options:
         cyclone.web.Application(
             [
                 (r"/", Index),
+                (r"/(wifi\.js)", cyclone.web.StaticFileHandler, {"path": '.'}),
                 (r'/json', Json),
                 (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
                 (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
                 (r'/table', Table),
+                (r'/remoteSuspend', RemoteSuspend),
                 #(r'/activity', Activity),
             ],
             wifi=wifi,
