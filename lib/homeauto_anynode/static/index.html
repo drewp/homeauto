@@ -97,7 +97,7 @@
 
       </style>
       <template>
-        <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
+        <streamed-graph url="graph/events" graph="{{graph}}" expanded="true"></streamed-graph>
         <iron-ajax url="boards" auto="true" handle-as="json"
                    last-response="{{ret}}"></iron-ajax>
         <template is="dom-repeat" items="{{ret.boards}}" as="board">
@@ -153,10 +153,5 @@
       </script>
     </dom-module>
     <arduinonode-boards></arduinonode-boards>
-
-    <div id="out"></div>
-    <script type="module" src="/rdf/streamed_graph_view.js"></script>
-
-
   </body>
 </html>
