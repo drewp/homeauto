@@ -18,8 +18,26 @@ def shell(ctx):
 
 @task(pre=[build_image])
 def local_run(ctx):
-    ctx.run(f'docker run --name {JOB}_local --rm -it --net=host {TAG} python3 wifi.py -v', pty=True)
+    ctx.run(f'docker run --name {JOB}_local --rm -it --net=host -v `pwd`:/opt {TAG} python3 wifi.py -v', pty=True)
 
 @task(pre=[push_image])
 def redeploy(ctx):
     ctx.run(f'supervisorctl -s http://bang:9001/ restart {JOB}_{PORT}')
+
+
+# one time:
+#   yarn policies set-version v2
+# and for vscode:
+#   yarn pnpify --sdk
+#   then pick the pnp one on statusbar.
+
+#yarn run webpack-cli --config webpack.config.js --mode production
+
+
+@task
+def build(ctx):
+    ctx.run(f'yarn webpack-build', pty=True)  # --debug --display-error-details
+    
+@task
+def serve_demo(ctx):
+    ctx.run('node_modules/.bin/webpack-dev-server --config webpack-dev.config.ts  --port 8082 --verbose --color')

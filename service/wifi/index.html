@@ -4,37 +4,29 @@
 <head>
   <title>wifi</title>
   <meta charset="utf-8">
-  <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
-  <script src="/lib/require/require-2.3.3.js"></script>
-  <script src="/rdf/common_paths_and_ns.js"></script>
-
-  <link rel="stylesheet" href="/rdf/browse/style.css">
-
-  <link rel="import" href="/rdf/streamed-graph.html">
-  <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+  <script src="/rdf/common_paths_and_ns.js?v3"></script>
+  <script type="module" src="build/wifi.bundle.js"></script>
+  <link rel="stylesheet" href="/rdf/streamed-graph.css">
 </head>
 
 <body class="rdfBrowsePage">
-  <template id="t" is="dom-bind">
-    <style>
-
-     #subjectRequest {
-         width: 50em;
-     }
-    </style>
-
     <streamed-graph url="/sse_collector/graph/network" graph="{{graph}}"></streamed-graph>
-    <div id="out">
-    </div>
+
+  <dom-bind>
+    <style>
+      #subjectRequest {
+        width: 50em;
+      }
+    </style>
+    <div id="out"></div>
 
     <script type="module">
       import { render } from '/lib/lit-html/1.0.0/lit-html.js';
-      import { graphView } from './wifi.js';
       const sg = document.querySelector('streamed-graph');
 
       const out = document.querySelector('#out');
       const startPainting = () => {
-        if (!sg.graph || !sg.graph.graph) {
+        if (!sg.graph || !sg.graph.store) {
           setTimeout(startPainting, 100);
           return;
         }
@@ -45,7 +37,7 @@
           if (!dirty) {
             return;
           }
-          render(graphView(sg.graph.graph, /*showGroups=*/false), out);
+          render(graphView(sg.graph.store, /*showGroups=*/false), out);
           dirty = false;
         };
 
@@ -56,8 +48,9 @@
         repaint();
       };
       setTimeout(startPainting, 10);
+      document.querySelector('dom-bind').style.display = 'block';  // not sure why polymer hides this and never shows it
     </script>
-  </template>
+  </dom-bind>
   <script>
 
   </script>
