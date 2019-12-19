@@ -3,19 +3,19 @@
   <head>
     <title>collector</title>
     <meta charset="utf-8">
-    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="/lib/webcomponents/2.4.0/webcomponents-bundle.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
 
-    <link rel="stylesheet" href="/rdf/browse/style.css">
+    <script src="/rdf/streamed-graph.bundle.js"></script>
 
     <script type="module" src="static/state.js"></script>
   </head>
   <body class="rdfBrowsePage">
     <h1>collector</h1>
 
-    <p><a href="/rdf/browse/?graph=/sse_collector/graph/home">output for graph/home</a></p>
-
-   <collector-state></collector-state>
+    <p><a href="/rdf/browse/?graph=/sse_collector/graph/home">See output for graph/home</a></p>
+    
+    <collector-state></collector-state>
   </body>
 </html>
