@@ -43,14 +43,21 @@ class CollectorState extends LitElement {
         const sourcesTable = (clients) => {
             const clientRow = (client) => {
                 const d = client.reconnectedPatchSource;
+                const now = Date.now() / 1000;
+                const dispSec = (sec) => (
+                    Math.abs(sec) > now - 1 ? '--' :
+                        Math.abs(sec) > 3600 ?
+                        `${Math.round(sec/3600)} hr` : Math.abs(sec) > 60 ?
+                        `${Math.round(sec/60)} min` :
+                        `${Math.round(sec*10)/10} sec`);
                 return html`
                   <tr>
                     <td><a href="/rdf/browse/?graph=${d.url}">[browse]</a> <a href="${d.url}">${d.url}</a></td>
                     <td>${d.fullGraphReceived}</td>
                     <td>${d.patchesReceived}</td>
-                    <td>${d.time.open}</td>
-                    <td>${d.time.fullGraph}</td>
-                    <td>${d.time.latestPatch}</td>
+                    <td>${dispSec(d.time.open - now)}</td>
+                    <td>${dispSec(d.time.fullGraph - d.time.open)}</td>
+                    <td>${dispSec(d.time.latestPatch - now)}</td>
                   </tr>
                 `;
             };
@@ -62,9 +69,9 @@ class CollectorState extends LitElement {
                     <th>patch source</th>
                     <th>full graph recv</th>
                     <th>patches recv</th>
-                    <th>time open</th>
-                    <th>time fullGraph</th>
-                    <th>time latest patch</th>
+                    <th>time open (rel)</th>
+                    <th>time fullGraph (after open)</th>
+                    <th>time latest patch (rel)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -112,17 +119,17 @@ class CollectorState extends LitElement {
         return html`
           <div>
             <p>
-              Graph: ${d.statements.len} statements
+              Graph: ${d.statements ? d.statements.len : 0} statements
             </p>
 
             <p>
               Sources:
-              ${sourcesTable(d.clients)}
+              ${sourcesTable(d.clients || [])}
             </p>
 
             <p>
               Listening clients:
-              ${handlersTable(d.sseHandlers)}
+              ${handlersTable(d.sseHandlers || [])}
             </p>
           </div>`;
     }
