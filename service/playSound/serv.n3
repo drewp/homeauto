@@ -8,16 +8,16 @@ serv:speechmusic_dash a :Service;
       :serverHost "bang";
       :internalPort 9049;
       :prodDockerFlags (
-      "-p" "9049:9049"
+      "-p" "9049:9049" "--privileged"
       "--net=host");
       :localDockerFlags (
       "--cap-add" "SYS_PTRACE"
       #"--mount type=bind,source=/etc/pulse,target=/etc/pulse"
       "--mount" "type=tmpfs,destination=/tmp,tmpfs-size=52428800"
-      "--mount" "type=bind,source=/tmp/pulseaudio,target=/tmp/pulseaudio"
+      "--mount" "type=bind,source=/run/user/501/pulse,target=/run/user/501/pulse"
       );
       :localRunCmdline (
-      "strace" "-ftts" "999"
+#      "strace" "-ftts" "999"
       "python3" "playSound.py" "-v");
       :dockerFile "Dockerfile"
 .
