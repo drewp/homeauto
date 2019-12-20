@@ -1,0 +1,24 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+serv:speechmusic_dash a :Service;
+      :path "/speech_music/dash/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9049;
+      :prodDockerFlags (
+      "-p" "9049:9049"
+      "--net=host");
+      :localDockerFlags (
+      "--cap-add" "SYS_PTRACE"
+      #"--mount type=bind,source=/etc/pulse,target=/etc/pulse"
+      "--mount" "type=tmpfs,destination=/tmp,tmpfs-size=52428800"
+      "--mount" "type=bind,source=/tmp/pulseaudio,target=/tmp/pulseaudio"
+      );
+      :localRunCmdline (
+      "strace" "-ftts" "999"
+      "python3" "playSound.py" "-v");
+      :dockerFile "Dockerfile"
+.
+

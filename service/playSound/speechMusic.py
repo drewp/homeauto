@@ -1,25 +1,18 @@
-#!bin/python
 """
 play sounds according to POST requests.
 """
-from __future__ import division
+from docopt import docopt
+import cyclone.web
 import sys, tempfile, itertools
-from pyjade.ext.mako import preprocessor as mako_preprocessor
-from mako.lookup import TemplateLookup
 from twisted.internet import reactor
 from cyclone.httpclient import fetch
 from generator import tts
 import xml.etree.ElementTree as ET
-from klein import Klein
 from twisted.web.static import File
-from logsetup import log
-import pygame.mixer
-class URIRef(str): pass
+from standardservice.logsetup import log, verboseLogging
+import os
 
 soundCount = itertools.count()
-templates = TemplateLookup(directories=['.'],
-                           preprocessor=mako_preprocessor,
-                           filesystem_checks=True)
 
 def makeSpeech(speech, fast=False):
     speechWav = tempfile.NamedTemporaryFile(suffix='.wav')
@@ -51,7 +44,7 @@ class SoundEffects(object):
                 out.write(resp.body)
             log.info('write %s bytes to %s', len(resp.body), path)
             self.buffers[uri] = pygame.mixer.Sound(path)
-            
+
         return fetch(uri).addCallback(done).addErrback(log.error)
 
     def playEffect(self, uri):
@@ -72,21 +65,7 @@ class SoundEffects(object):
         t = 0
         if preEffect:
             t += self.playEffect(preEffect)
-            t -= preEffectOverlap
-            
-        reactor.callLater(t, self.playBuffer, buf)
-        t += secs
 
-        if postEffect:
-            self.playBufferLater(t, self.buffers[postEffect])
-
-    def playBufferLater(self, t, buf):
-        self.queued.append(reactor.callLater(t, self.playBuffer, buf))
-            
-    def playBuffer(self, buf):
-        buf.play()
-
-        secs = buf.get_length()
         self.playingSources.append(buf)
         reactor.callLater(secs + .1, self.done, buf)
         return secs
@@ -104,45 +83,56 @@ class SoundEffects(object):
             q.cancel()
         # doesn't cover the callLater ones
 
-class Server(object):
-    app = Klein()
-    def __init__(self, sfx):
-        self.sfx = sfx
 
-    @app.route('/static/', branch=True)
-    def static(self, request):
-        return File("./static")
-
-    @app.route('/', methods=['GET'])
-    def index(self, request):
-        t = templates.get_template("index.jade")
-        return t.render(effectNames=[
+class Index(cyclone.web.RequestHandler):
+    def get(self):
+        self.render('index.html', effectNames=[
             dict(name=k, postUri='effects/%s' % k)
-            for k in self.sfx.buffers.keys()])
+            for k in self.settings.sfx.buffers.keys()])
 
-    @app.route('/speak', methods=['POST'])
-    def speak(self, request):
-        self.sfx.playSpeech(request.args['msg'][0])
+class Speak(cyclone.web.RequestHandler):
+    def post(self):
+        self.settings.sfx.playSpeech(self.get_argument('msg'))
         return "ok"
 
-    @app.route('/playSound', methods=['POST'])
-    def effect(self, request):
-        uri = request.args['uri'][0]
-        self.sfx.playEffect(uri)
+class PlaySound(cyclone.web.RequestHandler):
+    def post(self):
+        uri = self.get_argument('uri')
+        self.settings.sfx.playEffect(uri)
         return "ok"
 
-    @app.route('/volume', methods=['PUT'])
-    def volume(self, request, name):
-        self.sfx.setVolume(float(request.args['v'][0]))
+class Volume(cyclone.web.RequestHandler):
+    def put(self):
+        self.settings.sfx.setVolume(float(self.get_argument('v')))
         return "ok"
 
-    @app.route('/stopAll', methods=['POST'])
-    def stopAll(self, request):
-        self.sfx.stopAll()
+class StopAll(cyclone.web.RequestHandler):
+    def post(self):
+        self.settings.sfx.stopAll()
         return "ok"
 
-pygame.mixer.init()
-sfx = SoundEffects()
 
-server = Server(sfx)
+if __name__ == '__main__':
+    arg = docopt('''
+    Usage: playSound.py [options]
+
+    -v                Verbose
+    ''')
+    verboseLogging(arg['-v'])
+
+    import pygame
+    print('mixer init pulse')
+    import pygame.mixer
+    pygame.mixer.init()
+    sfx = SoundEffects()
+
+    reactor.listenTCP(9049, cyclone.web.Application(handlers=[
+        (r'/', Index),
+        (r'/speak', Speak),
+        (r'/playSound', PlaySound),
+        (r'/volume', Volume),
+        (r'/stopAll', StopAll),
+        (r'/static/(.*)', cyclone.web.StaticFileHandler, {'path': 'static'}),
+    ], template_path='.', sfx=sfx))
+    reactor.run()
 server.app.run(endpoint_description=r"tcp6:port=9049:interface=\:\:")
