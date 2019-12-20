@@ -1,0 +1,6 @@
+replacement for playSound; assume we do TTS somewhere else and then have
+this service (and also chromecasts, etc) play it.
+
+It's still a goal for this service to do low-latency stuff like
+feedback beeps for button presses, so it should cache and stay ready
+to play.

@@ -1,4 +1,4 @@
-FROM bang6:5000/base_x86
+FROM bang6:5000/base_pi
 
 WORKDIR /opt
 
@@ -7,11 +7,11 @@ RUN apt-get install --yes libopenal1 libogg0 pulseaudio-utils python-pygame fest
 COPY requirements.txt ./
 RUN pip install -r requirements.txt
 
-ENV SDL_AUDIODRIVER pulse
-ENV PULSE_SERVER /tmp/pulseaudio
-COPY pulse-client.conf /etc/pulse/client.conf
 COPY *.py req* *.jade ./
+COPY pulse-client.conf /etc/pulse/client.conf
 
+ENV PULSE_SERVER /tmp/pulseaudio
 EXPOSE 9049
+RUN mkdir /sounds
 
-CMD [ "python", "./speechMusic.py" ]
+CMD [ "python", "./playSound.py" ]
