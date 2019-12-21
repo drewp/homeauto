@@ -99,4 +99,3 @@ if __name__ == '__main__':
         (r'/stopAll', StopAll),
     ], template_path='.', sfx=sfx))
     reactor.run()
-server.app.run(endpoint_description=r"tcp6:port=9049:interface=\:\:")
