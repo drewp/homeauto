@@ -14,6 +14,7 @@ serv:speechmusic_dash a :Service;
       "--cap-add" "SYS_PTRACE"
       #"--mount type=bind,source=/etc/pulse,target=/etc/pulse"
       "--mount" "type=tmpfs,destination=/tmp,tmpfs-size=52428800"
+      "--mount" "type=bind,source=/my/proj/homeauto/service/playSound,target=/opt"
       "--mount" "type=bind,source=/home/drewp/.config/pulse/cookie,target=/home/pulseuser/.config/pulse/cookie"
       );
       :localRunCmdline (

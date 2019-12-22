@@ -2,7 +2,7 @@ FROM bang6:5000/base_x86
 
 WORKDIR /opt
 
-RUN touch need-new-update
+RUN touch need-new-update2
 RUN apt-get update
 
 RUN apt-get install --yes libopenal1 libogg0 pulseaudio-utils python-pygame
