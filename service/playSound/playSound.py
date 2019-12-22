@@ -9,28 +9,29 @@ from cyclone.httpclient import fetch
 from twisted.web.static import File
 from standardservice.logsetup import log, verboseLogging
 
-soundCount = itertools.count()
-
 class LOADING(object): pass
 
 class SoundEffects(object):
     def __init__(self):
-        self.buffers = {} # URIRef : pygame.mixer.Sound
+        self.buffers = {} # URIRef : path
         self.playingSources = []
         self.queued = []
         self.volume = 1 # level for the next sound that's played (or existing instances of the same sound)
 
     def _getSound(self, uri):
         def done(resp):
-            path = '/tmp/sound_%s' % next(soundCount)
-            with open(path, 'w') as out:
-                out.write(resp.body)
+            print('save')
+            body = bytes(resp.body)
+            path = '/tmp/sound_%s' % hash(uri)
+            with open(path, 'wb') as out:
+                out.write(body)
             log.info('write %s bytes to %s', len(resp.body), path)
-            self.buffers[uri] = pygame.mixer.Sound(path)
+            self.buffers[uri] = path
+            print('donesave')
 
-        return fetch(uri).addCallback(done).addErrback(log.error)
+        return fetch(uri.encode('utf8')).addCallback(done).addErrback(log.error)
 
-    def playEffect(self, uri):
+    def playEffect(self, uri: str):
         if uri not in self.buffers:
             self.buffers[uri] = LOADING
             self._getSound(uri).addCallback(lambda ret: self.playEffect(uri))
@@ -40,8 +41,9 @@ class SoundEffects(object):
             # during that load are dropped, not queued.
             return
         snd = self.buffers[uri]
-        snd.set_volume(self.volume)
-        return self.playBuffer(snd)
+        print('subp')
+        subprocess.check_call(['paplay', snd])
+        return
 
     def done(self, src):
         try:
@@ -55,7 +57,6 @@ class SoundEffects(object):
         for q in self.queued:
             q.cancel()
         # doesn't cover the callLater ones
-
 
 class Index(cyclone.web.RequestHandler):
     def get(self):
@@ -86,10 +87,7 @@ if __name__ == '__main__':
     ''')
     verboseLogging(arg['-v'])
 
-    import pygame
-    print('mixer init pulse')
-    import pygame.mixer
-    pygame.mixer.init()
+    os.environ['PULSE_SERVER'] = '172.17.0.1'
     sfx = SoundEffects()
 
     reactor.listenTCP(9049, cyclone.web.Application(handlers=[
