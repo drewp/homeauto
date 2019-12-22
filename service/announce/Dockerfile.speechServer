@@ -1,0 +1,22 @@
+FROM bang6:5000/base_x86
+
+WORKDIR /opt
+
+RUN apt-get update
+RUN apt-get install -y openjdk-11-jre-headless unzip
+
+RUN wget https://github.com/marytts/marytts/releases/download/v5.2/marytts-5.2.zip && \
+        unzip marytts-5.2.zip && \
+        rm marytts-5.2.zip
+
+#RUN apt-get install -y mbrola-us1 mbrola-us2
+
+RUN cd /opt/marytts-5.2; \
+        wget https://github.com/marytts/voice-dfki-poppy/releases/download/v5.2/voice-dfki-poppy-5.2.zip && unzip voice-dfki-poppy-5.2.zip; \
+        wget https://github.com/marytts/voice-dfki-poppy-hsmm/releases/download/v5.2/voice-dfki-poppy-hsmm-5.2.zip && unzip voice-dfki-poppy-hsmm-5.2.zip; \
+        wget https://github.com/marytts/voice-cmu-slt/releases/download/v5.2/voice-cmu-slt-5.2.zip && unzip voice-cmu-slt-5.2.zip;
+
+
+EXPOSE 59125
+
+CMD [ "/opt/marytts-5.2/bin/marytts-server" ]

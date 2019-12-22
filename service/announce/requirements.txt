@@ -1,0 +1,7 @@
+cyclone
+mock==1.0.1
+Twisted
+treq==18.6.0
+lru-dict==1.1.6
+
+standardservice==0.6.0

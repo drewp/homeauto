@@ -1,0 +1,30 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+serv:announce a :Service;
+      :path "/announce/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9010;
+      :prodDockerFlags (
+      "-p" "9010:9010"
+      "--net=host"
+      );
+      :localDockerFlags (
+      "--mount" "type=bind,source=/my/proj/homeauto/service/announce/announce.py,target=/opt/announce.py"
+      "--mount" "type=bind,source=/my/proj/homeauto/service/announce/index.html,target=/opt/index.html"
+      );
+      :localRunCmdline ("python3" "announce.py" "-v");
+      :dockerFile "Dockerfile"
+.
+
+
+serv:tts_server a :Service;
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 59125;
+      :prodDockerFlags ("-p" "59125:59125");
+      :dockerFile "Dockerfile.speechServer"
+.
+

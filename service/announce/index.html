@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <title></title>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <style>
+     input { width: 50em; }
+    </style>
+    <input type="text" id="msg">
+    <button id="demo">speak</button>
+    <script>
+     document.querySelector('#msg').value = 'ding! <prosody rate="100%" pitch="+0%"> normal speech! </prosody>';
+     document.querySelector('#demo').addEventListener('click', () => {
+       fetch('announcement?text=' + encodeURIComponent(document.querySelector('#msg').value), {
+         method: 'POST',
+       });
+     });
+    </script>
+  </body>
+</html>
