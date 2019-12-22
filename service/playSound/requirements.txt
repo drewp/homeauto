@@ -1,10 +1,6 @@
 cyclone
 mock==1.0.1
 Twisted
-
-# upgrading to 1.9.5 makes it stop working with pulseaudio
-# (maybe this unversioned one picks the system package which
-# has a better SDL build)
-pygame
+requests==2.22.0
 
 standardservice==0.6.0
