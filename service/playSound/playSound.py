@@ -3,9 +3,10 @@ play sounds according to POST requests.
 """
 from docopt import docopt
 import cyclone.web
-import os, sys, tempfile, itertools
+import os, sys, tempfile, itertools, subprocess
+import treq
 from twisted.internet import reactor
-from cyclone.httpclient import fetch
+from twisted.internet.defer import inlineCallbacks
 from twisted.web.static import File
 from standardservice.logsetup import log, verboseLogging
 
@@ -18,24 +19,22 @@ class SoundEffects(object):
         self.queued = []
         self.volume = 1 # level for the next sound that's played (or existing instances of the same sound)
 
+    @inlineCallbacks
     def _getSound(self, uri):
-        def done(resp):
-            print('save')
-            body = bytes(resp.body)
-            path = '/tmp/sound_%s' % hash(uri)
-            with open(path, 'wb') as out:
-                out.write(body)
-            log.info('write %s bytes to %s', len(resp.body), path)
-            self.buffers[uri] = path
-            print('donesave')
-
-        return fetch(uri.encode('utf8')).addCallback(done).addErrback(log.error)
+        resp = yield treq.get(uri.encode('utf8'))
+        body = yield treq.content(resp)
+        path = '/tmp/sound_%s' % hash(uri)
+        with open(path, 'wb') as out:
+            out.write(body)
+        log.info('write %s bytes to %s', len(body), path)
+        self.buffers[uri] = path
+        print('donesave')
 
     def playEffect(self, uri: str):
         if uri not in self.buffers:
             self.buffers[uri] = LOADING
-            self._getSound(uri).addCallback(lambda ret: self.playEffect(uri))
-            return
+            self._getSound(uri).addCallback(lambda ret: self.playEffect(uri)).addErrback(log.error)
+            return b'will play after load'
         if self.buffers[uri] is LOADING:
             # The first playback loads then plays, but any attempts
             # during that load are dropped, not queued.
@@ -43,7 +42,7 @@ class SoundEffects(object):
         snd = self.buffers[uri]
         print('subp')
         subprocess.check_call(['paplay', snd])
-        return
+        return b'played'
 
     def done(self, src):
         try:
@@ -65,18 +64,17 @@ class Index(cyclone.web.RequestHandler):
 class PlaySound(cyclone.web.RequestHandler):
     def post(self):
         uri = self.get_argument('uri')
-        self.settings.sfx.playEffect(uri)
-        return "ok"
+        return self.settings.sfx.playEffect(uri)
 
 class Volume(cyclone.web.RequestHandler):
     def put(self):
         self.settings.sfx.setVolume(float(self.get_argument('v')))
-        return "ok"
+        return b"ok"
 
 class StopAll(cyclone.web.RequestHandler):
     def post(self):
         self.settings.sfx.stopAll()
-        return "ok"
+        return b"ok"
 
 
 if __name__ == '__main__':
