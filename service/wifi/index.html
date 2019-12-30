@@ -10,15 +10,19 @@
 </head>
 
 <body class="rdfBrowsePage">
-    <streamed-graph url="/sse_collector/graph/network" graph="{{graph}}"></streamed-graph>
 
   <dom-bind>
+
+
     <style>
       #subjectRequest {
         width: 50em;
       }
     </style>
-    <div id="out"></div>
+
+    <streamed-graph url="/sse_collector/graph/network" graph="{{graph}}"></streamed-graph>
+
+    <wifi-table graph="{{graph}}" show-groups="true"></wifi-table>
 
     <script type="module">
       import { render } from '/lib/lit-html/1.0.0/lit-html.js';

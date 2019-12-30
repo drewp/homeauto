@@ -36,8 +36,8 @@ def redeploy(ctx):
 
 @task
 def build(ctx):
-    ctx.run(f'yarn webpack-build', pty=True)  # --debug --display-error-details
+    ctx.run(f'npm run webpack-build', pty=True)
     
 @task
 def serve_demo(ctx):
-    ctx.run('node_modules/.bin/webpack-dev-server --config webpack-dev.config.ts  --port 8082 --verbose --color')
+    ctx.run('npm run webpack-dev-server')
