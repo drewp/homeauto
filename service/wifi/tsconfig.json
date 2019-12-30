@@ -1,32 +1,38 @@
 {
-    "compilerOptions": {
-        "alwaysStrict": true,
-        "declaration": true,
-        "experimentalDecorators": true,
-        "lib": [
-            "es2017",
-            "dom"
-        ],
-        "module": "commonjs",
-        "noFallthroughCasesInSwitch": true,
-        "noImplicitAny": true,
-        "noImplicitReturns": true,
-        "noImplicitThis": true,
-        "declarationDir": "./build",
-        "outDir": "./build/js",
-        "strict": true,
-        "strictFunctionTypes": true,
-        "strictNullChecks": true,
-        "strictPropertyInitialization": true,
-        "target": "es6",
-        "esModuleInterop": true,
-        "types": [
-            "jest"
-        ],
-        "sourceMap": true,
-        "baseUrl": "src",
-        "paths": {
-            "streamed-graph":["/tmp/sg/foo"]
-        }
-    }
+  "compilerOptions": {
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+
+    "types": ["jest"],
+    
+    "module": "ES6",
+    "target": "ES6", 
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    // "allowSyntheticDefaultImports": true,
+    // "rootDir": ".",
+    // "outDir": "./build",
+    "baseUrl": ".",
+    // "emitDecoratorMetadata": true,
+    // "lib": [ "es6", "dom" ],
+    "paths": {
+      "streamed-graph": ["node_modules/streamed-graph"]
+    },
+    "diagnostics": true,
+    "traceResolution": true
+
+  },
+  "include": ["src/**/*.ts"],
+  // "exclude": ["src/**/*.test.ts"]
 }
