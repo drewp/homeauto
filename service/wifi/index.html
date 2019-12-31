@@ -1,67 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
+  <head>
+    <title>wifi</title>
+    <meta charset="utf-8" />
+    <script src="/rdf/common_paths_and_ns.js?v3"></script>
+    <link rel="stylesheet" href="/rdf/streamed-graph.css" />
+  </head>
 
-<head>
-  <title>wifi</title>
-  <meta charset="utf-8">
-  <script src="/rdf/common_paths_and_ns.js?v3"></script>
-  <script type="module" src="build/wifi.bundle.js"></script>
-  <link rel="stylesheet" href="/rdf/streamed-graph.css">
-</head>
-
-<body class="rdfBrowsePage">
-
-  <dom-bind>
-
-
-    <style>
-      #subjectRequest {
-        width: 50em;
-      }
-    </style>
-
-    <streamed-graph url="/sse_collector/graph/network" graph="{{graph}}"></streamed-graph>
-
-    <wifi-table graph="{{graph}}" show-groups="true"></wifi-table>
-
-    <script type="module">
-      import { render } from '/lib/lit-html/1.0.0/lit-html.js';
-      const sg = document.querySelector('streamed-graph');
-
-      const out = document.querySelector('#out');
-      const startPainting = () => {
-        if (!sg.graph || !sg.graph.store) {
-          setTimeout(startPainting, 100);
-          return;
+  <body class="rdfBrowsePage">
+    pre dombind
+    <dom-bind>
+      inside dombind
+      <style>
+        #subjectRequest {
+          width: 50em;
         }
+      </style>
+sg:
+      <streamed-graph
+        url="graph/events"
+        realurl="sse_collector/graph/network"
+        static="['demo.n3']"
+        graph="{{graph}}"
+      ></streamed-graph>
 
-        let dirty = true;
+      wifi-display:
+      <wifi-display graph="{{graph}}" show-groups="true"></wifi-display>
 
-        const repaint = () => {
-          if (!dirty) {
-            return;
-          }
-          render(graphView(sg.graph.store, /*showGroups=*/false), out);
-          dirty = false;
-        };
+    </dom-bind>
+    <form method="POST" action="remoteSuspend">
+      <button>Suspend windows/VR machine</button>
+    </form>
+    <!-- also put wakeonlan actions down here -->
 
-        sg.addEventListener('graph-changed', (ev) => {
-          dirty = true;
-          requestAnimationFrame(repaint);
-        });
-        repaint();
-      };
-      setTimeout(startPainting, 10);
-      document.querySelector('dom-bind').style.display = 'block';  // not sure why polymer hides this and never shows it
+    <script type="module" src="build/bundle.js"></script>
+    <script type="module">
+      document.querySelector("dom-bind").style.display = "block"; // not sure why polymer hides this and never shows it
     </script>
-  </dom-bind>
-  <script>
 
-  </script>
-
-  <form method="POST" action="remoteSuspend"><button>Suspend windows/VR machine</button></form>
-  <!-- also put wakeonlan actions down here -->
-
-</body>
-
+    
+  </body>
 </html>

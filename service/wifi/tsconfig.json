@@ -26,9 +26,7 @@
     "baseUrl": ".",
     // "emitDecoratorMetadata": true,
     // "lib": [ "es6", "dom" ],
-    "paths": {
-      "streamed-graph": ["node_modules/streamed-graph"]
-    },
+
     "diagnostics": true,
     "traceResolution": true
 
