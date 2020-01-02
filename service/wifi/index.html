@@ -3,41 +3,37 @@
   <head>
     <title>wifi</title>
     <meta charset="utf-8" />
+    <script src="/lib/webcomponents/2.4.0/webcomponents-bundle.js"></script>
     <script src="/rdf/common_paths_and_ns.js?v3"></script>
-    <link rel="stylesheet" href="/rdf/streamed-graph.css" />
+    <script type="module" src="build/bundle.js"></script>
   </head>
-
+  <link rel="stylesheet" href="/rdf/streamed-graph.css" />
   <body class="rdfBrowsePage">
-    pre dombind
+    <hr />
     <dom-bind>
-      inside dombind
-      <style>
-        #subjectRequest {
-          width: 50em;
-        }
-      </style>
-sg:
-      <streamed-graph
-        url="graph/events"
-        realurl="sse_collector/graph/network"
-        static="['demo.n3']"
-        graph="{{graph}}"
-      ></streamed-graph>
-
-      wifi-display:
-      <wifi-display graph="{{graph}}" show-groups="true"></wifi-display>
-
+      <template>
+        <style>
+          body {
+            background: #3a3a3a;
+          }
+          #subjectRequest {
+            width: 50em;
+          }
+        </style>
+        <streamed-graph
+          url="/sse_collector/graph/env"
+          n="network"
+          static="['demo.n3']"
+          graph="{{graph}}"
+          expanded="{{e}}"
+        ></streamed-graph>
+        g={{graph.version}} e={{e}}
+        <wifi-display graph="{{graph}}" show-groups="true"></wifi-display>
+      </template>
     </dom-bind>
     <form method="POST" action="remoteSuspend">
       <button>Suspend windows/VR machine</button>
     </form>
     <!-- also put wakeonlan actions down here -->
-
-    <script type="module" src="build/bundle.js"></script>
-    <script type="module">
-      document.querySelector("dom-bind").style.display = "block"; // not sure why polymer hides this and never shows it
-    </script>
-
-    
   </body>
 </html>

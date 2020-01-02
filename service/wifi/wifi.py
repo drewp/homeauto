@@ -250,7 +250,7 @@ Options:
         cyclone.web.Application(
             [
                 (r"/", Index),
-                (r"/build/(wifi\.bundle\.js)", cyclone.web.StaticFileHandler, {"path": 'build'}),
+                (r"/build/(bundle\.js)", cyclone.web.StaticFileHandler, {"path": 'build'}),
                 (r'/json', Json),
                 (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
                 (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
