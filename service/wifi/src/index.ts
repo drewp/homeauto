@@ -21,9 +21,12 @@ interface Dev {
   ipAddress: Literal;
   dhcpHostname: string;
   macAddress: Literal;
-  packetsPerSec: string; //number; todo
-  bytesPerSec: string; //number;
+  packetsPerSec: number;
+  packetsPerSecDisplay: string;
+  bytesPerSec: number;
+  bytesPerSecDisplay: string;
 }
+const room = "http://projects.bigasterisk.com/room/";
 
 // workaround for uris that don't have good labels in the graph
 function labelFromUri(
@@ -39,6 +42,76 @@ function labelFromUri(
     }
   });
   return label;
+}
+function asString(x: Literal | undefined): string {
+  if (x && x.value) {
+    return x.value;
+  }
+  return "(unknown)";
+}
+
+function graphLiteral(
+  store: N3Store,
+  subj: NamedNode,
+  pred: string,
+  notFoundResult?: string
+): Literal {
+  const keep: Array<Literal> = [];
+  store.forEach(
+    q => {
+      if (!Util.isLiteral(q.object)) {
+        throw new Error("non literal found");
+      }
+      let seen = false;
+      for (let other of keep) {
+        if (other.equals(q.object)) {
+          seen = true;
+        }
+      }
+      if (!seen) {
+        keep.push(q.object as Literal);
+      }
+    },
+    subj,
+    namedNode(pred),
+    null,
+    null
+  );
+  if (keep.length == 0) {
+    return literal(notFoundResult || "(missing)");
+  }
+  if (keep.length == 1) {
+    return keep[0];
+  }
+  console.log(`${subj.value} ${pred} had ${keep.length} objects:`, keep);
+  return keep[0];
+}
+
+function graphUriValue(
+  store: N3Store,
+  subj: NamedNode,
+  pred: string
+): NamedNode | undefined {
+  const keep: Array<NamedNode> = [];
+  store.forEach(
+    q => {
+      if (!Util.isNamedNode(q.object)) {
+        throw new Error("non uri found");
+      }
+      keep.push(q.object as NamedNode);
+    },
+    subj,
+    namedNode(pred),
+    null,
+    null
+  );
+  if (keep.length == 0) {
+    return undefined;
+  }
+  if (keep.length == 1) {
+    return keep[0];
+  }
+  throw new Error("found multiple matches for pred");
 }
 
 @customElement("wifi-display")
@@ -67,11 +140,11 @@ class WifiDisplay extends LitElement {
     return ["onGraphChanged(graph)"];
   }
 
-  @property({ type: Object }) //no longer a prop?
-  grouped: Map<string, DevGroup> = new Map();
+  @property({ type: Boolean })
+  showGroups = false;
 
   render() {
-    const grouped = this.graphView(this.graph.store!, false);
+    const grouped = this.graphView(this.graph.store!);
 
     return html`
       <div class="report">
@@ -84,11 +157,6 @@ class WifiDisplay extends LitElement {
         </table>
       </div>
     `;
-  }
-
-  onGraphChanged(val: VersionedGraph, old: VersionedGraph) {
-    console.log("new graph value", this.graph);
-    this.grouped = this.graphView((val as VersionedGraph).store!, false);
   }
 
   renderDevice(dev: Dev) {
@@ -111,8 +179,8 @@ class WifiDisplay extends LitElement {
             >${dev.ipAddress && dev.ipAddress.value}</a
           ></span
         >
-        <span class="packets">${dev.packetsPerSec}</span>
-        <span class="bytes">${dev.bytesPerSec}</span>
+        <span class="packets">${dev.packetsPerSecDisplay}</span>
+        <span class="bytes">${dev.bytesPerSecDisplay}</span>
         <span class="hostname">${dev.dhcpHostname}</span>
         <span class="ago">${agoReport}</span>
         <span class="links">
@@ -156,7 +224,6 @@ class WifiDisplay extends LitElement {
       return ip.replace(/(\d+)/g, m => ("00" + m).slice(-3));
     }
     devs.sort((a, b) => {
-      return 0; //todo
       return padIp(a.ipAddress.value) > padIp(b.ipAddress.value) ? 1 : -1;
     });
     return html`
@@ -172,104 +239,65 @@ class WifiDisplay extends LitElement {
     `;
   }
 
-  graphView(store: N3Store, showGroups: boolean): Map<string, DevGroup> {
+  addGroupedDev(
+    store: N3Store,
+    grouped: Map<string, DevGroup>,
+    devUri: NamedNode
+  ) {
+    const getAgoMin = (connected: Literal | undefined): number | undefined => {
+      if (connected) {
+        const t = new Date(connected.value);
+        const agoMs = Date.now() - t.valueOf();
+        return agoMs / 1000 / 60;
+      }
+      return undefined;
+    };
+
+    const packetsPerSec = parseFloat(
+      graphLiteral(store, devUri, room + "packetsPerSec", "0").value
+    );
+    const bytesPerSec = parseFloat(
+      graphLiteral(store, devUri, room + "bytesPerSec", "0").value
+    );
+
+    const row: Dev = {
+      agoMin: getAgoMin(graphLiteral(store, devUri, room + "connected")),
+      ipAddress: graphLiteral(store, devUri, room + "ipAddress", "(unknown)"),
+      dhcpHostname: asString(
+        graphLiteral(store, devUri, room + "dhcpHostname")
+      ),
+      macAddress: graphLiteral(store, devUri, room + "macAddress"),
+      packetsPerSec: packetsPerSec,
+      packetsPerSecDisplay: packetsPerSec + " P/s",
+      bytesPerSec: bytesPerSec,
+      bytesPerSecDisplay: bytesPerSec + " B/s",
+    };
+
+    const wifiBand = graphUriValue(store, devUri, room + "wifiBand");
+    const connectedToAp = graphUriValue(store, devUri, room + "connectedToAp");
+    if (!this.showGroups || connectedToAp) {
+      const key = this.showGroups
+        ? `${connectedToAp!.value}-${wifiBand!.value}`
+        : "all";
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          connectedToAp: connectedToAp!,
+          wifiBand: wifiBand!,
+          devs: [],
+        });
+      }
+      grouped.get(key)!.devs.push(row);
+    } else {
+      console.log("lost row", row);
+    }
+  }
+
+  graphView(store: N3Store): Map<string, DevGroup> {
     const grouped: Map<string, DevGroup> = new Map();
-    const room = "http://projects.bigasterisk.com/room/";
     store.forEach(
       q => {
         const devUri: NamedNode = q.subject as NamedNode;
-
-        const graphLiteral = (
-          store: N3Store,
-          devUri: NamedNode,
-          pred: string,
-          notFoundResult?: string
-        ): Literal => {
-          const keep: Array<Literal> = [];
-          store.forEach(
-            q => {
-              if (!Util.isLiteral(q.object)) {
-                throw new Error("non literal found");
-              }
-              keep.push(q.object as Literal);
-            },
-            devUri,
-            namedNode(pred),
-            null,
-            null
-          );
-          if (keep.length == 0) {
-            return literal(notFoundResult || "(missing)");
-          }
-          if (keep.length == 1) {
-            return keep[0];
-          }
-          throw new Error("found multiple matches for pred");
-        };
-
-        const getAgoMin = (
-          connected: Literal | undefined
-        ): number | undefined => {
-          if (connected) {
-            const t = new Date(connected.value);
-            const agoMs = Date.now() - t.valueOf();
-            return agoMs / 1000 / 60;
-          }
-          return undefined;
-        };
-
-        const asString = (x: Literal | undefined): string => {
-          if (x && x.value) {
-            return x.value;
-          }
-          return "(unknown)";
-        };
-        const row: Dev = {
-          agoMin: getAgoMin(
-            literal("2020-01-01") //  graphLiteral(store, devUri, room + "connectedToAp")
-          ),
-          ipAddress: graphLiteral(
-            store,
-            devUri,
-            room + "ipAddress",
-            "(unknown)"
-          ),
-          dhcpHostname: asString(
-            graphLiteral(store, devUri, room + "dhcpHostname")
-          ),
-          macAddress: graphLiteral(store, devUri, room + "macAddress"),
-          packetsPerSec:
-            graphLiteral(store, devUri, room + "packetsPerSec", "? ").value +
-            " P/s", //number; todo
-          bytesPerSec:
-            graphLiteral(store, devUri, room + "bytesPerSec", "? ").value +
-            "B/s", //number;
-        };
-        if (row.dhcpHostname && (row.dhcpHostname as any).value) {
-          row.dhcpHostname = (row.dhcpHostname as any).value;
-        }
-        if (!showGroups || (row as any).connectedToAp) {
-          const key = showGroups
-            ? `${(row as any).connectedToAp.toNT()}-${(row as any).wifiBand.toNT()}`
-            : "all";
-          if (!grouped.has(key)) {
-            grouped.set(key, {
-              connectedToAp: (row as any).connectedToAp,
-              wifiBand: (row as any).wifiBand,
-              devs: [],
-            });
-          }
-          grouped.get(key)!.devs.push(row);
-        } else {
-          console.log("lost row", row);
-        }
-
-        if (row.bytesPerSec) {
-          row.bytesPerSec = row.bytesPerSec.valueOf() + " B/s";
-        }
-        if (row.packetsPerSec) {
-          row.packetsPerSec = row.packetsPerSec.valueOf() + " p/s";
-        }
+        this.addGroupedDev(store, grouped, devUri);
       },
       null,
       namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type"),
