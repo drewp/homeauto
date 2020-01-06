@@ -9,7 +9,6 @@
   </head>
   <link rel="stylesheet" href="/rdf/streamed-graph.css" />
   <body class="rdfBrowsePage">
-    <hr />
     <dom-bind>
       <template>
         <style>
@@ -25,10 +24,8 @@
           n="network"
           static="['demo.n3']"
           graph="{{graph}}"
-          expanded="{{e}}"
         ></streamed-graph>
-        g={{graph.version}} e={{e}}
-        <wifi-display graph="{{graph}}" show-groups="true"></wifi-display>
+        <wifi-display graph="[[g2]]" show-groups="true"></wifi-display>
       </template>
     </dom-bind>
     <form method="POST" action="remoteSuspend">
