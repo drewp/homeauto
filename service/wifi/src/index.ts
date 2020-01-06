@@ -18,7 +18,7 @@ interface DevGroup {
 }
 interface Dev {
   agoMin: number | undefined;
-  ipAddress: Literal;
+  ipAddress: Literal; // todo no one wants this literal. just make it string.
   dhcpHostname: string;
   macAddress: Literal;
   packetsPerSec: number;
@@ -28,11 +28,12 @@ interface Dev {
 }
 const room = "http://projects.bigasterisk.com/room/";
 
+////////////////// funcs that could move out //////////////////////////////
 // workaround for uris that don't have good labels in the graph
 function labelFromUri(
   uri: NamedNode,
   prefix: string,
-  tailsToLabels: any,
+  tailsToLabels: {[key: string]: string},
   defaultLabel: string
 ) {
   let label = defaultLabel === undefined ? uri.value : defaultLabel;
@@ -113,6 +114,7 @@ function graphUriValue(
   }
   throw new Error("found multiple matches for pred");
 }
+//////////////////////////////////////////////////////////////////////////////////
 
 @customElement("wifi-display")
 class WifiDisplay extends LitElement {
@@ -120,10 +122,7 @@ class WifiDisplay extends LitElement {
     return [style];
   }
 
-  @property({
-    type: Object,
-    //    observer: WifiDisplay.prototype.onGraphChanged,
-  })
+  @property({ type: Object })
   graph!: VersionedGraph;
 
   connectedCallback() {
@@ -173,10 +172,10 @@ class WifiDisplay extends LitElement {
     const glow = ""; //todo
     return html`
       <div class="dev" style="background: rgba(185, 5, 138, ${glow});">
-        <span class="mac">${dev.macAddress && dev.macAddress.value}</span>
+        <span class="mac">${dev.macAddress.value}</span>
         <span class="ip"
-          ><a href="http://${dev.ipAddress && dev.ipAddress.value}/"
-            >${dev.ipAddress && dev.ipAddress.value}</a
+          ><a href="http://${dev.ipAddress.value}/"
+            >${dev.ipAddress.value}</a
           ></span
         >
         <span class="packets">${dev.packetsPerSecDisplay}</span>
@@ -185,8 +184,7 @@ class WifiDisplay extends LitElement {
         <span class="ago">${agoReport}</span>
         <span class="links">
           <a
-            href="https://bigasterisk.com/ntop/lua/host_details.lua?ifid=17&amp;host=${dev.ipAddress &&
-              dev.ipAddress.value}&amp;page=flows"
+            href="https://bigasterisk.com/ntop/lua/host_details.lua?ifid=17&amp;host=${dev.ipAddress.value}&amp;page=flows"
             >[flows]</a
           >
         </span>
