@@ -25,10 +25,10 @@
     // "outDir": "./build",
     "baseUrl": ".",
     // "emitDecoratorMetadata": true,
-    // "lib": [ "es6", "dom" ],
+   // "lib": [ "dom" ],
 
-    "diagnostics": true,
-    "traceResolution": true
+    // "diagnostics": true,
+    // "traceResolution": true
 
   },
   "include": ["src/**/*.ts"],
