@@ -31,6 +31,7 @@ export function graphLiteral(
       }
       let seen = false;
       for (let other of keep) {
+        // why are we getting multiple matches for the same literal? seems like a bug
         if (other.equals(q.object)) {
           seen = true;
         }

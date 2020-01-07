@@ -11,9 +11,9 @@
     "alwaysStrict": true,
 
     "types": ["jest"],
-    
+
     "module": "ES6",
-    "target": "ES6", 
+    "target": "ES6",
     "moduleResolution": "node",
     "sourceMap": true,
     "declaration": true,
@@ -23,14 +23,13 @@
     // "allowSyntheticDefaultImports": true,
     // "rootDir": ".",
     // "outDir": "./build",
-    "baseUrl": ".",
+    "baseUrl": "."
     // "emitDecoratorMetadata": true,
-   // "lib": [ "dom" ],
+    // "lib": [ "dom" ],
 
     // "diagnostics": true,
     // "traceResolution": true
-
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts"]
   // "exclude": ["src/**/*.test.ts"]
 }
