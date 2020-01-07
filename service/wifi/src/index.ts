@@ -47,11 +47,9 @@ class WifiDisplay extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    console.log("wifidisplay connected");
     const sg = this.ownerDocument!.querySelector("streamed-graph");
     sg?.addEventListener("graph-changed", ((ev: CustomEvent) => {
       this.graph = ev.detail!.value as VersionedGraph;
-      console.log("wifidisplay got new graph", this.graph);
     }) as EventListener);
   }
 
@@ -67,8 +65,6 @@ class WifiDisplay extends LitElement {
 
     return html`
       <div class="report">
-        report at graph version ${this.graph.version} grouped:
-        ${Array.from(grouped.entries()).length}
         <table>
           ${Array.from(grouped.entries()).map((row: [string, DevGroup]) => {
             return this.renderGroup(row[0], row[1]);
@@ -203,7 +199,7 @@ class WifiDisplay extends LitElement {
       }
       grouped.get(key)!.devs.push(row);
     } else {
-      console.log("lost row", row);
+      console.log("row didn't get into any group:", row);
     }
   }
 
