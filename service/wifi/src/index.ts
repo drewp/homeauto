@@ -80,16 +80,18 @@ class WifiDisplay extends LitElement {
 
   renderDevice(dev: Dev) {
     let agoReport = "";
+    let glow = 0;
     if (dev.agoMin === undefined) {
       agoReport = "unknown";
     } else {
-      const glow = Math.max(0, 1 - dev.agoMin! / 60);
+      glow = Math.max(0, 1 - dev.agoMin! / 60);
       agoReport =
         dev.agoMin! < 360
           ? ` (${Math.ceil(dev.agoMin! * 10) / 10} minutes ago)`
           : "";
     }
-    const glow = ""; //todo
+    const ntopUrl = "https://bigasterisk.com/ntop/lua/host_details.lua";
+    const ntopLink = `${ntopUrl}?ifid=17&amp;host=${dev.ipAddress.value}&amp;page=flows`;
     return html`
       <div class="dev" style="background: rgba(185, 5, 138, ${glow});">
         <span class="mac">${dev.macAddress.value}</span>
@@ -102,12 +104,7 @@ class WifiDisplay extends LitElement {
         <span class="bytes">${dev.bytesPerSecDisplay}</span>
         <span class="hostname">${dev.dhcpHostname}</span>
         <span class="ago">${agoReport}</span>
-        <span class="links">
-          <a
-            href="https://bigasterisk.com/ntop/lua/host_details.lua?ifid=17&amp;host=${dev.ipAddress.value}&amp;page=flows"
-            >[flows]</a
-          >
-        </span>
+        <span class="links"><a href="${ntopLink}">[flows]</a></span>
       </div>
     `;
   }
