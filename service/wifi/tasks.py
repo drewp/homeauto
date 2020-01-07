@@ -4,7 +4,12 @@ JOB = 'wifi'
 PORT = 9070
 TAG = f'bang6:5000/{JOB}_x86:latest'
 
+
 @task
+def build(ctx):
+    ctx.run(f'npm run build', pty=True)
+    
+@task(pre=[build])
 def build_image(ctx):
     ctx.run(f'docker build --network=host -t {TAG} .')
 
@@ -32,12 +37,3 @@ def redeploy(ctx):
 #   then pick the pnp one on statusbar.
 
 #yarn run webpack-cli --config webpack.config.js --mode production
-
-
-@task
-def build(ctx):
-    ctx.run(f'npm run webpack-build', pty=True)
-    
-@task
-def serve_demo(ctx):
-    ctx.run('npm run webpack-dev-server')
