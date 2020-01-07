@@ -10,6 +10,9 @@ export const style = css`
   .dev {
     margin-bottom: 2px;
   }
+  .dev a {
+      color: #5555ff;
+  }
   .ip,
   .mac,
   .packets,
