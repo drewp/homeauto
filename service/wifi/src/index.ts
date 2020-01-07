@@ -1,14 +1,14 @@
 // for the web page
 export { DomBind } from "@polymer/polymer/lib/elements/dom-bind.js";
+export { StreamedGraph } from "streamed-graph";
 
 import { LitElement, property, html, customElement } from "lit-element";
 
 import { Literal, Term, N3Store, Util } from "n3";
 import { NamedNode, DataFactory } from "n3";
-const { literal, quad, namedNode } = DataFactory;
+const { literal, namedNode } = DataFactory;
 
 import { VersionedGraph } from "streamed-graph";
-export { StreamedGraph } from "streamed-graph";
 import { style } from "./style";
 
 interface DevGroup {
