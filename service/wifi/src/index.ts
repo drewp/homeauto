@@ -4,12 +4,13 @@ export { StreamedGraph } from "streamed-graph";
 
 import { LitElement, property, html, customElement } from "lit-element";
 
-import { Literal, Term, N3Store, Util } from "n3";
+import { Literal, N3Store } from "n3";
 import { NamedNode, DataFactory } from "n3";
-const { literal, namedNode } = DataFactory;
+const { namedNode } = DataFactory;
 
 import { VersionedGraph } from "streamed-graph";
 import { style } from "./style";
+import { labelFromUri, graphLiteral, graphUriValue } from "./graph_access";
 
 interface DevGroup {
   connectedToAp: NamedNode;
@@ -28,93 +29,12 @@ interface Dev {
 }
 const room = "http://projects.bigasterisk.com/room/";
 
-////////////////// funcs that could move out //////////////////////////////
-// workaround for uris that don't have good labels in the graph
-function labelFromUri(
-  uri: NamedNode,
-  prefix: string,
-  tailsToLabels: {[key: string]: string},
-  defaultLabel: string
-) {
-  let label = defaultLabel === undefined ? uri.value : defaultLabel;
-  Object.entries(tailsToLabels).forEach(([tail, useLabel]) => {
-    if (uri.equals(namedNode(prefix + tail))) {
-      label = useLabel as string;
-    }
-  });
-  return label;
-}
 function asString(x: Literal | undefined): string {
   if (x && x.value) {
     return x.value;
   }
   return "(unknown)";
 }
-
-function graphLiteral(
-  store: N3Store,
-  subj: NamedNode,
-  pred: string,
-  notFoundResult?: string
-): Literal {
-  const keep: Array<Literal> = [];
-  store.forEach(
-    q => {
-      if (!Util.isLiteral(q.object)) {
-        throw new Error("non literal found");
-      }
-      let seen = false;
-      for (let other of keep) {
-        if (other.equals(q.object)) {
-          seen = true;
-        }
-      }
-      if (!seen) {
-        keep.push(q.object as Literal);
-      }
-    },
-    subj,
-    namedNode(pred),
-    null,
-    null
-  );
-  if (keep.length == 0) {
-    return literal(notFoundResult || "(missing)");
-  }
-  if (keep.length == 1) {
-    return keep[0];
-  }
-  console.log(`${subj.value} ${pred} had ${keep.length} objects:`, keep);
-  return keep[0];
-}
-
-function graphUriValue(
-  store: N3Store,
-  subj: NamedNode,
-  pred: string
-): NamedNode | undefined {
-  const keep: Array<NamedNode> = [];
-  store.forEach(
-    q => {
-      if (!Util.isNamedNode(q.object)) {
-        throw new Error("non uri found");
-      }
-      keep.push(q.object as NamedNode);
-    },
-    subj,
-    namedNode(pred),
-    null,
-    null
-  );
-  if (keep.length == 0) {
-    return undefined;
-  }
-  if (keep.length == 1) {
-    return keep[0];
-  }
-  throw new Error("found multiple matches for pred");
-}
-//////////////////////////////////////////////////////////////////////////////////
 
 @customElement("wifi-display")
 class WifiDisplay extends LitElement {
