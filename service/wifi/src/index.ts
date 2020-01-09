@@ -6,7 +6,7 @@ import { LitElement, property, html, customElement } from "lit-element";
 
 import { Literal, N3Store } from "n3";
 import { NamedNode, DataFactory } from "n3";
-const { namedNode } = DataFactory;
+const { namedNode, literal } = DataFactory;
 
 import { VersionedGraph } from "streamed-graph";
 import { style } from "./style";
@@ -184,7 +184,13 @@ class WifiDisplay extends LitElement {
       bytesPerSecDisplay: bytesPerSec + " B/s",
     };
 
-    const wifiBand = graphUriValue(store, devUri, room + "wifiBand");
+    let wifiBand;
+    try {
+      wifiBand = graphUriValue(store, devUri, room + "wifiBand");
+    } catch (e) {
+      wifiBand = namedNode("multi"); // some have 5G and 2G?
+    }
+    
     const connectedToAp = graphUriValue(store, devUri, room + "connectedToAp");
     if (!this.showGroups || connectedToAp) {
       const key = this.showGroups

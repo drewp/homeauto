@@ -6,6 +6,12 @@ import replace from "@rollup/plugin-replace";
 
 const workaround_jsonld_module_system_picker = "process = {version: '1.0.0'}";
 const workaround_some_browser_detector = "global = window";
+const workaround_jsonld_expand_issue = {
+  namedExports: {
+    jsonld: ["expand"], // fixes "expand is not exported by node_modules/jsonld/lib/index.js"
+    '../../../streamed-graph/node_modules/jsonld/lib/index': ['expand'],
+  }
+};
 
 // This makes <dom-module> element totally unavailable. I only meant to prune one of the
 // two, but of course why is streamed-graph's node_modules/**/dom-module.js file getting 
@@ -32,11 +38,7 @@ export default {
       browser: true,
     }),
     typescript(),
-    commonjs({
-      namedExports: {
-        jsonld: ["expand"], // fixes "expand is not exported by node_modules/jsonld/lib/index.js"
-      },
-    }),
+    commonjs(workaround_jsonld_expand_issue),
     replace({ ...replacements, delimiters: ["", ""] }),
   ],
 };
