@@ -1,0 +1,59 @@
+# jump IO0 to GND on the board for programming
+
+esphome:
+  name: garage_hall_cam
+  platform: ESP32
+  board: nodemcu-32s
+  build_path: build
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: ''
+  use_address: 10.2.0.21
+     
+#mqtt:
+#  broker: '10.2.0.1'
+#  port: 1883
+#  username: ''
+#  password: ''
+  
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+
+api:
+  port: 6053
+  password: 'MyPassword'
+  
+esp32_camera:
+  external_clock:
+    pin: GPIO0
+    frequency: 20MHz
+  i2c_pins:
+    sda: GPIO26
+    scl: GPIO27
+  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
+  vsync_pin: GPIO25
+  href_pin: GPIO23
+  pixel_clock_pin: GPIO22
+  power_down_pin: GPIO32
+
+  name: camera
+  # setting to 5 causes 'Setup Failed: ERROR'
+  max_framerate: 1 fps
+  # https://github.com/raphaelbs/esp32-cam-ai-thinker#capabilities says camera
+  # is likely ov2640 with these native resolutions:
+  # uxga=1600x1200 svga=800x600 cif=400x296
+  # My camera has 'Setup Failed: ERROR' if this is not 640x480. Not sure why.
+  resolution: 640x480
+  
+  # 10 to 63. default=10. higher is
+  # worse. https://github.com/esphome/esphome/blob/6682c43dfaeb1c006943ae546145e5f22262cadb/esphome/components/esp32_camera/__init__.py#L84
+  # sets the lower limit to 10, but
+  # https://github.com/raphaelbs/esp32-cam-ai-thinker/blob/master/components/ov2640/sensors/ov2640.c#L345
+  # suggests that it might be 0 (for an ov2640, anyway).
+  jpeg_quality: 20
+  
