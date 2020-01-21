@@ -1,0 +1,99 @@
+esphome:
+  name: theater_blaster
+  platform: esp32
+  board: lolin32
+  build_path: build
+
+# MAC: 3c:71:bf:ab:6e:94
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: 10.2.0.38
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  on_message:
+    - topic: theater_blaster/ir_out
+      payload: "volume_up"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4BB6
+            command: 0x40BF
+            repeat:
+              times: 3
+    - topic: theater_blaster/ir_out
+      payload: "volume_down"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4BB6
+            command: 0xC03F
+            repeat:
+              times: 3
+    - topic: theater_blaster/ir_out
+      payload: "input_bd"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4B36
+            command: 0x31CE
+    - topic: theater_blaster/ir_out
+      payload: "input_cbl"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4BB6
+            command: 0x708F
+    - topic: theater_blaster/ir_out
+      payload: "input_game"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4BB6
+            command: 0xB04F
+    - topic: theater_blaster/ir_out
+      payload: "input_pc"
+      then:
+        - remote_transmitter.transmit_nec:
+            address: 0x4BB6
+            command: 0x39C6
+            
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+
+
+remote_receiver:
+  -  id: ir_in
+     pin:
+       number: GPIO27
+       mode: INPUT
+       inverted: True
+     dump: nec
+  -  id: rf_in
+     pin: GPIO13
+     dump: all
+     # Settings to optimize recognition of RF devices
+     tolerance: 50%
+     filter: 250us
+     idle: 4ms
+     buffer_size: 2kb
+   
+remote_transmitter:
+  id: ir_out
+  pin: GPIO14
+  carrier_duty_percent: 50%
+
+  
+#13 rf recv
+#12 rf send
+#https://www.passion-radio.com/img/cms/wifi-kit-32-pinout.png
+
+  
+#on_...:
+#  - remote_transmitter.transmit_nec:
+#      address: 0x1234
+#      command: 0x78AB
+      
