@@ -1,0 +1,7 @@
+#RPi.GPIO==0.6.5
+#git+git://github.com/adafruit/Adafruit_Nokia_LCD
+#http://abyz.me.uk/rpi/pigpio/pigpio.zip
+#rpi_ws281x==3.1.0
+w1thermsensor
+
+standardservice==0.6.0
