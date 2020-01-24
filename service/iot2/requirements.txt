@@ -5,3 +5,5 @@
 w1thermsensor
 
 standardservice==0.6.0
+pycapnp==0.6.4
+
