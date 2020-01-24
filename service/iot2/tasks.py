@@ -26,16 +26,16 @@ def py_install(ctx):
 
 @task(pre=[py_install])
 def py_deps(ctx):
-    pip_install_ever_ran = SOME_PY_DEP.exists()
-    pip_install_last_ran = Path(f'{PY_SITE_PACKAGES}/wheel').stat().st_mtime
+    pip_installed = Path(f'{PY_SITE_PACKAGES}/.pip_last_install')
     requirements = Path('requirements.txt').stat().st_mtime
-    if pip_install_ever_ran and pip_install_last_ran > requirements:
+    if pip_installed.exists() and pip_installed.stat().st_mtime > requirements:
         return
     ctx.run(f'{PY_ENV}/bin/pip install '
             #f'--quiet '
             f'--index-url https://projects.bigasterisk.com/ '
             f'--extra-index-url https://pypi.org/simple '
             f'-r requirements.txt')
+    ctx.run(f'touch {str(pip_installed)}')
 
 @task(pre=[nim_install])
 def nim_deps(ctx):
@@ -84,9 +84,10 @@ def install_nim_capnp(ctx):
 
 @task
 def messages_build_nim(ctx):
+    Path('build/nim_capn').mkdir(exist_ok=True)
     ctx.run(f'capnp compile '
             f'-o ./build/capnp.nim/capnp/capnpc '
-            f'messages.capnp > build/messages.nim')
+            f'messages.capnp > build/nim_capn/messages.nim')
 
 if 0:
     # maybe esp32 should be done as extra c files in an esphome build,
