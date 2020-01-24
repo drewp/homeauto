@@ -1,5 +1,6 @@
 from invoke import task
 from pathlib import Path
+import os
 
 PY_ENV = f'build/py'
 NIM_ENV = f'build/nim'
@@ -76,23 +77,6 @@ def local_run(ctx):
     ctx.run(f'build/iot2_linux_x86')
 
 @task
-def nim_build_esp32(ctx):
-    ctx.run(f'{NIM_BIN}/nim compile '
-            f'--cpu:arm '
-            f'--os:standalone '
-            #f'--deadCodeElim:on '
-            # --gc:refc|v2|markAndSweep|boehm|go|none|regions
-            f'--gc:stack '
-            f'--compileOnly:on '
-            f'--noMain '
-            f'--nimcache:build/nimcache '
-            f'--embedsrc:on '
-            f'--verbosity:3 '
-            #f'-d:release '
-            f'iot2_esp32.nim')
-    ctx.run(f'')
-
-@task
 def install_nim_capnp(ctx):
     ctx.run(f'git clone git@github.com:drewp/capnp.nim.git build/capnp.nim')
     ctx.run(f'cd build/capnp.nim; ./build.sh')
@@ -100,7 +84,47 @@ def install_nim_capnp(ctx):
 
 @task
 def messages_build_nim(ctx):
-    ctx.run(f'capnp compile -o ./build/capnp.nim/capnp/capnpc messages.capnp > build/messages.nim')
+    ctx.run(f'capnp compile '
+            f'-o ./build/capnp.nim/capnp/capnpc '
+            f'messages.capnp > build/messages.nim')
+
+if 0:
+    # maybe esp32 should be done as extra c files in an esphome build,
+    # not ESP-IDF from scratch
+
+    @task
+    def setup_esp_build(ctx):
+        if not Path('build/esp-idf').exists():
+            ctx.run(f'git clone --recursive https://github.com/espressif/esp-idf build/esp-idf')
+        if not Path('build/esp/').exists():
+            ctx.run(f'cd build/esp-idf; IDF_TOOLS_PATH=../esp ./install.sh')
+
+    esp_env = {'IDF_TOOLS_PATH': '../build/esp',
+                                      'PATH': os.environ['PATH'] + ':' + str(Path('build/esp/tools/xtensa-esp32-elf/esp-2019r2-8.2.0/xtensa-esp32-elf/bin/').absolute())}
+    esp_port = '/dev/ttyUSB0'
+
+    @task(pre=[setup_esp_build])
+    def nim_build_esp32(ctx):
+        ctx.run(f'{NIM_BIN}/nim compile '
+                f'esp32_main/iot2_esp32.nim')
+        ctx.run(f'cd esp32_main; '
+                f'. ../build/esp-idf/export.sh; '
+                f'idf.py build', env=esp_env)
+
+    @task(pre=[nim_build_esp32])
+    def esp32_flash(ctx):
+        ctx.run(f'cd esp32_main; '
+                f'. ../build/esp-idf/export.sh; '
+                f'idf.py -p {esp_port} flash', env=esp_env)
+
+    @task(pre=[nim_build_esp32])
+    def esp32_monitor(ctx):
+        ctx.run(f'cd esp32_main; '
+                f'. ../build/esp-idf/export.sh; '
+                f'idf.py -p {esp_port} monitor', env=esp_env)
+
+
+
 
 
 # pack this into docker for pushing to Pi
