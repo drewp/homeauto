@@ -44,7 +44,9 @@ def nim_deps(ctx):
     if all(Path(f'~/.nimble/pkgs/{pkg[1]}').expanduser().exists() for pkg in pkgs):
         return
     plain_names = ' '.join(p[0] for p in pkgs)
-    ctx.run(f'{NIM_BIN}/nimble install -y {plain_names}', pty=True)
+    print('todo: on initial install, this may need to be run a few times')
+    ctx.run(f'{NIM_BIN}/nimble install -y {plain_names}',
+            pty=True, env={'PATH': f'/usr/bin:{NIM_BIN}'})
     ctx.run(f'ln -s ~/.nimble/bin/capnpc ~/.nimble/bin/capnpc-nim')
 
 
