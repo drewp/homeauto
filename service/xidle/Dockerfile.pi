@@ -3,13 +3,12 @@ FROM bang6:5000/base_pi
 RUN apt-get install --yes libxss-dev
 
 COPY requirements.txt ./
-RUN pip install -r requirements.txt
-
-ADD https://projects.bigasterisk.com/rdfdb/more.tgz ./
-RUN tar xvzf more.tgz
+RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements.txt
+# not sure why this doesn't work from inside requirements.txt
+RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 
 COPY *.py ./
 
 EXPOSE 9107
 
-CMD [ "python", "./xidle.py" ]
+CMD [ "python3", "./xidle.py" ]
