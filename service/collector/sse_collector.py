@@ -423,17 +423,22 @@ class State(cyclone.web.RequestHandler):
         except Exception:
             import traceback; traceback.print_exc()
             raise
-              
+
+class GraphList(cyclone.web.RequestHandler):
+    def get(self) -> None:
+        self.write(json.dumps(config['streams']))
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: sse_collector.py [options]
 
     -v   Verbose
+    -i  Info level only
     """)
-    
-    if arg['-v']:
+
+    if arg['-v'] or arg['-i']:
         enableTwistedLog()
-        log.setLevel(logging.DEBUG)
+        log.setLevel(logging.DEBUG if arg['-v'] else logging.INFO)
         defer.setDebugging(True)
 
 
@@ -448,7 +453,8 @@ if __name__ == '__main__':
                     "path": "static", "default_filename": "index.html"}),
                 (r'/static/(.*)',cyclone.web.StaticFileHandler, {"path": "static"}),
                 (r'/state', State),
-                (r'/graph/(.*)', PatchSink),
+                (r'/graph/', GraphList),
+                (r'/graph/(.+)', PatchSink),
                 (r'/stats/(.*)', StatsHandler, {'serverName': 'collector'}),
             ],
             graphClients=graphClients),
