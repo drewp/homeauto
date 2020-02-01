@@ -7,14 +7,14 @@ This is like light9/bin/collector.
 import json
 
 from docopt import docopt
-from rdflib import Namespace, URIRef, Literal, Graph
-from rdflib.parser import StringInputSource
+from rdflib import Namespace, Literal
 from twisted.internet import reactor
 import cyclone.web
 
 from mqtt_client import MqttClient
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from standardservice.logsetup import log, verboseLogging
+import rdf_over_http
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
@@ -29,30 +29,17 @@ devs = {
     },
 }
 
-def rdfGraphBody(body, headers):
-    g = Graph()
-    g.parse(StringInputSource(body), format='nt')
-    return g
 
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
-        arg = self.request.arguments
-        if arg.get('s') and arg.get('p'):
-            subj = URIRef(arg['s'][-1])
-            pred = URIRef(arg['p'][-1])
-            turtleLiteral = self.request.body
-            try:
-                obj = Literal(float(turtleLiteral))
-            except ValueError:
-                obj = Literal(turtleLiteral)
-            stmt = (subj, pred, obj)
-        else:
-            g = rdfGraphBody(self.request.body, self.request.headers)
-            assert len(g) == 1, len(g)
-            stmt = g.triples((None, None, None)).next()
-        self._onStatement(stmt)
-            
+        for stmt in rdf_over_http.rdfStatementsFromRequest(
+                self.request.arguments,
+                self.request.body,
+                self.request.headers):
+            self._onStatement(stmt)
+
     def _onStatement(self, stmt):
+        log.info(f'incoming statement: {stmt}')
         ignored = True
         for dev, attrs in devs.items():
             if stmt[0:2] == (dev, ROOM['brightness']):
@@ -100,5 +87,5 @@ if __name__ == '__main__':
     for dev, attrs in devs.items():
         masterGraph.patchObject(attrs['ctx'],
                                 dev, ROOM['brightness'], Literal(0.0))
-    
+
     reactor.run()
