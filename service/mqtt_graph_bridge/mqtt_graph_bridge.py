@@ -27,6 +27,11 @@ devs = {
         'root': 'h801_counter',
         'ctx': ROOM['kitchenH801']
     },
+    ROOM['livingLampShelf']: {
+        'root': 'sonoff_0/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_0'],
+        'values': 'binary',
+    },
 }
 
 
@@ -42,25 +47,62 @@ class OutputPage(cyclone.web.RequestHandler):
         log.info(f'incoming statement: {stmt}')
         ignored = True
         for dev, attrs in devs.items():
+            if stmt[0] == ROOM['frontWindow']:
+                ignored = ignored and self._publishFrontScreenText(stmt)
+
             if stmt[0:2] == (dev, ROOM['brightness']):
-                for chan, scale in [('w1', 1),
-                                    ('r', 1),
-                                    ('g', .8),
-                                    ('b', .8)]:
-                    out = stmt[2].toPython() * scale
-                    topic = f"{attrs['root']}/light/kit_{chan}/command"
-                    self.settings.mqtt.publish(
-                        topic.encode('ascii'),
-                        json.dumps({
-                            'state': 'ON',
-                            'brightness': int(out * 255)}).encode('ascii'))
-                self.settings.masterGraph.patchObject(
-                    attrs['ctx'],
-                    stmt[0], stmt[1], stmt[2])
+                log.info(f'brightness request: {stmt}')
+                brightness = stmt[2].toPython()
+
+                if attrs.get('values', '') == 'binary':
+                    self._publishOnOff(attrs, brightness)
+                else:
+                    self._publishRgbw(attrs, brightness)
+                    # try to stop saving this; let the device be the master usually
+                    self.settings.masterGraph.patchObject(
+                        attrs['ctx'],
+                        stmt[0], stmt[1], stmt[2])
                 ignored = False
         if ignored:
             log.warn("ignoring %s", stmt)
-            
+
+    def _publishOnOff(self, attrs, brightness):
+        msg = 'OFF'
+        if brightness > 0:
+            msg = 'ON'
+        self._publish(topic=attrs['root'], message=msg)
+
+    def _publishRgbw(self, attrs, brightness):
+        for chan, scale in [('w1', 1),
+                            ('r', 1),
+                            ('g', .8),
+                            ('b', .8)]:
+            self._publish(
+                topic=f"{attrs['root']}/light/kit_{chan}/command",
+                messageJson={
+                    'state': 'ON',
+                    'brightness': int(brightness * 255)
+                })
+
+    def _publishFrontScreenText(self, stmt):
+        ignored = True
+        for line in ['line1', 'line2', 'line3', 'line4']:
+            if stmt[1] == ROOM[line]:
+                ignored = False
+                self.settings.mqtt.publish(
+                    b'frontwindow/%s' % line.encode('ascii'),
+                    stmt[2].toPython())
+        return ignored
+
+    def _publish(self, topic: str, messageJson: object=None,
+                 message: str=None):
+        if messageJson is not None:
+            message = json.dumps(messageJson)
+        self.settings.mqtt.publish(
+            topic.encode('ascii'),
+            message.encode('ascii'))
+
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: mqtt_graph_bridge.py [options]
