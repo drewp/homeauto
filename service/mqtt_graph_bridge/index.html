@@ -1,10 +1,35 @@
 <!doctype html>
 <html>
   <head>
-    <title></title>
-    <meta charset="utf-8" />
+    <title>mqtt_graph_bridge</title>
+    <meta charset="utf-8">
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="/lib/require/require-2.3.3.js"></script>
+    <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="stylesheet" href="/rdf/browse/style.css">
+
   </head>
-  <body>
+  <body class="rdfBrowsePage">
     mqtt_graph_bridge
+
+
+    <p>Send demo statements to bridge:</p>
+    <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="0.0">Send (:kitchenLight :brightness 0.0)</button></div>
+    <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="1.0">Send (:kitchenLight :brightness 1.0)</button></div>
+    <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="0.0">Send (:livingLampShelf :brightness 0.0)</button></div>
+    <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="1.0">Send (:livingLampShelf :brightness 1.0)</button></div>
+
+    <script>
+     Array.from(document.querySelectorAll("button")).forEach((el) => {
+       el.addEventListener("click", (ev) => {
+         fetch(el.dataset.post, {
+           method: "PUT",
+           body: el.dataset.body
+         });
+       });
+     });
+    </script>
+
   </body>
 </html>
