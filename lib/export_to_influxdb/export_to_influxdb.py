@@ -28,7 +28,7 @@ class RetentionPolicies(object):
         return name
 
 class InfluxExporter(object):
-    def __init__(self, configGraph, influxHost='bang6'):
+    def __init__(self, configGraph, influxHost='bang5'):
         self.graph = configGraph
         self.influx = InfluxDBClient(influxHost, 9060, 'root', 'root', 'main')
         self.retentionPolicies = RetentionPolicies(self.influx)
