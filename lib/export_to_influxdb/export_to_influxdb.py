@@ -9,7 +9,7 @@ ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 stats = scales.collection(
     '/export_to_influxdb',
-    scales.RecentFpsStat('exportToInflux'),
+    scales.PmfStat('exportToInflux'),
 )
 
 
