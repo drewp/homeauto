@@ -2,9 +2,16 @@ import time, logging, math, os, sys, socket
 from influxdb import InfluxDBClient
 from rdflib import Namespace
 from twisted.internet import task
+from greplin import scales
 
 log = logging.getLogger()
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
+
+stats = scales.collection(
+    '/export_to_influxdb',
+    scales.RecentFpsStat('exportToInflux'),
+)
+
 
 class RetentionPolicies(object):
     def __init__(self, influx):
@@ -71,6 +78,7 @@ class InfluxExporter(object):
 
         task.LoopingCall(send).start(period_secs, now=False)
 
+    @stats.exportToInflux.time()
     def exportToInflux(self, currentStatements):
         """
         looks for
