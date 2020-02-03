@@ -2,7 +2,7 @@ from setuptools import setup
  
 setup(
     name='patchablegraph',
-    version='0.7.0',
+    version='0.8.0',
     packages=['patchablegraph'],
     package_dir={'patchablegraph': ''},
     install_requires=[
@@ -14,7 +14,7 @@ setup(
         'cycloneerr',
         'twisted_sse >= 0.3.0',
     ],
-    url='https://projects.bigasterisk.com/patchablegraph/patchablegraph-0.7.0.tar.gz',
+    url='https://projects.bigasterisk.com/patchablegraph/patchablegraph-0.8.0.tar.gz',
     author='Drew Perttula',
     author_email='drewp@bigasterisk.com',
 )
