@@ -47,9 +47,9 @@ def writeGraphResponse(req, graph, acceptHeader):
         if acceptHeader.startswith('text/html'):
             # browser; should arrange to pick live view
             req.set_header('Content-type', 'text/plain')
-            lines = graph.serialize(format='nquads')
+            lines = graph.serialize(None, format='nquads').splitlines()
             lines.sort()
-            req.write(''.join(lines))
+            req.write(b'\n'.join(lines))
             return
 
         req.set_header('Content-type', 'application/x-trig')
