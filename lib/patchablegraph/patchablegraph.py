@@ -71,7 +71,7 @@ def jsonFromPatch(p):
     }})
 patchAsJson = jsonFromPatch # deprecated name
 
-    
+
 def patchFromJson(j):
     body = json.loads(j)['patch']
     a = ConjunctiveGraph()
@@ -128,7 +128,7 @@ class PatchableGraph(GraphEditApi):
         self._observers.append(onPatch)
         self._currentObservers = len(self._observers)
         self._observersAdded += 1
-        
+
     def removeObserver(self, onPatch):
         try:
             self._observers.remove(onPatch)
@@ -138,7 +138,7 @@ class PatchableGraph(GraphEditApi):
 
     def setToGraph(self, newGraph):
         self.patch(Patch.fromDiff(self._graph, newGraph))
-        
+
     _sendSimpleGraph = scales.PmfStat('serve/simpleGraph')
     _sendFullGraph = scales.PmfStat('serve/events/sendFull')
     _sendPatch = scales.PmfStat('serve/events/sendPatch')
@@ -146,7 +146,7 @@ class PatchableGraph(GraphEditApi):
 class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
     def initialize(self, masterGraph):
         self.masterGraph = masterGraph
-        
+
     def get(self):
         with self.masterGraph._sendSimpleGraph.time():
             writeGraphResponse(self, self.masterGraph,
@@ -156,7 +156,7 @@ class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
 class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
     """
     One session with one client.
-    
+
     returns current graph plus future patches to keep remote version
     in sync with ours.
 
@@ -180,7 +180,6 @@ class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
             # throttle and combine patches here- ideally we could see how
             # long the latency to the client is to make a better rate choice
             self.sendEvent(message=patchJson, event=b'patch')
-               
+
     def unbind(self):
         self.masterGraph.removeObserver(self.onPatch)
-
