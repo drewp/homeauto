@@ -43,6 +43,15 @@ def writeGraphResponse(req, graph, acceptHeader):
         req.set_header('Content-type', 'application/ld+json')
         graph.serialize(req, format='json-ld', indent=2)
     else:
+        print(f'acceptHeader    {acceptHeader}')
+        if acceptHeader.startswith('text/html'):
+            # browser; should arrange to pick live view
+            req.set_header('Content-type', 'text/plain')
+            lines = graph.serialize(format='nquads')
+            lines.sort()
+            req.write(''.join(lines))
+            return
+
         req.set_header('Content-type', 'application/x-trig')
         graph.serialize(req, format='trig')
 
