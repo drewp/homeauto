@@ -100,9 +100,9 @@ class PatchableGraph(GraphEditApi):
         scales.init(self, '/patchableGraph%s' % next(_graphsInProcess))
 
     _serialize = scales.PmfStat('serialize')
-    def serialize(self, to, **kw):
+    def serialize(self, *arg, **kw):
         with self._serialize.time():
-            return self._graph.serialize(to, **kw)
+            return self._graph.serialize(*arg, **kw)
 
     _patch = scales.PmfStat('patch')
     _len = scales.IntStat('statementCount')
