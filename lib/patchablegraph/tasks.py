@@ -20,5 +20,5 @@ def browser_test(ctx):
             f'--net=host '
             f'-v `pwd`:/opt '
             f'bang:5000/patchable_graph_browser_test '
-            f'/bin/bash'  #f'python3 browser_test.py',
+            f'/bin/bash',  #f'python3 browser_test.py',
             pty=True)
