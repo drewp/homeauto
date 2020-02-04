@@ -35,7 +35,16 @@ from rdfdb.rdflibpatch import patchQuads, inGraph
 
 log = logging.getLogger('patchablegraph')
 
-def writeGraphResponse(req, graph, acceptHeader):
+def _writeGraphForBrowser(req, graph):
+    # We think this is a browser, so respond with a live graph view
+    # (todo)
+    req.set_header('Content-type', 'text/plain')
+    lines = graph.serialize(None, format='nquads').splitlines()
+    lines.sort()
+    req.write(b'\n'.join(lines))
+
+
+def _writeGraphResponse(req, graph, acceptHeader: str):
     if acceptHeader == 'application/nquads':
         req.set_header('Content-type', 'application/nquads')
         graph.serialize(req, format='nquads')
@@ -43,15 +52,9 @@ def writeGraphResponse(req, graph, acceptHeader):
         req.set_header('Content-type', 'application/ld+json')
         graph.serialize(req, format='json-ld', indent=2)
     else:
-        print(f'acceptHeader    {acceptHeader}')
         if acceptHeader.startswith('text/html'):
-            # browser; should arrange to pick live view
-            req.set_header('Content-type', 'text/plain')
-            lines = graph.serialize(None, format='nquads').splitlines()
-            lines.sort()
-            req.write(b'\n'.join(lines))
+            _writeGraphForBrowser(req, graph)
             return
-
         req.set_header('Content-type', 'application/x-trig')
         graph.serialize(req, format='trig')
 
@@ -149,8 +152,8 @@ class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
 
     def get(self):
         with self.masterGraph._sendSimpleGraph.time():
-            writeGraphResponse(self, self.masterGraph,
-                               self.request.headers.get('accept'))
+            _writeGraphResponse(self, self.masterGraph,
+                                self.request.headers.get('accept', ''))
 
 
 class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
