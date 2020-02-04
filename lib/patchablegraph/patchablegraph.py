@@ -20,43 +20,20 @@ models
 differences between RDF graphs
 
 """
-import json, logging, itertools
+import json, logging, itertools, html
 
 from greplin import scales
 from rdfdb.grapheditapi import GraphEditApi
 from rdflib import ConjunctiveGraph
+from rdflib.namespace import NamespaceManager
 from rdflib.parser import StringInputSource
 from rdflib_jsonld.serializer import from_rdf
 import cyclone.sse
-
 from cycloneerr import PrettyErrorHandler
 from rdfdb.patch import Patch
 from rdfdb.rdflibpatch import patchQuads, inGraph
 
 log = logging.getLogger('patchablegraph')
-
-def _writeGraphForBrowser(req, graph):
-    # We think this is a browser, so respond with a live graph view
-    # (todo)
-    req.set_header('Content-type', 'text/plain')
-    lines = graph.serialize(None, format='nquads').splitlines()
-    lines.sort()
-    req.write(b'\n'.join(lines))
-
-
-def _writeGraphResponse(req, graph, acceptHeader: str):
-    if acceptHeader == 'application/nquads':
-        req.set_header('Content-type', 'application/nquads')
-        graph.serialize(req, format='nquads')
-    elif acceptHeader == 'application/ld+json':
-        req.set_header('Content-type', 'application/ld+json')
-        graph.serialize(req, format='json-ld', indent=2)
-    else:
-        if acceptHeader.startswith('text/html'):
-            _writeGraphForBrowser(req, graph)
-            return
-        req.set_header('Content-type', 'application/x-trig')
-        graph.serialize(req, format='trig')
 
 # forked from /my/proj/light9/light9/rdfdb/rdflibpatch.py
 def _graphFromQuads2(q):
@@ -146,14 +123,91 @@ class PatchableGraph(GraphEditApi):
     _sendFullGraph = scales.PmfStat('serve/events/sendFull')
     _sendPatch = scales.PmfStat('serve/events/sendPatch')
 
+
 class CycloneGraphHandler(PrettyErrorHandler, cyclone.web.RequestHandler):
-    def initialize(self, masterGraph):
+    def initialize(self, masterGraph: PatchableGraph):
         self.masterGraph = masterGraph
 
     def get(self):
         with self.masterGraph._sendSimpleGraph.time():
-            _writeGraphResponse(self, self.masterGraph,
-                                self.request.headers.get('accept', ''))
+            self._writeGraphResponse()
+
+    def _writeGraphResponse(self):
+        acceptHeader = self.request.headers.get(
+            'Accept',
+            # see https://github.com/fiorix/cyclone/issues/20
+            self.request.headers.get('accept', ''))
+
+        if acceptHeader == 'application/nquads':
+            self.set_header('Content-type', 'application/nquads')
+            self.masterGraph.serialize(self, format='nquads')
+        elif acceptHeader == 'application/ld+json':
+            self.set_header('Content-type', 'application/ld+json')
+            self.masterGraph.serialize(self, format='json-ld', indent=2)
+        else:
+            if acceptHeader.startswith('text/html'):
+                self._writeGraphForBrowser()
+                return
+            self.set_header('Content-type', 'application/x-trig')
+            self.masterGraph.serialize(self, format='trig')
+
+    def _writeGraphForBrowser(self):
+        # We think this is a browser, so respond with a live graph view
+        # (todo)
+        self.set_header('Content-type', 'text/html')
+
+        self.write(b'''
+        <html><body><pre>''')
+
+        ns = NamespaceManager(self.masterGraph._graph)
+        # maybe these could be on the PatchableGraph instance
+        ns.bind('ex', 'http://example.com/')
+        ns.bind('', 'http://projects.bigasterisk.com/room/')
+        ns.bind("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+        ns.bind("xsd", "http://www.w3.org/2001/XMLSchema#")
+
+        for s, p, o, g in sorted(self.masterGraph._graph.quads()):
+            g = g.identifier
+            nquadLine = f'{s.n3(ns)} {p.n3(ns)} {o.n3(ns)} {g.n3(ns)} .\n'
+            self.write(html.escape(nquadLine).encode('utf8'))
+
+        self.write(b'''
+        </pre>
+        <p>
+          <a href="#">[refresh]</a>
+          <label><input type="checkbox"> Auto-refresh</label>
+        </p>
+        <script>
+
+        if (new URL(window.location).searchParams.get('autorefresh') == 'on') {
+          document.querySelector("input").checked = true;
+          setTimeout(() => {
+            requestAnimationFrame(() => {
+              window.location.replace(window.location.href);
+            });
+          }, 2000);
+        }
+
+        document.querySelector("a").addEventListener("click", (ev) => {
+          ev.preventDefault();
+          window.location.replace(window.location.href);
+
+        });
+        document.querySelector("input").addEventListener("change", (ev) => {
+          if (document.querySelector("input").checked) {
+             const u = new URL(window.location);
+             u.searchParams.set('autorefresh', 'on');
+             window.location.replace(u.href);
+          } else {
+             const u = new URL(window.location);
+             u.searchParams.delete('autorefresh');
+             window.location.replace(u.href);
+          }
+        });
+
+        </script>
+        </body></html>
+        ''')
 
 
 class CycloneGraphEventsHandler(cyclone.sse.SSEHandler):
