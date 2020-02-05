@@ -119,11 +119,8 @@ if __name__ == '__main__':
     reactor.listenTCP(port, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
-        (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
-        (r"/graph/events", CycloneGraphEventsHandler,
-         {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
-        ], mqtt=mqtt, masterGraph=masterGraph, debug=arg['-v']), interface='::')
+        ], mqtt=mqtt, debug=arg['-v']), interface='::')
     log.warn('serving on %s', port)
 
     for dev, attrs in devs.items():

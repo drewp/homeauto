@@ -269,8 +269,8 @@ class Application(cyclone.web.Application):
             (r'/(jquery.min.js)', Static),
             (r'/(lastInput|lastOutput)Graph', GraphResource),
 
-            (r"/graph/output", CycloneGraphHandler, {'masterGraph': reasoning.outputGraph}),
-            (r"/graph/output/events", CycloneGraphEventsHandler, {'masterGraph': reasoning.outputGraph}),
+            (r"/graph/reasoning", CycloneGraphHandler, {'masterGraph': reasoning.outputGraph}),
+            (r"/graph/reasoning/events", CycloneGraphEventsHandler, {'masterGraph': reasoning.outputGraph}),
 
             (r'/ntGraphs', NtGraphs),
             (r'/rules', Rules),

@@ -74,10 +74,10 @@ def main():
                 (r"/()",
                  cyclone.web.StaticFileHandler,
                  {"path": ".", "default_filename": "index.html"}),
-                (r'/graph',
+                (r'/graph/environment',
                  CycloneGraphHandler, {'masterGraph': masterGraph}),
-                (r'/graph/events',
-                 CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+                (r'/graph/environment/events',
+                 CycloneGraphEventsHandlerWithCors, {'masterGraph': masterGraph}),
                 (r'/doc', Doc), # to be shared
                 (r'/stats/(.*)', StatsHandler, {'serverName': 'environment'}),
             ]

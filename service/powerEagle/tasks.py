@@ -19,7 +19,7 @@ def shell(ctx):
 
 @task(pre=[build_image])
 def local_run(ctx):
-    ctx.run(f'docker run --rm -it -p {PORT}:{PORT} --net=host {TAG} python3 reader.py -v', pty=True)
+    ctx.run(f'docker run --rm -it -p {PORT}:{PORT} -v /etc/resolv.conf:/etc/resolv.conf --net=host {TAG} python3 reader.py -v', pty=True)
 
 @task(pre=[push_image])
 def redeploy(ctx):

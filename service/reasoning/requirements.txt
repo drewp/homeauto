@@ -13,7 +13,7 @@ git+http://github.com/drewp/FuXi.git@003fb48984e9813808a23ba152798c125718f0e7#eg
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 
 cycloneerr
-export_to_influxdb==0.1.0
-patchablegraph==0.6.0
-rdfdb==0.8.0
-standardservice==0.5.0
+export_to_influxdb==0.4.0
+patchablegraph==0.6.0  # pinned for py2
+rdfdb==0.8.0 # pinned for py2
+standardservice==0.6.0

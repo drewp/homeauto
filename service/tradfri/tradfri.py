@@ -180,8 +180,8 @@ def main():
             "path": "/opt/static", "default_filename": "index.html"}),
         (r'/static/(.*)', cyclone.web.StaticFileHandler, {"path": "/opt/static"}),
         (r'/boards', Boards),
-        (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
-        (r"/graph/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+        (r"/graph/tradfri", CycloneGraphHandler, {'masterGraph': masterGraph}),
+        (r"/graph/tradfri/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
         ], hub=hub, debug=arg['-v']), interface='::')
     log.warn('serving on 10009')

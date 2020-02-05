@@ -40,4 +40,4 @@ def redeploy(ctx):
 
 @task
 def push_config(ctx):
-    ctx.run(f'docker run --rm --net=host -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py pi/')
+    ctx.run(f'docker run --name={JOB}_config --rm --net=host --dns 10.2.0.1 --dns-search bigasterisk.com -v `pwd`/config:/opt/config bang6:5000/arduino_node python pushConfig.py pi/')
