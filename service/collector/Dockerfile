@@ -10,8 +10,7 @@ RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url
 RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -U 'https://github.com/drewp/cyclone/archive/python3.zip'
 
 COPY stubs ./stubs
-COPY *.py req* *.ini ./
-COPY static ./static
+COPY *.py *.html req* *.ini ./
 
 EXPOSE 9072
 
