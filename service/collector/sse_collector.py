@@ -31,7 +31,7 @@ from rdfdb.patch import Patch
 
 from patchablegraph.patchsource import ReconnectingPatchSource
 
-from sse_collector_config import config
+from collector_config import config
 
 #SourceUri = NewType('SourceUri', URIRef) # doesn't work
 class SourceUri(URIRef): pass
@@ -450,8 +450,7 @@ if __name__ == '__main__':
         cyclone.web.Application(
             handlers=[
                 (r"/()", cyclone.web.StaticFileHandler, {
-                    "path": "static", "default_filename": "index.html"}),
-                (r'/static/(.*)',cyclone.web.StaticFileHandler, {"path": "static"}),
+                    "path": ".", "default_filename": "index.html"}),
                 (r'/state', State),
                 (r'/graph/', GraphList),
                 (r'/graph/(.+)', PatchSink),
