@@ -1,0 +1,27 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:buttonMap a :ValueMap;
+    :map [:from "OFF"; :to :notPressed], [:from "ON"; :to :pressed]
+  .
+
+:bedBarAsherButton1 a :MqttStatementSource;
+  :mqttTopic ("bed_bar_asher" "binary_sensor" "button_1" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
+  
+:bedBarAsherButton2 a :MqttStatementSource;
+  :mqttTopic ("bed_bar_asher" "binary_sensor" "button_2" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
+  
+:bedBarAsherButton3 a :MqttStatementSource;
+  :mqttTopic ("bed_bar_asher" "binary_sensor" "button_3" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
+  
+:bedBarAsherButton4 a :MqttStatementSource;
+  :mqttTopic ("bed_bar_asher" "binary_sensor" "button_4" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
