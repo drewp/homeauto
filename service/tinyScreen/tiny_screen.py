@@ -23,7 +23,7 @@ class Screen(object):
 
     def _stateImage(self, state):
         return Image.open('anim/%s.png' % state.rsplit('/')[-1])
-        
+
     def _initOutput(self, spiDevice, rotation):
         # CS on pin 26 (GPIO7; spi0 ce1), DC on pin 18 (GPIO24), RST held at VCC.
         self._dev = ssd1331(spi(device=spiDevice, port=0,
@@ -34,7 +34,7 @@ class Screen(object):
                                 gpio_DC=24,
                             ),
                             rotation=rotation)
-        
+
     def setContrast(self, contrast):
         """0..255"""
         self._dev.contrast(contrast)
@@ -71,7 +71,7 @@ class Screen(object):
         if self.goalState == ROOM['unlockNews']:
             # wrong during animation
             self.renderNews()
-        
+
     def renderNews(self):
         bg = self._stateImage(ROOM['unlockNews'])
         draw = ImageDraw.Draw(bg)
@@ -82,7 +82,7 @@ class Screen(object):
                 textwrap.fill(self.news, width=12).splitlines()):
             draw.text((24, 0 + 10 * i), line, font=font)
         self.display(bg)
-        
+
 class ScreenSim(Screen):
     def _initOutput(self):
         self.windowScale = 2
@@ -92,7 +92,7 @@ class ScreenSim(Screen):
         self.surf = pygame.display.set_mode(
             (96 * self.windowScale, 64 * self.windowScale))
         time.sleep(.05) # something was causing the 1st update not to show
-        
+
     def display(self, img):
         pgi = self.pygame.image.fromstring(
             img.tobytes(), img.size, img.mode)
@@ -122,7 +122,7 @@ class OutputPage(cyclone.web.RequestHandler):
             assert len(g)
             stmts = list(g.triples((None, None, None)))
         self._onStatement(stmts)
-            
+
     def _onStatement(self, stmts):
         """
         (disp :brightness 1.0 . )
@@ -138,7 +138,7 @@ class OutputPage(cyclone.web.RequestHandler):
                 self.settings.screen.animateTo(stmt[2])
             else:
                 log.warn("ignoring %s", stmt)
-    
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: tiny_screen.py [options]
@@ -170,5 +170,5 @@ if __name__ == '__main__':
         ], screen=screen, masterGraph=masterGraph, debug=arg['-v']),
                       interface='::')
     log.warn('serving on %s', port)
-    
+
     reactor.run()

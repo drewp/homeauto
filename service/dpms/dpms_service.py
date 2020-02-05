@@ -59,7 +59,7 @@ class Monitor(cyclone.web.RequestHandler):
     def get(self):
         self.set_header('content-type', 'text/plain')
         self.write(getMonitorState())
-        
+
     def put(self):
         body = self.request.body.strip()
         if body in ['on', 'off']:
@@ -73,7 +73,7 @@ class Poller(object):
         self.lastSent = None
         self.lastSentTime = 0
         task.LoopingCall(self.poll).start(5)
-        
+
     def poll(self):
         now = int(time.time())
         state = getMonitorState()
@@ -84,7 +84,7 @@ class Poller(object):
             URIRef("http://bigasterisk.com/host/%s/monitor" % host),
             ROOM['powerStateMeasured'],
             ROOM[getMonitorState()])
-        
+
         if state != self.lastSent or (now > self.lastSentTime + 3600):
             influx.write_points([
                 {'measurement': 'power',
@@ -92,13 +92,13 @@ class Poller(object):
                  'fields': {'value': 1 if state == 'on' else 0},
                  'time': now
                  }], time_precision='s')
-            
+
             self.lastSent = state
             self.lastSentTime = now
 
 masterGraph = PatchableGraph()
 poller = Poller()
-            
+
 reactor.listenTCP(9095, cyclone.web.Application([
     (r'/', Root),
     (r'/monitor', Monitor),
@@ -107,5 +107,3 @@ reactor.listenTCP(9095, cyclone.web.Application([
 ]), interface='::')
 
 reactor.run()
-
-

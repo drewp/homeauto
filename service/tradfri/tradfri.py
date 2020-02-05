@@ -48,7 +48,7 @@ class Hub(object):
         task.LoopingCall(self.updateCur).start(60)
         for dev in self.devices:
             self.startObserve(dev)
-            
+
     def startObserve(self, dev):
         def onUpdate(dev):
             reactor.callFromThread(self.updateCur, dev)
@@ -75,13 +75,13 @@ class Hub(object):
             } for dev in self.devices],
             'graph': 'http://sticker:9059/graph', #todo
         }
-        
+
     def updateCur(self, dev=None):
         cur = [(s,p,o,self.ctx) for s,p,o in
                self.currentStateStatements([dev] if dev else self.devices)]
         self.graph.patch(Patch(addQuads=cur, delQuads=self.curStmts))
         self.curStmts = cur
-                
+
     def deviceStatements(self):
         for dev in self.devices:
             uri = devUri(dev)
@@ -94,7 +94,7 @@ class Hub(object):
                 yield (uri, ROOM['reachable'], ROOM['yes'] if dev.reachable else ROOM['no'])
             yield (uri, RDFS.label, Literal(dev.name))
             # no connection between remotes and lights?
-            
+
     def currentStateStatements(self, devs):
         for dev in self.devices:  # could scan just devs, but the Patch line needs a fix
             uri = devUri(dev)
@@ -115,7 +115,7 @@ class Hub(object):
                 #if light.hex_color:
                 #    yield (lightUri, ROOM['kelvinColor'], Literal(light.kelvin_color))
                 #    yield (lightUri, ROOM['color'], Literal('#%s' % light.hex_color))
-            
+
 
     def outputStatements(self, stmts):
         for stmt in stmts:
@@ -130,7 +130,7 @@ class Hub(object):
                             traceback.print_exc()
                             raise
         self.updateCur()
-      
+
 class OutputPage(cyclone.web.RequestHandler):
     def put(self):
         arg = self.request.arguments
@@ -159,7 +159,7 @@ class Boards(cyclone.web.RequestHandler):
             'host': hostname,
             'boards': [self.settings.hub.description()]
         }, indent=2))
-        
+
 def main():
     arg = docopt("""
     Usage: tradfri.py [options]
@@ -174,7 +174,7 @@ def main():
 
     masterGraph = PatchableGraph()
     hub = Hub(masterGraph, private.hubAddr, key=private.hubKey)
-    
+
     reactor.listenTCP(10009, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler, {
             "path": "/opt/static", "default_filename": "index.html"}),

@@ -28,7 +28,7 @@ STATS = scales.collection('/root',
 @STATS.update.time()
 def update(masterGraph):
     stmt = lambda s, p, o: masterGraph.patchObject(ROOM.environment, s, p, o)
-    
+
     now = datetime.datetime.now(tzlocal())
 
     stmt(DEV.environment, ROOM.localHour, Literal(now.hour))
@@ -53,7 +53,7 @@ def update(masterGraph):
     stmt(DEV.calendar, ROOM.twilight,
          ROOM['withinTwilight'] if isWithinTwilight(now) else ROOM['daytime'])
 
-       
+
 def main():
     arg = docopt("""
     Usage: environment.py [options]
@@ -89,4 +89,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
