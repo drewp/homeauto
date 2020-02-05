@@ -1,0 +1,26 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+
+:nightlightAriTemperature a :MqttStatementSource;
+  :mqttTopic ("nightlight_ari" "sensor" "temperature" "state");
+
+  :parser xsd:double;
+  :conversions (:celsiusToFarenheit
+                [:ignoreValueBelow -999]);
+  :graphStatements [
+    :outputPredicate :temperatureF;  
+    :statementLifetime "150s";
+  # ], [
+  #  :conversions ([:recentLow "30s"]);
+  #  :outputPredicate :recentLowTemperatureF;
+  ];
+  
+  :influxMeasurement [ # replaces this block in piNode configs
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "nightlight_ari"],
+         [:key "location"; :value "ariRoom"]] .
+
