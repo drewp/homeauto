@@ -28,7 +28,7 @@ STATS = scales.collection('/root',
 def timeLiteral(dt):
     return Literal(dt.replace(tzinfo=tzlocal()).isoformat(),
                    datatype=XSD.dateTime)
-    
+
 def macUri(macAddress: str) -> URIRef:
     return URIRef("http://bigasterisk.com/mac/%s" % macAddress.lower())
 
@@ -46,7 +46,7 @@ class Poller:
                 self.fileTimes[f] = mtime
                 ret = True
         return ret
-        
+
     def poll(self):
         if not self.anythingToRead():
             STATS.filesDidntChange += 1
@@ -67,7 +67,7 @@ class Poller:
                     g.add((uri, ROOM['dhcpHostname'], Literal(hostname), ctx))
 
             self.graph.setToGraph(g)
-            
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: store.py [options]

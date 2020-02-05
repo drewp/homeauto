@@ -71,7 +71,7 @@ class Poller(object):
                     tags=dict(house='berkeley'),
                     time=int(startTime),
                 ))
-                   
+
             self.influx.write_points(pts, time_precision='s')
         except Exception as e:
             traceback.print_exc()

@@ -45,7 +45,7 @@ class OutputPage(cyclone.web.RequestHandler):
             stmt = g.triples((None, None, None)).next()
         self._onStatement(user, stmt)
     post = put
-    
+
     def _onStatement(self, user, stmt):
         # write rfid to new key, etc.
         if stmt[1] == ROOM['keyContents']:
@@ -54,13 +54,13 @@ class OutputPage(cyclone.web.RequestHandler):
 
 def uidUri(card_id):
     return URIRef('http://bigasterisk.com/rfidCard/%010x' % card_id)
-        
+
 def uidArray(uri):
     prefix, h = uri.rsplit('/', 1)
     if prefix != 'http://bigasterisk.com/rfidCard':
         raise ValueError(uri)
     return [int(h[i * 2: i * 2 + 2], 16) for i in range(0, len(h), 2)]
-        
+
 class Rewrite(cyclone.web.RequestHandler):
     def post(self):
         agent = URIRef(self.request.headers['x-foaf-agent'])
@@ -72,16 +72,16 @@ class Rewrite(cyclone.web.RequestHandler):
             self.set_status(404, "no card present")
             # maybe retry a few more times since the card might be nearby
             return
-            
+
         text = ''.join(random.choice(string.uppercase) for n in range(32))
-        log.info('%s rewrites %s to %s, to be owned by %s', 
+        log.info('%s rewrites %s to %s, to be owned by %s',
                  agent, uid, text, body['user'])
-        
+
         #reader.KEY = private.rfid_key
         reader.write(uid, text)
         log.info('done with write')
 
-    
+
 sensor = ROOM['frontDoorWindowRfid']
 
 class ReadLoop(object):
@@ -92,7 +92,7 @@ class ReadLoop(object):
 
         self.pollPeriodSecs = .1
         self.expireSecs = 2
-        
+
         task.LoopingCall(self.poll).start(self.pollPeriodSecs)
 
     @STATS.cardReadPoll.time()
@@ -114,7 +114,7 @@ class ReadLoop(object):
         self.log[cardIdUri] = now
         if is_new:
             self.startCardRead(cardIdUri, textLit)
-        
+
     def flushOldReads(self, now):
         for uri in self.log.keys():
             if self.log[uri] < now - self.expireSecs:
@@ -138,9 +138,9 @@ class ReadLoop(object):
         for spo in self.masterGraph._graph.triples(
                 (cardUri, ROOM['cardText'], None)):
             delQuads.append(spo + (ctx,))
-            
+
         self.masterGraph.patch(Patch(addQuads=[], delQuads=delQuads))
-        
+
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
@@ -155,8 +155,8 @@ class ReadLoop(object):
                      url, e.getErrorMessage())
         d.addErrback(err)
 
-                                                              
-        
+
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: rfid.py [options]

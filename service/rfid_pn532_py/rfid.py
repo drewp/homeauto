@@ -43,7 +43,7 @@ class OutputPage(cyclone.web.RequestHandler):
         except ValueError:
             obj = Literal(turtleLiteral)
         self._onStatements([(subj, pred, obj)])
-        
+
     def _onGraphBodyStatements(self, body, headers):
         g = Graph()
         g.parse(StringInputSource(body), format='nt')
@@ -51,7 +51,7 @@ class OutputPage(cyclone.web.RequestHandler):
             raise ValueError("expected graph body")
         self._onStatements(list(g.triples((None, None, None))))
     post = put
-    
+
     def _onStatements(self, stmts):
         # write rfid to new key, etc.
         if len(stmts) > 0 and stmts[0][1] == ROOM['keyContents']:
@@ -67,7 +67,7 @@ def randomBody():
 
 def looksLikeBigasterisk(text):
     return text.startswith(BODY_VERSION + "*")
-    
+
 class Rewrite(cyclone.web.RequestHandler):
     def post(self):
         agent = URIRef(self.request.headers['x-foaf-agent'])
@@ -79,16 +79,16 @@ class Rewrite(cyclone.web.RequestHandler):
             self.set_status(404, "no card present")
             # maybe retry a few more times since the card might be nearby
             return
-            
+
         text = randomBody()
-        log.info('%s rewrites %s to %s, to be owned by %s', 
+        log.info('%s rewrites %s to %s, to be owned by %s',
                  agent, uid, text, body['user'])
-        
+
         #reader.KEY = private.rfid_key
         reader.write(uid, text)
         log.info('done with write')
 
-    
+
 sensor = ROOM['frontDoorWindowRfid']
 
 class ReadLoop(object):
@@ -166,9 +166,9 @@ class ReadLoop(object):
         for spo in self.masterGraph._graph.triples(
                 (cardUri, ROOM['cardText'], None)):
             delQuads.append(spo + (ctx,))
-            
+
         self.masterGraph.patch(Patch(addQuads=[], delQuads=delQuads))
-        
+
     def _sendOneshot(self, oneshot):
         body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
                          for s,p,o in oneshot)).encode('utf8')
@@ -183,8 +183,8 @@ class ReadLoop(object):
                      url, e.getErrorMessage())
         d.addErrback(err)
 
-                                                              
-        
+
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: rfid.py [options]
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         log.setLevel(logging.DEBUG)
         log.info(f'cyclone {cyclone.__version__}')
         defer.setDebugging(True)
-        
+
     masterGraph = PatchableGraph()
     reader = NfcDevice() if not arg['-n'] else FakeNfc()
 

@@ -38,13 +38,3 @@ def monitor_usb(ctx):
 @task
 def tail_mqtt(ctx):
     ctx.run(f'mosquitto_sub -h bang -p 10010 -d -v -t \#')
-
-
-
-
-
-
-
-
-
-    

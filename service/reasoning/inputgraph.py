@@ -12,7 +12,6 @@ from graphop import graphEqual
 from greplin import scales
 
 from patchablegraph.patchsource import ReconnectingPatchSource
-
 from rdfdb.rdflibpatch import patchQuads
 
 log = logging.getLogger('fetch')
