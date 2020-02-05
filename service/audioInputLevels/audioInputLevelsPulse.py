@@ -23,7 +23,7 @@ class PeakMonitor(object):
 
         self.bufs = []
         self.buf_samples = 0
-        
+
         # Wrap callback methods in appropriate ctypefunc instances so
         # that the Pulseaudio C API can call them
         self._context_notify_cb = P.pa_context_notify_cb_t(self.context_notify_cb)
@@ -79,13 +79,13 @@ class PeakMonitor(object):
             # Tell PA to call stream_read_cb with peak samples.
             log.info('setting up peak recording using %s', source_info.name)
             log.info('description: %r', source_info.description)
-            
+
             samplespec = P.pa_sample_spec()
             samplespec.channels = 1
             samplespec.format = P.PA_SAMPLE_S32LE
             samplespec.rate = self.rate
             pa_stream = P.pa_stream_new(context, "audioInputLevels", samplespec, None)
-            
+
             P.pa_stream_set_read_callback(pa_stream,
                                           self._stream_read_cb,
                                           source_info.index)
@@ -128,10 +128,10 @@ class PeakMonitor(object):
             dt = 1
         self.lastRead = now
         return dt
-        
+
     def onChunk(self, arr):
         dt = self.timeSinceLastChunk()
-        
+
         n = 8192
 
         mags, ft = self.fft(arr[:n])
@@ -149,7 +149,7 @@ class PeakMonitor(object):
                  }
         log.debug('%r', bands)
         #import ipdb;ipdb.set_trace()
-        
+
         if log.isEnabledFor(logging.DEBUG):
             self.dumpFreqs(n, dt, ft, scl, arr, freqs, mags)
         self._samples.put(bands)
@@ -163,7 +163,7 @@ class PeakMonitor(object):
         for fr,v in rows[1:8] + rows[8:n//8:30]:
             log.debug('%6.1f %6.3f %s',
                       fr, v / scl, '*' * int(min(80, 80 * int(v) / scl)))
-        
+
 
 def main():
     arg = docopt("""
@@ -178,8 +178,8 @@ def main():
     # todo move this into the PeakMonitor part
     subprocess.check_output(['pactl',
                              'set-source-volume', arg['--source'], '94900'])
-    
-    influx = InfluxDBClient('bang.vpn-home.bigasterisk.com', 9060, 'root', 'root', 'main')
+
+    influx = InfluxDBClient('bang5, 9060, 'root', 'root', 'main')
 
     hostname = socket.gethostname()
     METER_RATE = 8192
@@ -191,6 +191,6 @@ def main():
                               "time": int(time.time())}],
                             tags=dict(location=hostname),
                             time_precision='s')
-        
+
 if __name__ == '__main__':
     main()
