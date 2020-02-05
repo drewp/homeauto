@@ -102,8 +102,8 @@ poller = Poller()
 reactor.listenTCP(9095, cyclone.web.Application([
     (r'/', Root),
     (r'/monitor', Monitor),
-    (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
-    (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+    (r'/graph/dpms', CycloneGraphHandler, {'masterGraph': masterGraph}),
+    (r'/graph/dpms/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
 ]), interface='::')
 
 reactor.run()

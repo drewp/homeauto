@@ -6,6 +6,6 @@ rdflib==4.2.2
 service_identity
 
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
-patchablegraph==0.7.0
-rdfdb==0.9.0
+patchablegraph==0.11.0
+rdfdb==0.21.0
 standardservice==0.6.0

@@ -58,5 +58,4 @@ def isWithinTwilight(t):
     return not (t1 < standardTime.time() < t2)
 
 if __name__ == '__main__':
-    print isWithinTwilight(datetime.now(tzlocal()))
-        
+    print(isWithinTwilight(datetime.now(tzlocal())))

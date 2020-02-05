@@ -7,4 +7,4 @@ pytradfri[async]==6.0.1
 rdflib==4.2.2
 rdflib-jsonld==0.4.0
 
-https://projects.bigasterisk.com/rdfdb/rdfdb-0.3.0.tar.gz
+https://projects.bigasterisk.com/rdfdb/rdfdb-0.21.0.tar.gz

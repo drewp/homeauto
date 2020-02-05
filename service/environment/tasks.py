@@ -1,9 +1,11 @@
 from invoke import task
 
-JOB = 'store'
-PORT = 10015
+JOB='environment'
+PORT=9075
 
-TAG = f'bang6:5000/{JOB}_x86:latest'
+TAG=f'bang6:5000/{JOB}_x86:latest'
+
+
 
 @task
 def build_image(ctx):
@@ -23,4 +25,4 @@ def local_run(ctx):
 
 @task(pre=[push_image])
 def redeploy(ctx):
-    ctx.run(f'supervisorctl -s http://bang:9001/ restart {JOB}_{PORT}')
+    ctx.run(f'supervisorctl -s http://bang:9001/ restart envgraph_{PORT}')

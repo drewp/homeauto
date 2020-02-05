@@ -101,6 +101,8 @@ if __name__ == '__main__':
         cyclone.web.Application(
             [
                 (r'/stats/(.*)', StatsHandler, {'serverName': 'powerEagle'}),
+                (r"/graph/power", CycloneGraphHandler, {'masterGraph': masterGraph}),
+                (r"/graph/power/events", CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
             ],
         ))
     reactor.run()

@@ -177,8 +177,8 @@ if __name__ == '__main__':
     reactor.listenTCP(port, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
-        (r"/graph", CycloneGraphHandler, {'masterGraph': masterGraph}),
-        (r"/graph/events", CycloneGraphEventsHandler,
+        (r"/graph/rfid", CycloneGraphHandler, {'masterGraph': masterGraph}),
+        (r"/graph/rfid/events", CycloneGraphEventsHandler,
          {'masterGraph': masterGraph}),
         (r'/output', OutputPage),
         (r'/rewrite', Rewrite),

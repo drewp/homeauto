@@ -87,8 +87,8 @@ if __name__ == '__main__':
             [
                 (r"/()", cyclone.web.StaticFileHandler,
                  {"path": ".", "default_filename": "index.html"}),
-                (r'/graph', CycloneGraphHandler, {'masterGraph': masterGraph}),
-                (r'/graph/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
+                (r'/graph/dhcpLeases', CycloneGraphHandler, {'masterGraph': masterGraph}),
+                (r'/graph/dhcpLeases/events', CycloneGraphEventsHandler, {'masterGraph': masterGraph}),
                 (r'/stats/(.*)', StatsHandler, {'serverName': 'dhcpleases'}),
             ], masterGraph=masterGraph
         ))

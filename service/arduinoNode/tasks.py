@@ -7,7 +7,7 @@ ANSIBLE_TAG = JOB
 
 @task
 def build_image(ctx):
-    ctx.run(f'docker build -t {TAG} .')
+    ctx.run(f'docker build --network=host -t {TAG} .')
 
 @task(pre=[build_image])
 def push_image(ctx):
