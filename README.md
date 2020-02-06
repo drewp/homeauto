@@ -24,3 +24,9 @@ Services create RDF graphs (legacy) and send MQTT messages (esp32 nodes, and eve
 (`reasoning` does some of its own output actions)
 
 Services (sometimes, the same ones that gathered input) perform home automation outputs.
+
+## Protocols
+
+A SyncedGraph can be updated on a server such that the updates (as Patch objects) are sent as JSON-LD over a long-running SSE connection. There's a Patches-over-websocket connector in the `rdfdb` repo.
+
+MQTT: Matching a lot of what esphome.io has, which maybe is compatible with homeassistant?
