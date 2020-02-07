@@ -1,0 +1,24 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+serv:mqtt_to_rdf a :Service;
+      :path "/mqtt_to_rdf/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 10018;
+      :prodDockerFlags (
+      "-p" "10018:10018"
+      "--net=host");
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+        "-v" "/my/proj/homeauto/lib:/lib_src"
+      );
+      :localRunCmdline (
+      
+      "python3" "mqtt_to_rdf.py" "-v"
+#"--cs" "living"
+);
+      :dockerFile "Dockerfile"
+.
+

@@ -1,0 +1,22 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+
+serv:wifi a :Service;
+      :path "/wifi/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9070;
+      :prodDockerFlags (
+      "-p" "9070:9070"
+      "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "wifi.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.

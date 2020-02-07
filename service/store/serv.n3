@@ -1,0 +1,22 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+serv:store a :Service;
+      :path "/store/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 10015;
+      :prodDockerFlags (
+      "-p" "10015:10015"
+      "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "store.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.
+
