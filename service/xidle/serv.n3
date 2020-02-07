@@ -1,0 +1,23 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+
+serv:xidle a :Service;
+      :path "/xidle/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9107;
+      :prodDockerFlags (
+      "-p" "9107:9107"
+      "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "xidle.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.
+

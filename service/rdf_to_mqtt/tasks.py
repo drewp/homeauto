@@ -1,6 +1,6 @@
 from invoke import task
 
-JOB = 'mqtt_graph_bridge'
+JOB = 'rdf_to_mqtt'
 PORT = 10008
 TAG = f'bang6:5000/{JOB}_x86:latest'
 
@@ -18,7 +18,7 @@ def shell(ctx):
 
 @task(pre=[build_image])
 def local_run(ctx):
-    ctx.run(f'docker run --name={JOB}_local --rm -it --net=host {TAG} python3 mqtt_graph_bridge.py -v', pty=True)
+    ctx.run(f'docker run --name={JOB}_local --rm -it --net=host -v /my/proj/homeauto/lib:/lib_src {TAG} python3 rdf_to_mqtt.py -v', pty=True)
 
 @task(pre=[push_image])
 def redeploy(ctx):

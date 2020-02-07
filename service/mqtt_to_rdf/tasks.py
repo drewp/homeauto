@@ -5,7 +5,7 @@ sys.path.append('/my/proj/release')
 from serv_tasks import serv_tasks
 
 ns = Collection()
-serv_tasks(ns, 'serv.n3', 'rdf_from_mqtt')
+serv_tasks(ns, 'serv.n3', 'mqtt_to_rdf')
 
 @ns.add_task
 @task

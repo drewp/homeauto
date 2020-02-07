@@ -1,0 +1,23 @@
+@prefix : <http://bigasterisk.com/ns/serv#> .
+@prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
+@prefix serv: <http://bigasterisk.com/services/> .
+
+
+serv:powerEagle a :Service;
+      :path "/powerEagle/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 10016;
+      :prodDockerFlags (
+      "-p" "10016:10016"
+      "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "reader.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.
+
