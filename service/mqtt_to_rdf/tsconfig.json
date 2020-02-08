@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+
+    "types": [],
+
+    "module": "ES6",
+    "target": "ES6",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "declaration": true,
+    "experimentalDecorators": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "traceResolution": true,
+    // "allowSyntheticDefaultImports": true,
+    // "rootDir": ".",
+    // "outDir": "./build",
+    "baseUrl": "."
+    // "emitDecoratorMetadata": true,
+    // "lib": [ "es6", "dom" ],
+  },
+  "include": ["src/**/*.ts"]
+  // "exclude": ["src/**/*.test.ts"]
+}

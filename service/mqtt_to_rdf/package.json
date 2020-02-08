@@ -1,0 +1,38 @@
+{
+  "name": "mqtt_to_rdf",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "rollup -c",
+    "build_forever": "rollup -cw",
+    "test": "jest",
+    "test_forever": "jest --watch"
+  },
+  "dependencies": {
+    "@polymer/polymer": "^3.3.1",
+    "@types/jsonld": "^1.5.0",
+    "jsonld": "^2.0.1",
+    "streamed-graph": "file:/my/proj/streamed-graph",
+    "@types/n3": "^1.1.5",
+    "n3": "link:/my/dl/modified/N3.js",
+    "lit-element": "^2.2.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^11.0.1",
+    "@rollup/plugin-node-resolve": "^7.0.0",
+    "@rollup/plugin-replace": "^2.3.0",
+    "@types/jest": "^24.9.0",
+    "@types/rollup-plugin-postcss": "^2.0.0",
+    "add": "^2.0.6",
+    "jest": "^24.9.0",
+    "node-globals": "^0.1.5",
+    "rollup": "^1.29.0",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-postcss": "^2.0.3",
+    "rollup-plugin-terser": "^5.2.0",
+    "rollup-plugin-typescript2": "^0.25.3",
+    "stylus": "^0.54.7",
+    "ts-jest": "^24.3.0",
+    "tslib": "^1.10.0",
+    "typescript": "^3.7.5"
+  }
+}
