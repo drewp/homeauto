@@ -156,7 +156,7 @@ class MqttStatementSource:
 
 if __name__ == '__main__':
     arg = docopt("""
-    Usage: rdf_from_mqtt.py [options]
+    Usage: mqtt_to_rdf.py [options]
 
     -v        Verbose
     --cs=STR  Only process config filenames with this substring
@@ -178,7 +178,7 @@ if __name__ == '__main__':
 
     masterGraph = PatchableGraph()
 
-    mqtt = MqttClient(clientId='rdf_from_mqtt', brokerHost='bang',
+    mqtt = MqttClient(clientId='mqtt_to_rdf', brokerHost='bang',
                       brokerPort=1883)
     influx = InfluxExporter(config)
 
@@ -191,7 +191,9 @@ if __name__ == '__main__':
     reactor.listenTCP(port, cyclone.web.Application([
         (r"/()", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
-        (r'/stats/(.*)', StatsHandler, {'serverName': 'rdf_from_mqtt'}),
+        (r"/build/(bundle.js)",
+         cyclone.web.StaticFileHandler, {"path": "build"}),
+        (r'/stats/(.*)', StatsHandler, {'serverName': 'mqtt_to_rdf'}),
         (r"/graph/mqtt", CycloneGraphHandler, {'masterGraph': masterGraph}),
         (r"/graph/mqtt/events", CycloneGraphEventsHandler,
          {'masterGraph': masterGraph}),

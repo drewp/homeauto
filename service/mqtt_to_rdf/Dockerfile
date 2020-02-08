@@ -7,7 +7,8 @@ RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url
 RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 
 COPY *.py *.html *.css *.js *.n3 ./
+COPY build/bundle.js build/
 
 EXPOSE 10018:10018
 
-CMD [ "python3", "./rdf_from_mqtt.py" ]
+CMD [ "python3", "./mqtt_to_rdf.py" ]
