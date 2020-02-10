@@ -9,10 +9,13 @@ from influxdb import InfluxDBClient
 from twisted.internet import reactor
 from twisted.internet.defer import inlineCallbacks
 import cyclone.web
+from rdflib import Namespace, Literal
 
 from standardservice.logsetup import log, verboseLogging
+from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 
 from private_config import deviceIp, cloudId, installId, macId, periodSec
+ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 STATS = scales.collection('/root',
                           scales.PmfStat('poll'),
@@ -22,8 +25,9 @@ authPlain = cloudId + ':' + installId
 auth = binascii.b2a_base64(authPlain.encode('ascii')).strip(b'=\n')
 
 class Poller(object):
-    def __init__(self, influx):
+    def __init__(self, influx, graph):
         self.influx = influx
+        self.graph = graph
         reactor.callLater(0, self.poll)
 
     @STATS.poll.time()
@@ -73,6 +77,11 @@ class Poller(object):
                 ))
 
             self.influx.write_points(pts, time_precision='s')
+
+            self.graph.patchObject(context=ROOM['powerEagle'],
+                                         subject=ROOM['housePower'],
+                                         predicate=ROOM['instantDemandWatts'],
+                                         newObject=Literal(float(ret['demand']) * 1000))
         except Exception as e:
             traceback.print_exc()
             log.error("failed: %r", e)
@@ -94,7 +103,8 @@ if __name__ == '__main__':
     verboseLogging(arg['-v'])
 
     influx = InfluxDBClient('bang', 9060, 'root', 'root', 'main')
-    p = Poller(influx)
+    masterGraph = PatchableGraph()
+    p = Poller(influx, masterGraph)
 
     reactor.listenTCP(
         int(arg['--port']),
