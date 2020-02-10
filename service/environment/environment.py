@@ -14,7 +14,7 @@ from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
 from twilight import isWithinTwilight
-from logsetup import log, enableTwistedLog
+from standardservice.logsetup import log, verboseLogging
 
 from rdfdoc import Doc
 
@@ -24,6 +24,12 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 STATS = scales.collection('/root',
                           scales.PmfStat('update'),
 )
+
+class CycloneGraphEventsHandlerWithCors(CycloneGraphEventsHandler):
+    def flush(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        return CycloneGraphEventsHandler.flush(self)
+
 
 @STATS.update.time()
 def update(masterGraph):
