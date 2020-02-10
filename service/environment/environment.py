@@ -66,12 +66,8 @@ def main():
 
     -v                    Verbose
     """)
-    log.setLevel(logging.INFO)
-    if arg['-v']:
-        enableTwistedLog()
-        log.setLevel(logging.DEBUG)
-        defer.setDebugging(True)
-        
+    verboseLogging(arg['-v'])
+
     masterGraph = PatchableGraph()
 
     class Application(cyclone.web.Application):
