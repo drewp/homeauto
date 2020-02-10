@@ -14,6 +14,7 @@ serv:powerEagle a :Service;
       );
       :localDockerFlags (
         "-v" "`pwd`:/opt"
+        #"-v" "/etc/resolv.conf:/etc/resolv.conf" # was in there before, but maybe the new dns settings are enough
       );
       :localRunCmdline (
         "python3" "reader.py" "-v"
