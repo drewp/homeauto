@@ -88,10 +88,6 @@ class OutputPage(cyclone.web.RequestHandler):
                     self._publishOnOff(attrs, brightness)
                 else:
                     self._publishRgbw(attrs, brightness)
-                    # try to stop saving this; let the device be the master usually
-                    self.settings.masterGraph.patchObject(
-                        attrs['ctx'],
-                        stmt[0], stmt[1], stmt[2])
                 ignored = False
         if ignored:
             log.warn("ignoring %s", stmt)
@@ -150,9 +146,5 @@ if __name__ == '__main__':
         (r'/output', OutputPage),
         ], mqtt=mqtt, debug=arg['-v']), interface='::')
     log.warn('serving on %s', port)
-
-    for dev, attrs in devs.items():
-        masterGraph.patchObject(attrs['ctx'],
-                                dev, ROOM['brightness'], Literal(0.0))
 
     reactor.run()
