@@ -10,4 +10,4 @@ COPY *.py *.html *.css *.js ./
 
 EXPOSE 10011:10011
 
-CMD [ "python3", "./mqtt_graph_bridge.py" ]
+CMD [ "python3", "./rdf_to_mqtt.py" ]
