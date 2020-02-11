@@ -5,13 +5,12 @@ convert those to outputAttrs (:dev1 :red 255; :green 0; :blue 0) and post them t
 This is like light9/bin/collector.
 """
 import json
-
+from mqtt_client import MqttClient
 from docopt import docopt
 from rdflib import Namespace, Literal
 from twisted.internet import reactor
 import cyclone.web
 
-from mqtt_client import MqttClient
 from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from standardservice.logsetup import log, verboseLogging
 import rdf_over_http
@@ -105,15 +104,13 @@ class OutputPage(cyclone.web.RequestHandler):
 
 if __name__ == '__main__':
     arg = docopt("""
-    Usage: mqtt_graph_bridge.py [options]
+    Usage: rdf_to_mqtt.py [options]
 
     -v   Verbose
     """)
     verboseLogging(arg['-v'])
 
-    masterGraph = PatchableGraph()
-
-    mqtt = MqttClient(clientId='mqtt_graph_bridge', brokerPort=1883)
+    mqtt = MqttClient(clientId='rdf_to_mqtt', brokerPort=1883)
 
     port = 10008
     reactor.listenTCP(port, cyclone.web.Application([
