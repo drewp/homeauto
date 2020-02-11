@@ -31,6 +31,37 @@ devs = {
         'ctx': ROOM['sonoff_0'],
         'values': 'binary',
     },
+    ROOM['livingLamp1']: {
+        'root': 'sonoff_1/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_1'],
+        'values': 'binary',
+    },
+    ROOM['livingLamp2']: {
+        'root': 'sonoff_2/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_2'],
+        'values': 'binary',
+    },
+    ROOM['livingLamp3']: {
+        'root': 'sonoff_3/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_3'],
+        'values': 'binary',
+    },
+    ROOM['livingLamp4']: {
+        'root': 'sonoff_4/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_4'],
+        'values': 'binary',
+    },
+    ROOM['livingLamp5']: {
+        'root': 'sonoff_5/switch/sonoff_basic_relay/command',
+        'ctx': ROOM['sonoff_5'],
+        'values': 'binary',
+    },
+#-t theater_blaster/ir_out -m 'input_game'
+#-t theater_blaster/ir_out -m 'input_bd'
+#-t theater_blaster/ir_out -m 'input_cbl'
+#-t theater_blaster/ir_out -m 'input_pc'
+#-t theater_blaster/ir_out/volume_up -m '{"times":1}'
+#-t theater_blaster/ir_out/volume_down -m '{"times":1}'
 }
 
 
