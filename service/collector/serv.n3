@@ -2,3 +2,22 @@
 @prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
 @prefix serv: <http://bigasterisk.com/services/> .
 
+
+serv:collector a :Service;
+      :path "/collector/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9072;
+      :prodDockerFlags (
+      "-p" "9072:9072"
+      "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "collector.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.
+
