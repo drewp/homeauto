@@ -14,8 +14,8 @@
 
 @prefix sensor: <http://bigasterisk.com/homeauto/sensor/> .
 
-{ ?d :deviceName "drew-phone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
-{ ?d :deviceName "Kelsis-iPhone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+# { ?d :deviceName "drew-phone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
+# { ?d :deviceName "Kelsis-iPhone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 
 { env: :localHour 8 } => { env: :localHour :awakeTime } .
 { env: :localHour 9 } => { env: :localHour :awakeTime } .
@@ -34,44 +34,34 @@
 { env: :localHour 22 } => { env: :localHour :awakeTime } .
 { env: :localHour 23 } => { env: :localHour :awakeTime } .
 
-#{
-#  # this won't update right, currently, since I don't let the exact
-#  # idle time into the rules recalculator. This threshold should be
-#  # applied upstream.
-# 
-#  dash:xidle :idleTimeMinutes ?idle .
-#  # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
-#} => {
-#  :drew :at :desk .
-#  # the plan here is that as soon as we can show that I'm not at my
-#  # desk (cell phone wifi, asleep, etc), power the screen off
-#} .
-#
-#@prefix shuttle: <http://bigasterisk.com/room/livingRoom/shuttlepro/> .
-#@prefix mpd: <http://bigasterisk.com/host/slash/mpd> .
-#
-#{ ?button :state :press . ?button :playsMusic ?song } => { mpd: :startMusic ?song } .
-## the rest of this modeling is still a mess. Handled completely by special case in reasoning.py
-#{ shuttle:button12 :state :press         } => { mpd: :playState :pause } .
-#{ shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
-#{ shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
-#
+# #{
+# #  # this won't update right, currently, since I don't let the exact
+# #  # idle time into the rules recalculator. This threshold should be
+# #  # applied upstream.
+# # 
+# #  dash:xidle :idleTimeMinutes ?idle .
+# #  # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
+# #} => {
+# #  :drew :at :desk .
+# #  # the plan here is that as soon as we can show that I'm not at my
+# #  # desk (cell phone wifi, asleep, etc), power the screen off
+# #} .
+# #
+# #@prefix shuttle: <http://bigasterisk.com/room/livingRoom/shuttlepro/> .
+# #@prefix mpd: <http://bigasterisk.com/host/slash/mpd> .
+# #
+# #{ ?button :state :press . ?button :playsMusic ?song } => { mpd: :startMusic ?song } .
+# ## the rest of this modeling is still a mess. Handled completely by special case in reasoning.py
+# #{ shuttle:button12 :state :press         } => { mpd: :playState :pause } .
+# #{ shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
+# #{ shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
+# #
 
-
-#{ sensor:motionStorage :seesRecently :noMotion . } => {
-#  :storageCeilingLedCross :brightness 0 .
-#  :storageCeilingLedLong :brightness 0 .
-#} .
 
 { sensor:motionStorage :seesRecently :motion . } => {
-  :storageCeilingLedCross :brightness 1 .
-  :storageCeilingLedLong :brightness 1 .
+  :storageCeilingLedCross :brightness 1.0 .
+  :storageCeilingLedLong :brightness 1.0 .
 } .
-
-#{ sensor:motionStorage :sees :motionStart . } => {
-#  :storageCeilingLedCross :brightness 1 .
-#  :storageCeilingLedLong :brightness 1 .
-#} .
 
 { sensor:bedGreenButton :buttonState :press } => {
   :headboardWhite :brightness 0.0 .
@@ -83,7 +73,7 @@
 } .
 
 { sensor:bedRedButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
-  :headboardWhite :brightness 1 .
+  :headboardWhite :brightness 1.0 .
 } .
 
 @prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
@@ -110,29 +100,28 @@
 { :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 0.0 . } => {
   :livingRoomLamp1 :brightness 1.0 .
   :livingRoomLamp2 :brightness 1.0 .
+  :livingRoomLamp3 :brightness 1.0 .
 } .
 { :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 1.0 . } => {
   :livingRoomLamp1 :brightness 0.0 .
   :livingRoomLamp2 :brightness 0.0 .
+  :livingRoomLamp3 :brightness 0.0 .
 } .
 
-{ :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 0.0 . } => {
-  :starTrekLight :brightness 1.0 .
-} .
-{ :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 1.0 . } => {
-  :starTrekLight :brightness 0.0 .
-} .
+# { :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 0.0 . } => {
+#   :starTrekLight :brightness 1.0 .
+# } .
+# { :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 1.0 . } => {
+#   :starTrekLight :brightness 0.0 .
+# } .
 
 { :frontBedPostSwitch1 :buttonState :press . } => { :loftDeskStrip :x 99.0
 . } .
-{ :frontBedPostSwitch2 :buttonState :press . } => { :loftDeskStrip :x 15
-#84.0
+{ :frontBedPostSwitch2 :buttonState :press . } => { :loftDeskStrip :x 84.0
 . } .
-{ :frontBedPostSwitch3 :buttonState :press . } => { :loftDeskStrip :x 15
-#53.0
+{ :frontBedPostSwitch3 :buttonState :press . } => { :loftDeskStrip :x 53.0
 . } .
-{ :frontBedPostSwitch4 :buttonState :press . } => { :loftDeskStrip :x 15
-#30.0
+{ :frontBedPostSwitch4 :buttonState :press . } => { :loftDeskStrip :x 15.0
 . } .
 { :frontBedPostSwitch5 :buttonState :press . } => { :loftDeskStrip :x 0.0 . } .
 
@@ -152,11 +141,6 @@
 } .
 
 
-
-{ <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :noMotion . } => {
-  :garageOverhead :brightness 0.0.
-} .
-
 { <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :motion . } => {
   :garageOverhead :brightness 1.0 .
 } .
@@ -165,22 +149,22 @@
 
 
 { sensor:motionFrontDoorInside :seesRecently30 :motion } => {
-  <http://bigasterisk.com/host/frontdoor/monitor> :powerState :on .
+  <http://bigasterisk.com/host/frontdoor/monitor> :powerState "on" .
 } .
 
 
 
 { <http://projects.bigasterisk.com/room/remoteButton/KEY_POWER> :state :press } => {
-#star:slideshow :postAction <http://dash:9049/effects/question> .
-bang: :postAction <http://10.2.0.62/rpc/motor> .
+  #star:slideshow :postAction <http://dash:9049/effects/question> .
+  bang: :postAction <http://10.2.0.62/rpc/motor> .
 } .
 
-{ <http://bigasterisk.com/homeauto/sensor/tempHumidKitchen> :temperatureF ?t .
-  <http://bigasterisk.com/homeauto/thermostatSetTemp> :temperatureF ?setTemp .
-  ?t math:lessThan ?setTemp .
-} =>  {
-  :fakeHeater :state :on .
-} .
+# { <http://bigasterisk.com/homeauto/sensor/tempHumidKitchen> :temperatureF ?t .
+#   <http://bigasterisk.com/homeauto/thermostatSetTemp> :temperatureF ?setTemp .
+#   ?t math:lessThan ?setTemp .
+# } =>  {
+#   :fakeHeater :state :on .
+# } .
 
 { :frontDoorLockRequest :state :unlocked .
 } => {
@@ -217,3 +201,7 @@ bang: :postAction <http://10.2.0.62/rpc/motor> .
   :frontWindow :line3 "Open" .
 } .
 
+# { :switch1 :buttonState :pressed .
+# } => {
+#   :switch1 :demo :received .
+# } .
