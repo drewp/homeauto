@@ -2,3 +2,23 @@
 @prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
 @prefix serv: <http://bigasterisk.com/services/> .
 
+
+serv:dhcpLeases a :Service;
+      :path "/dhcpLeases/";
+      :openid auth:admin;
+      :serverHost "bang";
+      :internalPort 9073;
+      :prodDockerFlags (
+        "-p" "9073:9073"
+        "--net=host"
+        "-v" "/opt/dnsmasq:/opt/dnsmasq"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "dhcpLeases.py" "-v"
+      );
+      :dockerFile "Dockerfile"
+.
+
