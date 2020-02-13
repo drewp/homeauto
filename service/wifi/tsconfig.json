@@ -23,9 +23,9 @@
     // "allowSyntheticDefaultImports": true,
     // "rootDir": ".",
     // "outDir": "./build",
-    "baseUrl": "."
+    "baseUrl": ".",
     // "emitDecoratorMetadata": true,
-    // "lib": [ "dom" ],
+    "lib": [ "DOM","ES6","DOM.Iterable","ScriptHost", "ES2017.object" ],
 
     // "diagnostics": true,
     // "traceResolution": true

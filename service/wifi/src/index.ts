@@ -8,9 +8,8 @@ import { Literal, N3Store } from "n3";
 import { NamedNode, DataFactory } from "n3";
 const { namedNode, literal } = DataFactory;
 
-import { VersionedGraph } from "streamed-graph";
+import { VersionedGraph, labelFromUri, graphLiteral, graphUriValue } from "streamed-graph";
 import { style } from "./style";
-import { labelFromUri, graphLiteral, graphUriValue } from "./graph_access";
 
 interface DevGroup {
   connectedToAp: NamedNode;
@@ -49,19 +48,21 @@ class WifiDisplay extends LitElement {
     super.connectedCallback();
     const sg = this.ownerDocument!.querySelector("streamed-graph");
     sg?.addEventListener("graph-changed", ((ev: CustomEvent) => {
-      this.graph = ev.detail!.value as VersionedGraph;
+      if (ev.detail!.value) {
+        // todo: sometimes i get ev.detail.graph instead of ev.detail.value
+        this.graph = ev.detail!.value as VersionedGraph;
+      }
     }) as EventListener);
-  }
-
-  static get observers() {
-    return ["onGraphChanged(graph)"];
   }
 
   @property({ type: Boolean })
   showGroups = false;
 
   render() {
-    const grouped = this.graphView(this.graph.store!);
+    if (!this.graph) {
+      return html`loading...`;
+    }
+    const grouped = this.graphView(this.graph.store);
 
     return html`
       <div class="report">
@@ -190,7 +191,7 @@ class WifiDisplay extends LitElement {
     } catch (e) {
       wifiBand = namedNode("multi"); // some have 5G and 2G?
     }
-    
+
     const connectedToAp = graphUriValue(store, devUri, room + "connectedToAp");
     if (!this.showGroups || connectedToAp) {
       const key = this.showGroups

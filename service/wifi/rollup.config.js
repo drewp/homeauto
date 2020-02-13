@@ -40,5 +40,6 @@ export default {
     typescript(),
     commonjs(workaround_jsonld_expand_issue),
     replace({ ...replacements, delimiters: ["", ""] }),
+    
   ],
 };
