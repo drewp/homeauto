@@ -59,7 +59,7 @@
                                                                                               `${Math.round(sec*10)/10} sec`);
              return html`
                <tr>
-                 <td><a href="/rdf/browse/?graph=${d.url}">[browse]</a> <a href="${d.url}">${d.url}</a></td>
+                 <td><a href="${d.url.replace('/events', '')}">[browse]</a> <a href="${d.url}">${d.url}</a></td>
                  <td>${d.fullGraphReceived}</td>
                  <td>${d.patchesReceived}</td>
                  <td>${dispSec(d.time.open - now)}</td>
