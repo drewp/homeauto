@@ -1,7 +1,7 @@
 """
 statements about dhcp leases (and maybe live-host pings)
 
-also read 'arp -an' and our dns list 
+also read 'arp -an' and our dns list
 """
 import datetime, itertools, os
 

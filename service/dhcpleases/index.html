@@ -2,11 +2,13 @@
 <html>
   <head>
     <title>dhcp leases</title>
-    <meta charset="utf-8" />
+    <meta charset="utf-8">
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents-lite.min.js"></script>
 
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="stylesheet" href="/rdf/browse/style.css">
 
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
@@ -15,7 +17,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
   </head>
-  <body>
+  <body class="rdfBrowsePage">
     <h1>Active dhcp leases</h1>
     <p><a href="../wifi">go to wifi</a>; <a href="/rdf/browse/?graph=https%3A%2F%2Fbigasterisk.com%2Fsse_collector%2Fgraph%2Fnetwork">merge with wifi</a></p>
 
@@ -26,16 +28,6 @@
       <script type="module" src="/rdf/streamed_graph_view.js"></script>
 
     </template>
-    <style>
-     .served-resources {
-         margin-top: 4em;
-         border-top: 1px solid gray;
-         padding-top: 1em;
-     }
-     .served-resources a {
-         padding-right: 2em;
-     }
-    </style>
 
     <div class="served-resources">
       <a href="stats/">/stats/</a>
