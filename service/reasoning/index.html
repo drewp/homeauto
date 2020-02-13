@@ -6,6 +6,9 @@
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="stylesheet" href="/rdf/browse/style.css">
+
     <link rel="import" href="/rdf/streamed-graph.html">
     <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
 
@@ -14,41 +17,54 @@
 
     <style type="text/css" media="all">
      /* <![CDATA[ */
-     @import url('https://fonts.googleapis.com/css?family=Allerta|Dosis|Jura&display=swap');
-     body {
-         background: black;
-         color: white;
-         font-family: 'Allerta', sans-serif;
-         font-size: 12px;
-     }
-     pre {
-         font-family: 'Allerta', sans-serif;
-     }
-     a {
-         color: #b1b1fd;
-         text-shadow: 1px 1px 0px #0400ff94;
-         text-decoration-color: #00007714;
-     }
-
-     .pane > h2 {
-         background: #3f738a61;
-         border-top-left-radius: 23px;
-         border-top-right-radius: 23px;
-         border-top: 3px solid #2a4b58;
-         padding: 14px 0 5px 11px;
-         margin-top:  10px;
-     }
 
      #out > section { background: #1d23314a; }
      #out2 > section { background: #4222134a; }
+
+     body {
+         display: flex;
+         flex-direction: column;
+         height: 100vh;
+         margin: 0;
+     }
+     body > *{
+         flex-grow: 1;
+         flex-shrink: 0;
+     }
+     .pane { padding: 5px; overflow: auto; }
      /* ]]> */
     </style>
     <link rel="import" href="/supdebug/bang/service-rows/main.html">
     <link rel="import" href="/rdf/rdf-uri.html">
   </head>
-  <body>
+  <body class="rdfBrowsePage">
     <h1>reasoning service</h1>
     <div class="pane">
+      <div>Post one-shot:
+        <button data-url="oneShot" data-body="sensor:kitchenCounterButton1 :buttonState :press .">kitchenCounterButton1</button>
+        <button data-url="oneShot" data-body=":bookSwitch :buttonState :press .">book switch</button>
+
+        <button data-url="oneShot" data-body=":frontBedPostSwitch1 :buttonState :release .">asher bed post 1</button>
+        <button data-url="oneShot" data-body=":frontBedPostSwitch2 :buttonState :release .">asher bed post 2</button>
+        <button data-url="oneShot" data-body=":frontBedPostSwitch3 :buttonState :release .">asher bed post 3</button>
+        <button data-url="oneShot" data-body=":frontBedPostSwitch4 :buttonState :release .">asher bed post 4</button>
+        <button data-url="oneShot" data-body=":frontBedPostSwitch5 :buttonState :release .">asher bed post 5</button>
+        <script>
+         Array.from(document.querySelectorAll("button[data-url]")).forEach((el) => {
+           el.addEventListener("click", (ev) => {
+             fetch(el.dataset.url, {
+               method: "POST",
+               headers: {"content-type": "text/n3"},
+               body: `
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix sensor: <http://bigasterisk.com/homeauto/sensor/> .
+               ` + el.dataset.body
+
+             });
+           });
+         });
+        </script>
+      </div>
       <h2>Service</h2>
       <service-rows name-substrs="reasoning"></service-rows>
     </div>
@@ -59,7 +75,7 @@
       <div id="inGraphView"></div>
     </div>
 
-    <div class="pane">
+    <div class="pane" style="flex-shrink: 1">
       <h2>Rules</h2>
       <div>
         <pre id="rules"></pre>
@@ -102,6 +118,10 @@
        .recent10 { background: #40401c; }
        .recent60 { background: #212116; }
        #putOutputs th, #putOutputs td { text-align: left; padding-left: 5px; }
+       td.urlAbbrev, td.numRequests, td.lastChangeTime {
+         white-space: nowrap;
+       }
+       td.changed { min-width: 7em; }
       </style>
       <table id="putOutputs">
         <thead>
@@ -132,6 +152,7 @@
                'lastErr',
              ]) {
                const td = document.createElement('td');
+               td.classList.add(attr);
                let value = row[attr];
                if (attr == 'lastChangeTime') {
                  const secAgo = Math.round(Date.now() / 1000 - row.lastChangeTime);
@@ -152,6 +173,7 @@
 
 
     <script type="module">
+     // this is approx /my/site/homepage/www/rdf/streamed_graph_view.js so port to that.
      import { render } from '/lib/lit-html/1.0.0/lit-html.js';
      import { graphView } from '/rdf/browse/graphView.js';
 
