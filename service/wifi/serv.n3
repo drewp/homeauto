@@ -3,7 +3,7 @@
 @prefix serv: <http://bigasterisk.com/services/> .
 
 
-serv:wifi a :Service;
+serv:wifi a :Service, :NpmPackage;
       :path "/wifi/";
       :openid auth:admin;
       :serverHost "bang";
