@@ -3,6 +3,7 @@ crochet==1.5.0
 cyclone
 docopt
 ipdb
+rx==1.6.1
 service_identity
 treq==18.6.0
 twisted
