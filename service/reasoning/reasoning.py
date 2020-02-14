@@ -19,12 +19,15 @@ no_setup()
 
 import json, time, traceback, sys
 from logging import getLogger, DEBUG, WARN
+from typing import Dict, Optional, Set, Tuple
 
 from colorlog import ColoredFormatter
 from docopt import docopt
 from rdflib import Namespace, Literal, RDF, Graph, URIRef
+from rdflib.term import Node
 from twisted.internet import reactor, defer
 import cyclone.web, cyclone.websocket
+from FuXi.Rete.RuleStore import N3RuleStore
 
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
@@ -48,7 +51,7 @@ STATS = scales.collection('/web',
                           scales.PmfStat('updateRules'),
 )
 
-def ntStatement(stmt):
+def ntStatement(stmt: Tuple[Node, Node, Node]):
     def compact(u):
         if isinstance(u, URIRef) and u.startswith(ROOM):
             return 'room:' + u[len(ROOM):]
@@ -56,6 +59,7 @@ def ntStatement(stmt):
     return '%s %s %s .' % (compact(stmt[0]), compact(stmt[1]), compact(stmt[2]))
 
 class Reasoning(object):
+    ruleStore: N3RuleStore
     def __init__(self, mockOutput=False):
         self.prevGraph = None
 
@@ -94,7 +98,7 @@ class Reasoning(object):
                  Literal(ruleParseTime))], ruleParseTime
 
     @STATS.graphChanged.time()
-    def graphChanged(self, inputGraph, oneShot=False, oneShotGraph=None):
+    def graphChanged(self, inputGraph: InputGraph, oneShot=False, oneShotGraph: Graph = None):
         """
         If we're getting called for a oneShot event, the oneShotGraph
         statements are already in inputGraph.getGraph().
@@ -141,11 +145,11 @@ class Reasoning(object):
     def copyOutput(self):
         self.outputGraph.setToGraph((s,p,o,ROOM['inferred']) for s,p,o in self.inferred)
 
-    def _makeInferred(self, inputGraph):
+    def _makeInferred(self, inputGraph: InputGraph):
         t1 = time.time()
 
         out = infer(inputGraph, self.ruleStore)
-        for p, n in NS.iteritems():
+        for p, n in NS.items():
             out.bind(p, n, override=True)
 
         inferenceTime = time.time() - t1
@@ -201,7 +205,7 @@ class OneShot(cyclone.web.RequestHandler):
 
 # for reuse
 class GraphResource(cyclone.web.RequestHandler):
-    def get(self, which):
+    def get(self, which: str):
         self.set_header("Content-Type", "application/json")
         r = self.settings.reasoning
         g = {'lastInput': r.inputGraph.getGraph(),
@@ -242,11 +246,11 @@ class Status(cyclone.web.RequestHandler):
         self.finish(msg)
 
 class Static(cyclone.web.RequestHandler):
-    def get(self, p):
+    def get(self, p: str):
         self.write(open(p).read())
 
-liveClients = set()
-def sendToLiveClients(d=None, asJson=None):
+liveClients: Set[cyclone.websocket.WebSocketHandler] = set()
+def sendToLiveClients(d: Dict[str, object]=None, asJson: Optional[str]=None):
     j = asJson or json.dumps(d)
     for c in liveClients:
         c.sendMessage(j)
@@ -274,8 +278,10 @@ class Application(cyclone.web.Application):
             (r'/(jquery.min.js)', Static),
             (r'/(lastInput|lastOutput)Graph', GraphResource),
 
-            (r"/graph/reasoning", CycloneGraphHandler, {'masterGraph': reasoning.outputGraph}),
-            (r"/graph/reasoning/events", CycloneGraphEventsHandler, {'masterGraph': reasoning.outputGraph}),
+            (r"/graph/reasoning", CycloneGraphHandler,
+             {'masterGraph': reasoning.outputGraph}),
+            (r"/graph/reasoning/events", CycloneGraphEventsHandler,
+             {'masterGraph': reasoning.outputGraph}),
 
             (r'/ntGraphs', NtGraphs),
             (r'/rules', Rules),
@@ -289,21 +295,21 @@ def configLogging(arg):
     log.setLevel(WARN)
 
     if arg['-i'] or arg['-r'] or arg['-o'] or arg['-v']:
-        log.handlers[0].setFormatter(ColoredFormatter("%(log_color)s%(levelname)-8s %(name)-6s %(filename)-12s:%(lineno)-3s %(funcName)-20s%(reset)s %(white)s%(message)s",
-        datefmt=None,
-        reset=True,
-        log_colors={
+        log.handlers[0].setFormatter(ColoredFormatter(
+            "%(log_color)s%(levelname)-8s %(name)-6s %(filename)-12s:%(lineno)-3s %(funcName)-20s%(reset)s %(white)s%(message)s",
+            datefmt=None,
+            reset=True,
+            log_colors={
                 'DEBUG':    'cyan',
                 'INFO':     'green',
                 'WARNING':  'yellow',
                 'ERROR':    'red',
                 'CRITICAL': 'red,bg_white',
-        },
-        secondary_log_colors={},
-        style='%'
-))
+            },
+            secondary_log_colors={},
+            style='%'
+        ))
         defer.setDebugging(True)
-
 
     if arg['-i']:
         import twisted.python.log

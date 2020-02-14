@@ -7,6 +7,7 @@ from twisted.internet import reactor
 import treq
 
 from httpputoutputs import HttpPutOutputs
+from inputgraph import InputGraph
 
 log = logging.getLogger('output')
 
@@ -28,7 +29,7 @@ def ntStatement(stmt):
 
 
 class Actions(object):
-    def __init__(self, inputGraph, sendToLiveClients, mockOutput=False):
+    def __init__(self, inputGraph: InputGraph, sendToLiveClients, mockOutput=False):
         self.inputGraph = inputGraph
         self.mockOutput = mockOutput
         self.putOutputs = HttpPutOutputs(mockOutput=mockOutput)
@@ -68,7 +69,7 @@ class Actions(object):
             if putUrl and matchPred == stmt[1]:
                 log.debug('putDevices: stmt %s leads to putting at %s',
                           ntStatement(stmt), putUrl.n3())
-                self._put(putUrl + '?' + urllib.urlencode([
+                self._put(putUrl + '?' + urllib.parse.urlencode([
                     ('s', str(stmt[0])),
                     ('p', str(putPred))]),
                           str(stmt[2].toPython()),
@@ -146,6 +147,8 @@ class Actions(object):
                                        default=Literal('30s'))#.map(secsFromLiteral)
 
     def _put(self, url, payload, refreshSecs, agent=None):
+        if isinstance(payload, str):
+            payload = payload.encode('utf8')
         assert isinstance(payload, bytes)
         self.putOutputs.put(url, payload, agent, refreshSecs)
 

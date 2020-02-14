@@ -1,5 +1,6 @@
 import logging, time
 import weakref
+from typing import Callable
 
 from greplin import scales
 from rdflib import Graph, ConjunctiveGraph
@@ -11,6 +12,7 @@ from twisted.internet import reactor
 
 from patchablegraph.patchsource import ReconnectingPatchSource
 from rdfdb.rdflibpatch import patchQuads
+from rdfdb.patch import Patch
 
 log = logging.getLogger('fetch')
 
@@ -21,7 +23,9 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 STATS = scales.collection('/web',
                           scales.PmfStat('combineGraph'),
 )
-def parseRdf(text, contentType):
+
+
+def parseRdf(text: str, contentType: str):
     g = Graph()
     g.parse(StringInputSource(text), format={
         'text/n3': 'n3',
@@ -30,7 +34,7 @@ def parseRdf(text, contentType):
 
 
 class RemoteData(object):
-    def __init__(self, onChange):
+    def __init__(self, onChange: Callable[[], None]):
         """we won't fire onChange during init"""
         self.onChange = onChange
         self.graph = ConjunctiveGraph()
@@ -42,7 +46,7 @@ class RemoteData(object):
             #URIRef('http://frontdoor:10012/graph/events'),
             self.onPatch, reconnectSecs=10, agent='reasoning')
 
-    def onPatch(self, p, fullGraph):
+    def onPatch(self, p: Patch, fullGraph: bool):
         if fullGraph:
             self.graph = ConjunctiveGraph()
         patchQuads(self.graph,
@@ -78,6 +82,7 @@ class RemoteData(object):
                 break
         else:
             log.debug("  remote graph has no changes to trigger rules")
+
 
 class InputGraph(object):
     def __init__(self, inputDirs, onChange):
