@@ -1,8 +1,10 @@
 import logging
 from rdflib import URIRef, ConjunctiveGraph
+from typing import List
 log = logging.getLogger()
 
-def graphWithoutMetadata(g, ignorePredicates=[]):
+
+def graphWithoutMetadata(g: ConjunctiveGraph, ignorePredicates=[]):
     """
     graph filter that removes any statements whose subjects are
     contexts in the graph and also any statements with the given
@@ -17,7 +19,9 @@ def graphWithoutMetadata(g, ignorePredicates=[]):
             out.addN([stmt])
     return out
 
-def graphEqual(a, b, ignorePredicates=[]):
+
+def graphEqual(a: ConjunctiveGraph, b: ConjunctiveGraph,
+               ignorePredicates: List[URIRef]=[]):
     """
     compare graphs, omitting any metadata statements about contexts
     (especially modification times) and also any statements using the
@@ -27,7 +31,7 @@ def graphEqual(a, b, ignorePredicates=[]):
     stmtsB = set(graphWithoutMetadata(b, ignorePredicates))
     if stmtsA == stmtsB:
         return True
-    
+
     if log.getEffectiveLevel() <= logging.INFO:
         lost = stmtsA - stmtsB
         if lost:

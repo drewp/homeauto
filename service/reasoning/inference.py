@@ -7,7 +7,7 @@ try:
     from rdflib.Graph import Graph
 except ImportError:
     from rdflib import Graph
-    
+
 from rdflib import Namespace
 from rdflib.parser import StringInputSource
 
@@ -15,7 +15,7 @@ from FuXi.Rete.Util import generateTokenSet
 from FuXi.Rete import ReteNetwork
 from FuXi.Rete.RuleStore import N3RuleStore
 
-from greplin import scales 
+from greplin import scales
 STATS = scales.collection('/web',
                           scales.PmfStat('readRules'))
 
@@ -32,7 +32,7 @@ def _loadAndEscape(ruleStore, n3, outputPatterns):
     # of my rules. This serialize/parse version is very slow (400ms),
     # but it only runs when the file changes.
     plainGraph = Graph()
-    plainGraph.parse(StringInputSource(n3), format='n3') # for inference
+    plainGraph.parse(StringInputSource(n3.encode('utf8')), format='n3') # for inference
     escapeOutputStatements(plainGraph, outputPatterns=outputPatterns)
     expandedN3 = plainGraph.serialize(format='n3')
 
@@ -60,7 +60,7 @@ def readRules(rulesPath, outputPatterns):
             ruleStore = N3RuleStore()
             _loadAndEscape(ruleStore, rulesN3, outputPatterns)
             log.debug('%s rules' % len(ruleStore.rules))
-            
+
             _rulesCache = key + (rulesN3, ruleStore)
         return rulesN3, ruleStore
 
@@ -76,7 +76,7 @@ def infer(graph, rules):
     with _dontChangeRulesStore(rules):
         network = ReteNetwork(rules, inferredTarget=target)
         network.feedFactsToAdd(tokenSet)
-    
+
     return target
 
 @contextlib.contextmanager
@@ -84,11 +84,11 @@ def _dontChangeRulesStore(rules):
     if not hasattr(rules, '_stashOriginalRules'):
         rules._stashOriginalRules = rules.rules[:]
     yield
-    for k in rules.formulae.keys():
+    for k in list(rules.formulae.keys()):
         if not k.startswith('_:Formula'):
             del rules.formulae[k]
     rules.rules = rules._stashOriginalRules[:]
-    
+
 import time, logging
 log = logging.getLogger()
 def logTime(func):

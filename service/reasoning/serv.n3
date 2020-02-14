@@ -16,7 +16,7 @@ serv:reasoning a :Service;
         "-v" "`pwd`:/opt"
       );
       :localRunCmdline (
-        "python3" "reasoning.py" "-v"
+        "python3" "reasoning.py" "-iro"
       );
       :dockerFile "Dockerfile"
 .

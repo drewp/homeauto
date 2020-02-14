@@ -1,24 +1,31 @@
 import logging
 import time
 
+from rdflib import URIRef
 from rx.subjects import BehaviorSubject
 from twisted.internet import reactor
+from twisted.python.failure import Failure
+from twisted.internet.interfaces import IDelayedCall
 import treq
+from typing import Optional
 
 log = logging.getLogger('httpputoutputs')
 
+
 class HttpPutOutput(object):
-    def __init__(self, url,
-                 refreshSecs,#: BehaviorSubject,
+    lastChangeTime: float
+
+    def __init__(self, url: str,
+                 refreshSecs: BehaviorSubject,
                  mockOutput=False):
         self.url = url
         self.mockOutput = mockOutput
-        self.payload = None
-        self.foafAgent = None
-        self.nextCall = None
-        self.lastErr = None
-        self.numRequests = 0
-        self.refreshSecs = refreshSecs
+        self.payload: Optional[str] = None
+        self.foafAgent: Optional[URIRef] = None
+        self.nextCall: IDelayedCall = None
+        self.lastErr: Optional[Failure] = None
+        self.numRequests: int = 0
+        self.refreshSecs: float = refreshSecs
 
     def report(self):
         return {
@@ -33,7 +40,7 @@ class HttpPutOutput(object):
             'lastErr': str(self.lastErr) if self.lastErr is not None else None,
             }
 
-    def setPayload(self, payload, foafAgent):
+    def setPayload(self, payload: str, foafAgent: URIRef):
         if self.numRequests > 0 and (self.payload == payload and
                                      self.foafAgent == foafAgent):
             return
@@ -101,6 +108,7 @@ class HttpPutOutput(object):
         self.nextCall = reactor.callLater(self.currentRefreshSecs(),
                                           self.makeRequest)
 
+
 class HttpPutOutputs(object):
     """these grow forever"""
     def __init__(self, mockOutput=False):
@@ -108,6 +116,7 @@ class HttpPutOutputs(object):
         self.state = {} # url: HttpPutOutput
 
     def put(self, url, payload, foafAgent, refreshSecs):
+        assert isinstance(url, str)
         if url not in self.state:
             self.state[url] = HttpPutOutput(url, mockOutput=self.mockOutput,
                                             refreshSecs=refreshSecs)

@@ -1,37 +1,34 @@
-from invoke import task
+from invoke import Collection, task
+import sys
+sys.path.append('/my/proj/release')
+from serv_tasks import serv_tasks
 
-JOB='reasoning'
-PORT=9071
+ns = Collection()
+serv_tasks(ns, 'serv.n3', 'reasoning')
 
-TAG=f'bang6:5000/{JOB}_x86:latest'
-
-@task
-def build_image(ctx):
-    ctx.run(f'docker build --network=host -t {TAG} .')
-
-@task(pre=[build_image])
-def push_image(ctx):
-    ctx.run(f'docker push {TAG}')
-
-@task
-def shell(ctx):
-    ctx.run(f'docker run --name {JOB}_shell --rm -it --cap-add SYS_PTRACE -v `pwd`:/mnt --dns 10.2.0.1 --dns-search bigasterisk.com --net=host {TAG}  /bin/bash', pty=True)
-
-@task(pre=[build_image])
-def local_run(ctx):
-    ctx.run(f'docker run --name {JOB}_local --rm -it '
-            f'-p {PORT}:{PORT} '
-            f'-v `pwd`:/mnt '
-            f'-v `pwd`/index.html:/opt/index.html '
-            f'--dns 10.2.0.1 --dns-search bigasterisk.com '
-            f'--net=host '
-            f'{TAG} '
-            f'python /mnt/{JOB}.py -iro', pty=True)
-
-@task(pre=[build_image])
+@ns.add_task
+@task(pre=[ns['build']])
 def local_run_mock(ctx):
-    ctx.run(f'docker run --name {JOB}_local_run_mock --rm -it -p {PORT}:{PORT} -v `pwd`:/mnt  --dns 10.2.0.1 --dns-search bigasterisk.com --net=host {TAG} python /mnt/{JOB}.py -iro --mockoutput', pty=True)
+    ctx.run(f'docker run --name reasoning_local_run_mock --rm -it -p 9071:9071 -v `pwd`:/opt --dns 10.2.0.1 --dns-search bigasterisk.com --net=host bang6:5000/reasoning:latest python3 reasoning.py -iro --mockoutput', pty=True)
 
-@task(pre=[push_image])
-def redeploy(ctx):
-    ctx.run(f'supervisorctl -s http://bang:9001/ restart {JOB}_{PORT}')
+@ns.add_task
+@task(pre=[ns['build']])
+def pytype(ctx):
+    ctx.run(f'docker run '
+            f'--name reasoning_pytype '
+            f'--rm -it '
+            f'-v `pwd`:/opt '
+            f'--dns 10.2.0.1 '
+            f'--dns-search bigasterisk.com '
+            f'--net=host bang6:5000/reasoning:latest '
+            f'pytype --pythonpath /usr/local/lib/python3.6/dist-packages:. '
+            f'--jobs 4 '
+            f'actions.py '
+            f'escapeoutputstatements.py '
+            f'graphop.py '
+            f'httpputoutputs.py '
+            f'inference.py '
+            f'inputgraph.py '
+            f'private_ipv6_addresses.py '
+            f'rdflibtrig.py '
+            f'reasoning.py', pty=True)
