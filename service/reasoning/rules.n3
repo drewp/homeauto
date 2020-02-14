@@ -34,28 +34,28 @@
 { env: :localHour 22 } => { env: :localHour :awakeTime } .
 { env: :localHour 23 } => { env: :localHour :awakeTime } .
 
-# #{
-# #  # this won't update right, currently, since I don't let the exact
-# #  # idle time into the rules recalculator. This threshold should be
-# #  # applied upstream.
-# # 
-# #  dash:xidle :idleTimeMinutes ?idle .
-# #  # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
-# #} => {
-# #  :drew :at :desk .
-# #  # the plan here is that as soon as we can show that I'm not at my
-# #  # desk (cell phone wifi, asleep, etc), power the screen off
-# #} .
-# #
-# #@prefix shuttle: <http://bigasterisk.com/room/livingRoom/shuttlepro/> .
-# #@prefix mpd: <http://bigasterisk.com/host/slash/mpd> .
-# #
-# #{ ?button :state :press . ?button :playsMusic ?song } => { mpd: :startMusic ?song } .
-# ## the rest of this modeling is still a mess. Handled completely by special case in reasoning.py
-# #{ shuttle:button12 :state :press         } => { mpd: :playState :pause } .
-# #{ shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
-# #{ shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
-# #
+#{
+#  # this won't update right, currently, since I don't let the exact
+#  # idle time into the rules recalculator. This threshold should be
+#  # applied upstream.
+# 
+#  dash:xidle :idleTimeMinutes ?idle .
+#  # broken with new  fuxi- needs review:    ?idle math:lessThan 30 .
+#} => {
+#  :drew :at :desk .
+#  # the plan here is that as soon as we can show that I'm not at my
+#  # desk (cell phone wifi, asleep, etc), power the screen off
+#} .
+#
+#@prefix shuttle: <http://bigasterisk.com/room/livingRoom/shuttlepro/> .
+#@prefix mpd: <http://bigasterisk.com/host/slash/mpd> .
+#
+#{ ?button :state :press . ?button :playsMusic ?song } => { mpd: :startMusic ?song } .
+## the rest of this modeling is still a mess. Handled completely by special case in reasoning.py
+#{ shuttle:button12 :state :press         } => { mpd: :playState :pause } .
+#{ shuttle:dial :change :clockwise        } => { mpd: :audioState :volumeStepUp } .
+#{ shuttle:dial :change :counterclockwise } => { mpd: :audioState :volumeStepDown } .
+#
 
 
 { sensor:motionStorage :seesRecently :motion . } => {
@@ -201,7 +201,3 @@
   :frontWindow :line3 "Open" .
 } .
 
-# { :switch1 :buttonState :pressed .
-# } => {
-#   :switch1 :demo :received .
-# } .
