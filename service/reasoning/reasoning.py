@@ -22,9 +22,8 @@ from logging import getLogger, DEBUG, WARN
 
 from colorlog import ColoredFormatter
 from docopt import docopt
-from rdflib import Namespace, Literal, RDF, Graph
-from twisted.internet import reactor, task, defer
-from twisted.internet.defer import inlineCallbacks
+from rdflib import Namespace, Literal, RDF, Graph, URIRef
+from twisted.internet import reactor, defer
 import cyclone.web, cyclone.websocket
 
 from greplin import scales
@@ -49,17 +48,23 @@ STATS = scales.collection('/web',
                           scales.PmfStat('updateRules'),
 )
 
+def ntStatement(stmt):
+    def compact(u):
+        if isinstance(u, URIRef) and u.startswith(ROOM):
+            return 'room:' + u[len(ROOM):]
+        return u.n3()
+    return '%s %s %s .' % (compact(stmt[0]), compact(stmt[1]), compact(stmt[2]))
+
 class Reasoning(object):
     def __init__(self, mockOutput=False):
         self.prevGraph = None
-
-        self.actions = Actions(sendToLiveClients, mockOutput=mockOutput)
 
         self.rulesN3 = "(not read yet)"
         self.inferred = Graph() # gets replaced in each graphChanged call
         self.outputGraph = PatchableGraph() # copy of inferred, for now
 
         self.inputGraph = InputGraph([], self.graphChanged)
+        self.actions = Actions(self.inputGraph, sendToLiveClients, mockOutput=mockOutput)
         self.inputGraph.updateFileData()
 
     @STATS.updateRules.time()
@@ -99,7 +104,7 @@ class Reasoning(object):
                  oneShot, len(oneShotGraph) if oneShotGraph is not None else 0)
         if oneShotGraph:
             for stmt in oneShotGraph:
-                log.info(" OS-> %r", stmt)
+                log.info(" oneshot -> %s", ntStatement(stmt))
         t1 = time.time()
         oldInferred = self.inferred
         try:
@@ -120,7 +125,7 @@ class Reasoning(object):
                 self.inferred += oneShotGraph
 
             t3 = time.time()
-            self.actions.putResults(self.inputGraph.getGraph(), self.inferred)
+            self.actions.putResults(self.inferred)
             putResultsTime = time.time() - t3
         finally:
             if oneShot:
