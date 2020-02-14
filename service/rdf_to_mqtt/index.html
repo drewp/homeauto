@@ -30,6 +30,13 @@
     <div><button data-post="output?s=:livingLamp4&p=:brightness" data-body="0.0">Send (:livingLamp4 :brightness 0.0)</button></div>
     <div><button data-post="output?s=:livingLamp4&p=:brightness" data-body="1.0">Send (:livingLamp4 :brightness 1.0)</button></div>
 
+    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="bd">Theater to chromecast</button></div>
+    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="game">Theater to PS4</button></div>
+    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="pc">Theater to VR</button></div>
+    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="cbl">Theater to PS3</button></div>
+    <div><button data-post="output?s=:theater&p=:volumeChange" data-body="3">Theater volume up</button></div>
+    <div><button data-post="output?s=:theater&p=:volumeChange" data-body="-3">Theater volume down</button></div>
+
     <script>
      Array.from(document.querySelectorAll("button")).forEach((el) => {
        el.addEventListener("click", (ev) => {
