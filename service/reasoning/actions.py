@@ -72,7 +72,7 @@ class Actions(object):
                 self._put(putUrl + '?' + urllib.parse.urlencode([
                     ('s', str(stmt[0])),
                     ('p', str(putPred))]),
-                          str(stmt[2].toPython()),
+                          payload=str(stmt[2].toPython()),
                           agent=agentFor.get(stmt[0], None),
                           refreshSecs=self._getRefreshSecs(stmt[0]))
                 activated.add((stmt[0],
@@ -146,10 +146,7 @@ class Actions(object):
         return self.inputGraph.rxValue(target, ROOM['refreshPutValue'],
                                        default=Literal('30s'))#.map(secsFromLiteral)
 
-    def _put(self, url, payload, refreshSecs, agent=None):
-        if isinstance(payload, str):
-            payload = payload.encode('utf8')
-        assert isinstance(payload, bytes)
+    def _put(self, url, payload: str, refreshSecs, agent=None):
         self.putOutputs.put(url, payload, agent, refreshSecs)
 
 import cyclone.sse
@@ -169,9 +166,9 @@ class PutOutputsTable(cyclone.sse.SSEHandler):
     def loop(self):
         if not self.bound:
             return
-
-        self.sendEvent(message=json.dumps({
+        puts = {
             'puts': [row.report() for _, row in
                      sorted(self.actions.putOutputs.state.items())],
-        }), event='update')
+        }
+        self.sendEvent(message=json.dumps(puts).encode('utf8'), event=b'update')
         reactor.callLater(1, self.loop)

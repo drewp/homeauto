@@ -195,8 +195,11 @@ class OneShot(cyclone.web.RequestHandler):
         """
         try:
             log.info('POST to oneShot, headers=%s', self.request.headers)
+            ct = self.request.headers.get(
+                'Content-Type',
+                self.request.headers.get('content-type', ''))
             dt = self.settings.reasoning.inputGraph.addOneShotFromString(
-                self.request.body, self.request.headers['content-type'])
+                self.request.body, ct)
             self.set_header('x-graph-ms', str(1000 * dt))
         except Exception as e:
             traceback.print_exc()
