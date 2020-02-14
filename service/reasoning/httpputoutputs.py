@@ -63,7 +63,7 @@ class HttpPutOutput(object):
         log.debug("PUT %s payload=%s agent=%s",
                   self.url, self.payload, self.foafAgent)
         if not self.mockOutput:
-            self.currentRequest = treq.put(self.url, data=self.payload,
+            self.currentRequest = treq.put(self.url, data=self.payload.encode('utf8'),
                                            headers=h, timeout=3)
             self.currentRequest.addCallback(self.onResponse).addErrback(
                 self.onError)
@@ -115,8 +115,7 @@ class HttpPutOutputs(object):
         self.mockOutput = mockOutput
         self.state = {} # url: HttpPutOutput
 
-    def put(self, url, payload, foafAgent, refreshSecs):
-        assert isinstance(url, str)
+    def put(self, url: str, payload: str, foafAgent: str, refreshSecs: float):
         if url not in self.state:
             self.state[url] = HttpPutOutput(url, mockOutput=self.mockOutput,
                                             refreshSecs=refreshSecs)

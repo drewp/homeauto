@@ -11,10 +11,11 @@ from private_ipv6_addresses import ipv6Addresses
 def addTrig(graph, url, timeout=2):
     t1 = time.time()
     # workaround for some reason my ipv6 names don't resolve
-    for name, addr in ipv6Addresses.iteritems():
+    for name, addr in ipv6Addresses.items():
         url = url.replace('/' + name + ':', '/[' + addr + ']:')
     log.debug('    fetching %r', url)
-    response = yield treq.get(url, headers={'accept': ['application/trig']}, timeout=timeout)
+    response = yield treq.get(url, headers={'accept': ['application/trig']},
+                              timeout=timeout)
     if response.code != 200:
         raise ValueError("status %s from %s" % (response.code, url))
     g = ConjunctiveGraph()
