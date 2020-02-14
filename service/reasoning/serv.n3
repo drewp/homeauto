@@ -9,8 +9,8 @@ serv:reasoning a :Service;
       :serverHost "bang";
       :internalPort 9071;
       :prodDockerFlags (
-      "-p" "9071:9071"
-      "--net=host"
+        "-p" "9071:9071"
+        "--net=host"
       );
       :localDockerFlags (
         "-v" "`pwd`:/opt"
