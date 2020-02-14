@@ -6,7 +6,7 @@ COPY requirements.txt ./
 RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -r requirements.txt
 RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 
-COPY *.py *.html *.css *.js ./
+COPY *.py *.html *.js ./
 
 EXPOSE 10011:10011
 
