@@ -7,16 +7,23 @@ This is like light9/bin/collector.
 import json
 from mqtt_client import MqttClient
 from docopt import docopt
-from rdflib import Namespace, Literal
+from rdflib import Namespace
 from twisted.internet import reactor
 import cyclone.web
+from greplin import scales
+from greplin.scales.cyclonehandler import StatsHandler
 
-from patchablegraph import PatchableGraph, CycloneGraphHandler, CycloneGraphEventsHandler
 from standardservice.logsetup import log, verboseLogging
 import rdf_over_http
 from cycloneerr import PrettyErrorHandler
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
+
+STATS = scales.collection('/root',
+                          scales.PmfStat('putRequests'),
+                          scales.PmfStat('statement'),
+                          scales.PmfStat('mqttPublish'),
+)
 
 devs = {
     ROOM['kitchenLight']: {
@@ -63,6 +70,7 @@ devs = {
 
 
 class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
+    @STATS.putRequests.time()
     def put(self):
         for stmt in rdf_over_http.rdfStatementsFromRequest(
                 self.request.arguments,
@@ -70,6 +78,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                 self.request.headers):
             self._onStatement(stmt)
 
+    @STATS.statement.time()
     def _onStatement(self, stmt):
         log.info(f'incoming statement: {stmt}')
         ignored = True
@@ -126,6 +135,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                     stmt[2].toPython())
         return ignored
 
+    @STATS.mqttPublish.time()
     def _publish(self, topic: str, messageJson: object=None,
                  message: str=None):
         if messageJson is not None:
@@ -150,6 +160,7 @@ if __name__ == '__main__':
         (r"/()", cyclone.web.StaticFileHandler,
          {"path": ".", "default_filename": "index.html"}),
         (r'/output', OutputPage),
+        (r'/stats/(.*)', StatsHandler, {'serverName': 'rdf_to_mqtt'}),
         ], mqtt=mqtt, debug=arg['-v']), interface='::')
     log.warn('serving on %s', port)
 
