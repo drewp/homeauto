@@ -8,13 +8,14 @@ serv:rdf_to_mqtt a :Service;
       :openid auth:admin;
       :serverHost "bang";
       :internalPort 10008;
+      :port 10008;
       :prodDockerFlags (
-      "-p" "10008:10008"
       "--net=host"
       );
       :localDockerFlags (
         "-v" "`pwd`:/opt"
       );
+      :prodCmdline ("python3" "rdf_to_mqtt.py");
       :localRunCmdline (
         "python3" "rdf_to_mqtt.py" "-v"
       );
