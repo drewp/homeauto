@@ -36,24 +36,20 @@ devs = {
         'root': 'sonoff_0/switch/sonoff_basic_relay/command',
         'values': 'binary',
     },
-    ROOM['livingLamp1']: {
+    ROOM['livingLampMantleEntry']: {
         'root': 'sonoff_1/switch/sonoff_basic_relay/command',
         'values': 'binary',
     },
-    ROOM['livingLamp2']: {
+    ROOM['livingLampMantleChair']: {
         'root': 'sonoff_2/switch/sonoff_basic_relay/command',
         'values': 'binary',
     },
-    ROOM['livingLamp3']: {
+    ROOM['livingLampToyShelf']: {
         'root': 'sonoff_3/switch/sonoff_basic_relay/command',
         'values': 'binary',
     },
-    ROOM['livingLamp4']: {
+    ROOM['livingLampPiano']: {
         'root': 'sonoff_4/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
-    ROOM['livingLamp5']: {
-        'root': 'sonoff_5/switch/sonoff_basic_relay/command',
         'values': 'binary',
     },
     ROOM['theater']: {
