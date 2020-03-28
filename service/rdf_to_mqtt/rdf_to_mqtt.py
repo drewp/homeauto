@@ -91,8 +91,8 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                     self._publishRgbw(attrs, brightness)
                 ignored = False
             if stmt[0:2] == (dev, ROOM['inputSelector']):
-                self._publish(topic=attrs['root'],
-                              message='input_'+str(stmt[2].toPython()))
+                choice = stmt[2].toPython().decode('utf8')
+                self._publish(topic=attrs['root'], message=f'input_{choice}')
                 ignored = False
             if stmt[0:2] == (dev, ROOM['volumeChange']):
                 delta = int(stmt[2].toPython())
@@ -134,6 +134,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
     @STATS.mqttPublish.time()
     def _publish(self, topic: str, messageJson: object=None,
                  message: str=None):
+        log.debug(f'mqtt.publish {topic} {message} {messageJson}')
         if messageJson is not None:
             message = json.dumps(messageJson)
         self.settings.mqtt.publish(
