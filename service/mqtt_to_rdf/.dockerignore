@@ -1,0 +1,5 @@
+.devcontainer
+.mypy_cache
+.pytype
+.vscode
+node_modules
