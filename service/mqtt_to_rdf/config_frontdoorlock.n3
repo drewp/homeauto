@@ -1,0 +1,20 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:mqttConnectedStatusMap a :ValueMap;
+   :map [:from "offline"; :to :Offline], 
+        [:from "online"; :to :Online] .
+
+:frontDoorLockStatus a :MqttStatementSource;
+  :mqttTopic ("frontdoorlock" "status");
+
+  :parser :mqttConnectedStatusMap;
+
+  :graphStatements [
+    :outputPredicate :connectedStatus
+  ]
+  
+  .
+
