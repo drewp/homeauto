@@ -2,7 +2,7 @@ try:
     import http.client as httplib
 except ImportError:
     import httplib  # type: ignore
-import cgi
+import html
 
 class PrettyErrorHandler(object):
     """
@@ -17,5 +17,5 @@ class PrettyErrorHandler(object):
                "<body>%(code)d: %(message)s<pre>%(tb)s</pre></body></html>" % {
             "code": status_code,
             "message": httplib.responses[status_code],
-            "tb" : cgi.escape(tb),
+            "tb" : html.escape(tb),
         }
