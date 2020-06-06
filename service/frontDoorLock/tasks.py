@@ -41,15 +41,15 @@ def monitor_usb(ctx):
 
 @task
 def tail_mqtt(ctx):
-    ctx.run(f'mosquitto_sub -h bang -p 10010 -d -v -t \#')
+    ctx.run(f'mosquitto_sub -h bang -p 10210 -d -v -t \#')
 
 @task
 def mqtt_force_open(ctx):
-    ctx.run(f'mosquitto_pub -h bang -p 10010 -t frontdoorlock/switch/strike/command -m ON')
+    ctx.run(f'mosquitto_pub -h bang -p 10210 -t frontdoorlock/switch/strike/command -m ON')
 
 @task
 def mqtt_force_lock(ctx):
-    ctx.run(f'mosquitto_pub -h bang -p 10010 -t frontdoorlock/switch/strike/command -m OFF')
+    ctx.run(f'mosquitto_pub -h bang -p 10210 -t frontdoorlock/switch/strike/command -m OFF')
     
 
 @task(pre=[build_image])

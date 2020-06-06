@@ -1,4 +1,6 @@
 """
+this service is generalized by mqtt_graph_bridge and rdf_from_mqtt, so delete when those are stable
+
 :frontDoorLock :state :locked/:unlocked
 is the true state of the lock, maintained in this process.
 
@@ -183,7 +185,7 @@ if __name__ == '__main__':
     verboseLogging(arg['-v'])
 
     masterGraph = PatchableGraph()
-    mqtt = MqttClient(brokerPort=10010)
+    mqtt = MqttClient(brokerPort=10210)
     autoclose = AutoLock(masterGraph, mqtt)
     def toGraph(payload):
         log.info('mqtt->graph %r', payload)

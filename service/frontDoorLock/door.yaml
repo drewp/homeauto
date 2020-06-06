@@ -4,7 +4,6 @@ esphome:
   board: lolin32
   build_path: .
   arduino_version: espressif32@>=1.4.0
-  esphome_core_version: latest
 
 switch:
   - platform: gpio
@@ -17,10 +16,8 @@ wifi:
 
 mqtt:
   broker: '10.2.0.1'
-  port: 10010
-  keepalive: 5
-  username: ''
-  password: ''
+  port: 10210
+  keepalive: 5s
   
 logger:
   baud_rate: 115200
