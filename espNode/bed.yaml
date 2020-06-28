@@ -1,0 +1,89 @@
+# https://cdn.hackaday.io/files/269911154782944/Heltec_WIFI-LoRa-32_DiagramPinout.jpg
+
+esphome:
+  name: bed
+  platform: ESP32
+  board: lolin32
+  build_path: build
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: ''
+  use_address: 10.2.0.90   # not stable!
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+  
+#dallas:
+#  - pin: GPIO16
+#sensor:
+#  - platform: dallas
+#    index: 0
+#    name: temperature
+
+switch:
+  - {platform: gpio, pin: {mode: INPUT_PULLUP, number: 2, inverted: yes}, name: red_button}
+  - {platform: gpio, pin: {mode: INPUT_PULLUP, number: 15, inverted: yes}, name: green_button}
+  - {platform: gpio, pin: GPIO16, name: pir}
+  
+output:
+  - {platform: ledc, pin: GPIO19, id: headboard_w }
+  - {platform: ledc, pin: GPIO23, id: headboard_r }
+  - {platform: ledc, pin: GPIO18, id: headboard_g }
+  - {platform: ledc, pin: GPIO17, id: headboard_b }
+  
+light:
+  - platform: rgbw
+    name: headboard
+    red: headboard_r
+    green: headboard_g
+    blue: headboard_b
+    white: headboard_w
+
+    
+i2c:
+  sda: 4
+  scl: 15
+
+font:
+  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
+    id: font_vera
+    size: 12
+    glyphs: "+-_.:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz"
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: wifi_ip
+      id: wifi_ip
+    ssid:
+      name: wifi_ssid
+    bssid:
+      name: wifi_bssid
+
+sensor:
+  - platform: wifi_signal
+    id: my_wifi_signal
+    name: wifi_signal
+    update_interval: 4s
+    internal: true # no mqtt
+      
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    reset_pin: 16
+    address: 0x3C
+    lambda: |-
+      it.print(0, 0, id(font_vera), "bed 2: running");
+      it.printf(0, 20, id(font_vera), "wifi %s %.2f", id(wifi_ip).state.c_str(), id(my_wifi_signal).state);
+      

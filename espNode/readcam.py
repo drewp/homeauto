@@ -5,6 +5,9 @@ import time
 import io
 import os
 import json
+from docopt import docopt
+from standardservice.logsetup import log, verboseLogging
+
 logging.basicConfig(level=logging.INFO)
 from aiohttp import web
 from aiohttp.web import Response
@@ -19,17 +22,34 @@ import cv2
 import numpy
 
 class CameraReceiver:
-    def __init__(self, loop):
+    def __init__(self, loop, host):
         self.lastFrameTime = None
         self.loop = loop
+        self.host = host
         self.lastFrame = b"", ''
         self.recent = []
 
     async def start(self):
-        self.c = c = APIClient(self.loop, '10.2.0.21', 6053, 'MyPassword')
-        await c.connect(login=True)
-        await c.subscribe_states(on_state=self.on_state)
-        await c.request_image_stream()
+        try:
+            self.c = c = APIClient(self.loop, 
+            self.host,
+            6053, 'MyPassword')
+            await c.connect(login=True)
+            await c.subscribe_states(on_state=self.on_state)
+        except OSError:
+            loop.stop()
+            return
+        self.loop.create_task(self.start_requesting_image_stream_forever())
+
+    async def start_requesting_image_stream_forever(self):
+        while True:
+            try:
+                await self.c.request_image_stream()
+            except AttributeError:
+                self.loop.stop()
+                return
+            # https://github.com/esphome/esphome/blob/dev/esphome/components/esp32_camera/esp32_camera.cpp#L265 says a 'stream' is 5 sec long
+            await asyncio.sleep(4)
 
     def on_state(self, s):
         if isinstance(s, CameraState):
@@ -38,8 +58,8 @@ class CameraReceiver:
                 self.recent = self.recent[-10:]
 
             self.recent.append(jpg)
-            print('recent lens: %s' % (','.join(str(len(x))
-                                                for x in self.recent)))
+            #print('recent lens: %s' % (','.join(str(len(x))
+            #                                    for x in self.recent)))
         else:
             print('other on_state', s)
 
@@ -66,14 +86,8 @@ class CameraReceiver:
                 self.lastFrame = jpg, msg
                 self.lastFrameTime = time.time()
             else:
-                await asyncio.sleep(.5)
+                await asyncio.sleep(.05)
 
-loop = asyncio.get_event_loop()
-
-recv = CameraReceiver(loop)
-detector = apriltag.Detector()
-
-loop.create_task(recv.start())
 
 def imageUri(jpg):
     return 'data:image/jpeg;base64,' + binascii.b2a_base64(jpg).decode('ascii')
@@ -128,8 +142,35 @@ async def index(request):
     """
     return Response(text=d, content_type='text/html')
 
+arguments = docopt('''
+this
 
+Usage:
+  this [-v] [--cam host] [--port to_serve]
+
+Options:
+  -v --verbose       more log
+  --port n           http server [default: 10020]
+  --cam host         hostname of esphome server
+''')
+
+verboseLogging(arguments['--verbose'])
+logging.getLogger('aioesphomeapi.connection').setLevel(logging.INFO)
+
+loop = asyncio.get_event_loop()
+
+recv = CameraReceiver(loop, arguments['--cam'])
+detector = apriltag.Detector()
+
+f = recv.start()
+loop.create_task(f)
+
+start_time = time.time()
 app = web.Application()
 app.router.add_route('GET', '/stream', stream)
 app.router.add_route('GET', '/', index)
-web.run_app(app, host='0.0.0.0', port=10020)
+try:
+    web.run_app(app, host='0.0.0.0', port=int(arguments['--port']))
+except RuntimeError as e:
+    log.error(e)
+log.info(f'run_app stopped after {time.time() - start_time} sec')

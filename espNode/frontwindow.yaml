@@ -1,7 +1,8 @@
 substitutions:
   location: display1
   board: d1_mini
-
+  wifi_addr: 10.2.0.97
+  
 <<: !include esp8266_nightlight.yaml
   
 i2c:
@@ -9,33 +10,67 @@ i2c:
   scl: D5
 
 font:
-  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
-    id: font_big
-    size: 24
-  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
-    id: font_small
-    size: 12
+  - file: "Oswald-Regular.ttf"
+    id: font_20
+    size: 20
+    glyphs: ' .ASacdegiknorstuwDpCf'
+  - file: "Oswald-Regular.ttf"
+    id: font_13
+    size: 13
+    glyphs: 'CLOUcdeklnopsD. '
+  - file: "Oswald-Regular.ttf"
+    id: font_10
+    size: 10
+    glyphs: ' %0123456789.:NekortwDpnb-dB'
 
 text_sensor:
   - platform: mqtt_subscribe
-    name: "Data from topic"
-    id: bigtext
-    topic: frontwindow/bigtext
+    name: "line1"
+    id: line1
+    topic: frontwindow/line1
+    on_value:
+      then:
+        - component.update: my_display
   - platform: mqtt_subscribe
-    name: "Data from topic"
-    id: smalltext
-    topic: frontwindow/smalltext
+    name: "line2"
+    id: line2
+    topic: frontwindow/line2
+    on_value:
+      then:
+        - component.update: my_display
+  - platform: mqtt_subscribe
+    name: "line3"
+    id: line3
+    topic: frontwindow/line3
+    on_value:
+      then:
+        - component.update: my_display
+  - platform: mqtt_subscribe
+    name: "line4"
+    id: line4
+    topic: frontwindow/line4
+    on_value:
+      then:
+        - component.update: my_display
+
+sensor:
+  - platform: wifi_signal
+    name: "WiFi Signal Sensor"
+    update_interval: 10s
+    id: wifi_db
     
 display:
   - platform: ssd1306_i2c
+    id: my_display
     model: "SSD1306 128x64"
     address: 0x3c
     lambda: |-
       it.rectangle(0, 0, 127, 63);
-      it.printf(64, 5, id(font_big), TextAlign::TOP_CENTER, id(bigtext).state.c_str());
-      it.printf(64, 63-5, id(font_small), TextAlign::BOTTOM_CENTER, id(smalltext).state.c_str());
-      
-      
+      it.printf(64, 3, id(font_20), TextAlign::TOP_CENTER, id(line1).state.c_str());
+      it.printf(30, 28, id(font_13), TextAlign::TOP_CENTER, id(line2).state.c_str());
+      it.printf(103, 28, id(font_13), TextAlign::TOP_CENTER, id(line3).state.c_str());
+      it.printf(64, 63 - 5, id(font_10), TextAlign::BOTTOM_CENTER, "Network: %d dB", static_cast<int8_t>(id(wifi_db).state));
+
 spi:
   clk_pin: D4
   miso_pin: D1
@@ -48,5 +83,6 @@ pn532:
     then:
       - mqtt.publish:
           topic: frontwindow/tag
+          retain: false
           payload: !lambda 'return x;'
       

@@ -2,7 +2,6 @@ esphome:
   name: theater_blaster
   platform: esp32
   board: lolin32
-  build_path: build
 
 # MAC: 3c:71:bf:ab:6e:94
 
@@ -16,23 +15,30 @@ mqtt:
   port: 1883
   username: ''
   password: ''
-  on_message:
-    - topic: theater_blaster/ir_out
-      payload: "volume_up"
+  on_json_message:
+    - topic: theater_blaster/ir_out/volume_up
       then:
         - remote_transmitter.transmit_nec:
             address: 0x4BB6
             command: 0x40BF
             repeat:
-              times: 3
-    - topic: theater_blaster/ir_out
-      payload: "volume_down"
+              times: !lambda |-
+                if (x.containsKey("times")) {
+                  return x["times"];
+                }
+                return 1;
+    - topic: theater_blaster/ir_out/volume_down
       then:
         - remote_transmitter.transmit_nec:
             address: 0x4BB6
             command: 0xC03F
             repeat:
-              times: 3
+              times: !lambda |-
+                if (x.containsKey("times")) {
+                  return x["times"];
+                }
+                return 1;
+  on_message:
     - topic: theater_blaster/ir_out
       payload: "input_bd"
       then:
@@ -97,3 +103,20 @@ remote_transmitter:
 #      address: 0x1234
 #      command: 0x78AB
       
+i2c:
+  sda: 4
+  scl: 15
+
+font:
+  - file: "/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf"
+    id: font_vera
+    size: 20
+    
+display:
+  - platform: ssd1306_i2c
+    model: "SSD1306 128x64"
+    reset_pin: 16
+    address: 0x3C
+    lambda: |-
+      it.print(128/2, 0+6, id(font_vera), TextAlign::TOP_CENTER, "big cast erisk");
+      it.print(128/2, 64-6, id(font_vera), TextAlign::BOTTOM_CENTER ,"Volume 45");

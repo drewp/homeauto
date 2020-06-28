@@ -8,7 +8,8 @@ esphome:
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
-  domain: ''
+  use_address: ${wifi_addr}
+  domain: '.bigasterisk.com'
 
 mqtt:
   broker: '10.2.0.1'
@@ -18,6 +19,6 @@ mqtt:
   
 logger:
   baud_rate: 115200
-  level: DEBUG
+  level: INFO
   
 ota:

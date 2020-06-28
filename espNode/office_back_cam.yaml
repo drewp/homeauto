@@ -1,25 +1,34 @@
-# jump IO0 to GND on the board for programming
+# device is https://www.amazon.com/ESP32-CAM-Bluetooth-Camera-Module-Development/dp/B07S5PVZKV/ref=sr_1_3
 
-# bang(pts/13):/my/proj/homeauto/espNode% forever { catchsegv ./readcam.py --cam garage_hall_cam  --port 10020 -v }
+# has no rst pin, so 
+#  1. connect DTR to IO0
+#  2. inv monitor-usb --board office_back_cam
+#  3. press reset button
+#  4. ctrl-c,  inv program-board-over-usb --board office_back_cam
+
+# mosquitto_sub  -v -t office_back_cam/status
+
+# bang(pts/15):/my/proj/homeauto/espNode% catchsegv ./readcam.py --cam office_back_cam  --port 10021
+
 
 
 esphome:
-  name: garage_hall_cam
+  name: office_back_cam
   platform: ESP32
-  board: nodemcu-32s
+  board: esp32cam
   build_path: build
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   domain: ''
-  use_address: 10.2.0.28
-     
-#mqtt:
-#  broker: '10.2.0.1'
-#  port: 1883
-#  username: ''
-#  password: ''
+  use_address: '10.2.0.35'
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
   
 logger:
   baud_rate: 115200
@@ -31,6 +40,7 @@ api:
   port: 6053
   password: 'MyPassword'
   
+# https://randomnerdtutorials.com/esp32-cam-ai-thinker-pinout/
 esp32_camera:
   external_clock:
     pin: GPIO0
@@ -53,9 +63,7 @@ esp32_camera:
   # https://github.com/raphaelbs/esp32-cam-ai-thinker#capabilities says camera
   # is likely ov2640 with these native resolutions:
   # uxga=1600x1200 svga=800x600 cif=400x296
-  # My camera has 'Setup Failed: ERROR' if this is not 640x480. Not sure why.
-  # Also the camera had 'Setup Failed: ERROR' when its cable needed reseating.
-
+  
   #   160x120 (QQVGA)    'Got invalid frame', then no more
   #   128x160 (QQVGA2)
   #   176x144 (QCIF)     fps: 25 jpg: 20 img: 2KB burst of frames then stopped. 
@@ -77,4 +85,38 @@ esp32_camera:
   # https://github.com/raphaelbs/esp32-cam-ai-thinker/blob/master/components/ov2640/sensors/ov2640.c#L345
   # suggests that it might be 0 (for an ov2640, anyway).
   jpeg_quality: 10
+ 
+output:
+  - platform: gpio
+    pin: GPIO4
+    id: gpio_4
+
+light:
+  - platform: fastled_clockless
+    chipset: WS2812B
+    pin: GPIO13
+    num_leds: 1
+    rgb_order: GRB
+    name: "strip"
+  # - platform: monochromatic
+  #   name: "flash"
+  #   output: flash_out
+  - platform: binary
+    output: gpio_4
+    name: flash
+
   
+dallas:
+  - pin: GPIO15
+    update_interval: 10s
+
+sensor:
+  - platform: dallas
+    index: 0
+    name: temperature
+
+# output:
+#   - platform: ledc
+#     id: flash_out
+#     pin: GPIO4
+#     frequency: 19531Hz
