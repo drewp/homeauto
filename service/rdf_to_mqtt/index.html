@@ -37,6 +37,12 @@
     <div><button data-post="output?s=:theater&p=:volumeChange" data-body="3">Theater volume up</button></div>
     <div><button data-post="output?s=:theater&p=:volumeChange" data-body="-3">Theater volume down</button></div>
 
+    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ffffff">headboard white</button></div>
+    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#000000">headboard black</button></div>
+    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ff0000">headboard red</button></div>
+    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#00ff00">headboard green</button></div>
+    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#0000ff">headboard blue</button></div>
+
     <script>
      Array.from(document.querySelectorAll("button")).forEach((el) => {
        el.addEventListener("click", (ev) => {

@@ -56,6 +56,9 @@ devs = {
         'root': 'theater_blaster/ir_out',
         'values': 'theaterOutputs',
     },
+    ROOM['bedHeadboard']: {
+        'root': 'bed/light/headboard/command',
+    },
 #-t theater_blaster/ir_out -m 'input_game'
 #-t theater_blaster/ir_out -m 'input_bd'
 #-t theater_blaster/ir_out -m 'input_cbl'
@@ -100,6 +103,14 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                 self._publish(topic=f'theater_blaster/ir_out/volume_{which}',
                               message=json.dumps({'timed': abs(delta)}))
                 ignored = False
+            if stmt[0:2] == (dev, ROOM['color']):
+                h = stmt[2].toPython()
+                r,g,b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+                self._publish(topic=attrs['root'],
+                              message=json.dumps({'state': 'ON' if r or g or b else 'OFF',
+                                                  'color': {'r': r, 'g': g, 'b': b},
+                                                  'white_value': max(r, g, b)}))
+                ignored = false
         if ignored:
             log.warn("ignoring %s", stmt)
 

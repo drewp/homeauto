@@ -3,22 +3,25 @@
 @prefix serv: <http://bigasterisk.com/services/> .
 
 
+serv:rdf_to_mqtt_image a :DockerImage;
+      :dockerFile "Dockerfile";
+      :internalPort 10008
+      .
+      
+
+
 serv:rdf_to_mqtt a :Service;
+      :image serv:rdf_to_mqtt_image;
       :path "/rdf_to_mqtt/";
       :openid auth:admin;
       :serverHost "bang";
-      :internalPort 10008;
       :port 10008;
       :prodDockerFlags (
-      "--net=host"
       );
-      :localDockerFlags (
+      :localRunDockerFlags (
         "-v" "`pwd`:/opt"
       );
       :prodCmdline ("python3" "rdf_to_mqtt.py");
-      :localRunCmdline (
-        "python3" "rdf_to_mqtt.py" "-v"
-      );
-      :dockerFile "Dockerfile"
+      :localRunCmdline ( "python3" "rdf_to_mqtt.py" "-v" );
 .
 
