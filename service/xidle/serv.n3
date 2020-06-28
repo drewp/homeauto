@@ -2,15 +2,11 @@
 @prefix auth: <http://bigasterisk.com/ns/serv/auth#> .
 @prefix serv: <http://bigasterisk.com/services/> .
 
-
-serv:xidle a :Service;
-      :path "/xidle/";
-      :openid auth:admin;
-      :serverHost "bang";
+serv:xidle_x86 a :DockerImage;
       :internalPort 9107;
       :prodDockerFlags (
-      "-p" "9107:9107"
-      "--net=host"
+        "-p" "9107:9107"
+        "--net=host"
       );
       :localDockerFlags (
         "-v" "`pwd`:/opt"
@@ -18,6 +14,24 @@ serv:xidle a :Service;
       :localRunCmdline (
         "python3" "xidle.py" "-v"
       );
-      :dockerFile "Dockerfile"
-.
+      :dockerFile "Dockerfile.x86" .
+  
+serv:xidle_pi a :DockerImage;
+      :internalPort 9107;
+      :prodDockerFlags (
+        "-p" "9107:9107"
+        "--net=host"
+      );
+      :localDockerFlags (
+        "-v" "`pwd`:/opt"
+      );
+      :localRunCmdline (
+        "python3" "xidle.py" "-v"
+      );
+      :dockerFile "Dockerfile.pi" .
+
+serv:xidle_dash       a :Service; :path "/xidle/dash/";     :openid auth:admin; :serverHost "dash";      :image serv:xidle_x86 .
+serv:xidle_slash      a :Service; :path "/xidle/slash/";    :openid auth:admin; :serverHost "slash";     :image serv:xidle_x86 .
+serv:xidle_plus       a :Service; :path "/xidle/plus/";     :openid auth:admin; :serverHost "plus";      :image serv:xidle_x86 .
+serv:xidle_frontdoor  a :Service; :path "/xidle/frontdoor"; :openid auth:admin; :serverHost "frontdoor"; :image serv:xidle_pi .
 

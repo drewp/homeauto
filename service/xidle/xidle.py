@@ -20,7 +20,7 @@ DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
 host = socket.gethostname()
-client = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
+client = InfluxDBClient('bang5', 9060, 'root', 'root', 'main')
 
 os.environ['DISPLAY'] = ':0.0'
 
