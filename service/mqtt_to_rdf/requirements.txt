@@ -1,12 +1,10 @@
-pytype
-
 cyclone
 rdflib-jsonld==0.4.0
 rdflib==4.2.2
 twisted-mqtt==0.3.6
 git+http://github.com/drewp/scales.git@550bcba42c5e96152ff5c5bd753fbb33ffdfe460#egg=scales
 git+https://github.com/ReactiveX/RxPY.git@6deb66e827f34a88b4605773d7671322b9cbbd08#egg=rx
-
+docopt
 cycloneerr
 export_to_influxdb==0.4.0
 mqtt_client==0.9.0

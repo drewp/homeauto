@@ -4,8 +4,7 @@
 
 serv:mqtt_to_rdf_image a :DockerImage;
       :internalPort 10018;
-      :prodDockerFlags (
-      "--net=host");
+      :prodDockerFlags ();
       :localRunDockerFlags (
         "-v" "`pwd`:/opt"
 #        "-v" "/my/proj/homeauto/lib:/lib_src"
