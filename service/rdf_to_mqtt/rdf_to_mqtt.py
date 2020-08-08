@@ -30,9 +30,11 @@ STATS = scales.collection(
 devs = {
     ROOM['kitchenLight']: {
         'root': 'h801_skylight',
+        'hasWhite': True,
     },
     ROOM['kitchenCounterLight']: {
         'root': 'h801_counter',
+        'hasWhite': True,
     },
     ROOM['livingLampShelf']: {
         'root': 'sonoff_0/switch/sonoff_basic_relay/command',
@@ -60,22 +62,45 @@ devs = {
     },
     ROOM['bedHeadboard']: {
         'root': 'bed/light/headboard/command',
+        'hasWhite': True,
     },
-    #-t theater_blaster/ir_out -m 'input_game'
-    #-t theater_blaster/ir_out -m 'input_bd'
-    #-t theater_blaster/ir_out -m 'input_cbl'
-    #-t theater_blaster/ir_out -m 'input_pc'
-    #-t theater_blaster/ir_out/volume_up -m '{"times":1}'
-    #-t theater_blaster/ir_out/volume_down -m '{"times":1}'
+    # https://github.com/Koenkk/zigbee2mqtt.io/blob/new_api/docs/information/mqtt_topics_and_message_structure.md#general
+    ROOM['syl1']: {
+        'root': 'zigbee2mqtt/syl1/set',
+        'hasBrightness': True,
+        'defaults': {
+            'transition': 0,
+        }
+    },
+    ROOM['syl2']: {
+        'root': 'zigbee2mqtt/syl2/set',
+        'hasBrightness': True,
+        'defaults': {
+            'transition': 0,
+        }
+    },
+    ROOM['syl3']: {
+        'root': 'zigbee2mqtt/syl3/set',
+        'hasBrightness': True,
+        'defaults': {
+            'transition': 0,
+        }
+    },
+    ROOM['syl4']: {
+        'root': 'zigbee2mqtt/syl4/set',
+        'hasBrightness': True,
+        'defaults': {
+            'transition': 0,
+        }
+    },
 }
 
 
 class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
+
     @STATS.putRequests.time()
     def put(self):
-        for stmt in rdf_over_http.rdfStatementsFromRequest(
-                self.request.arguments, self.request.body,
-                self.request.headers):
+        for stmt in rdf_over_http.rdfStatementsFromRequest(self.request.arguments, self.request.body, self.request.headers):
             self._onStatement(stmt)
 
     @STATS.statement.time()
@@ -101,25 +126,34 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
             if stmt[0:2] == (dev, ROOM['volumeChange']):
                 delta = int(stmt[2].toPython())
                 which = 'up' if delta > 0 else 'down'
-                self._publish(topic=f'theater_blaster/ir_out/volume_{which}',
-                              message=json.dumps({'timed': abs(delta)}))
+                self._publish(topic=f'theater_blaster/ir_out/volume_{which}', message=json.dumps({'timed': abs(delta)}))
                 ignored = False
             if stmt[0:2] == (dev, ROOM['color']):
                 h = stmt[2].toPython()
                 r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
-                self._publish(topic=attrs['root'],
-                              message=json.dumps({
-                                  'state':
-                                  'ON' if r or g or b else 'OFF',
-                                  'color': {
-                                      'r': r,
-                                      'g': g,
-                                      'b': b
-                                  },
-                                  'white_value':
-                                  max(r, g, b)
-                              }))
+                msg = {
+                    'state': 'ON' if r or g or b else 'OFF',
+                    'color': {
+                        'r': r,
+                        'g': g,
+                        'b': b
+                    },
+                }
+                if attrs.get('hasBrightness', False):
+                    # todo- still not right for sylvania bulbs; they want color x-y.
+                    # see https://www.zigbee2mqtt.io/information/mqtt_topics_and_message_structure.html#zigbee2mqttfriendly_nameset
+                    msg['brightness'] = max(r, g, b)
+                    if msg['brightness'] != 0:
+                        scl = msg['brightness'] / 255
+                        for chan in ['r', 'g', 'b']:
+                            msg['color'][chan] = int(msg['color'][chan] / 255.0 / scl * 255)
+
+                if attrs.get('hasWhite', False):
+                    msg['white_value'] = max(r, g, b)
+                msg.update(attrs.get('defaults', {}))
+                self._publish(topic=attrs['root'], message=json.dumps(msg))
                 ignored = False
+
         if ignored:
             log.warn("ignoring %s", stmt)
 
@@ -142,21 +176,15 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
         for line in ['line1', 'line2', 'line3', 'line4']:
             if stmt[1] == ROOM[line]:
                 ignored = False
-                self.settings.mqtt.publish(
-                    b'frontwindow/%s' % line.encode('ascii'),
-                    stmt[2].toPython())
+                self.settings.mqtt.publish(b'frontwindow/%s' % line.encode('ascii'), stmt[2].toPython())
         return ignored
 
     @STATS.mqttPublish.time()
-    def _publish(self,
-                 topic: str,
-                 messageJson: object = None,
-                 message: str = None):
+    def _publish(self, topic: str, messageJson: object = None, message: str = None):
         log.debug(f'mqtt.publish {topic} {message} {messageJson}')
         if messageJson is not None:
             message = json.dumps(messageJson)
-        self.settings.mqtt.publish(topic.encode('ascii'),
-                                   message.encode('ascii'))
+        self.settings.mqtt.publish(topic.encode('ascii'), message.encode('ascii'))
 
 
 if __name__ == '__main__':
@@ -167,9 +195,7 @@ if __name__ == '__main__':
     """)
     verboseLogging(arg['-v'])
 
-    mqtt = MqttClient(clientId='rdf_to_mqtt',
-                      brokerHost='mosquitto-ext.default.svc.cluster.local',
-                      brokerPort=1883)
+    mqtt = MqttClient(clientId='rdf_to_mqtt', brokerHost='mosquitto-ext.default.svc.cluster.local', brokerPort=1883)
 
     port = 10008
     reactor.listenTCP(port,

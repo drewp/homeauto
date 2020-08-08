@@ -1,62 +1,102 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>rdf_to_mqtt</title>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
     <script src="/rdf/common_paths_and_ns.js"></script>
 
-    <link rel="stylesheet" href="/rdf/browse/style.css">
-
+    <link rel="stylesheet" href="/rdf/browse/style.css" />
+    <style>
+      button {
+        min-height: 50px;
+      }
+      section {
+        margin: 5px;
+        display: inline-block;
+        vertical-align: top;
+      }
+    </style>
   </head>
   <body class="rdfBrowsePage">
     rdf_to_mqtt
 
-
     <p>Send demo statements to bridge:</p>
-    <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="0.0">Send (:kitchenLight :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="1.0">Send (:kitchenLight :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:kitchenCounterLight&p=:brightness" data-body="0.0">Send (:kitchenCounterLight :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:kitchenCounterLight&p=:brightness" data-body="1.0">Send (:kitchenCounterLight :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="0.0">Send (:livingLampShelf :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="1.0">Send (:livingLampShelf :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:livingLampMantleEntry&p=:brightness" data-body="0.0">Send (:livingLamp1 :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:livingLampMantleEntry&p=:brightness" data-body="1.0">Send (:livingLamp1 :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:livingLampMantleChair&p=:brightness" data-body="0.0">Send (:livingLamp2 :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:livingLampMantleChair&p=:brightness" data-body="1.0">Send (:livingLamp2 :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:livingLampToyShelf&p=:brightness" data-body="0.0">Send (:livingLamp3 :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:livingLampToyShelf&p=:brightness" data-body="1.0">Send (:livingLamp3 :brightness 1.0)</button></div>
-    <div><button data-post="output?s=:livingLampPiano&p=:brightness" data-body="0.0">Send (:livingLamp4 :brightness 0.0)</button></div>
-    <div><button data-post="output?s=:livingLampPiano&p=:brightness" data-body="1.0">Send (:livingLamp4 :brightness 1.0)</button></div>
-
-    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="bd">Theater to chromecast</button></div>
-    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="game">Theater to PS4</button></div>
-    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="pc">Theater to VR</button></div>
-    <div><button data-post="output?s=:theater&p=:inputSelector" data-body="cbl">Theater to PS3</button></div>
-    <div><button data-post="output?s=:theater&p=:volumeChange" data-body="3">Theater volume up</button></div>
-    <div><button data-post="output?s=:theater&p=:volumeChange" data-body="-3">Theater volume down</button></div>
-
-    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ffffff">headboard white</button></div>
-    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#000000">headboard black</button></div>
-    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ff0000">headboard red</button></div>
-    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#00ff00">headboard green</button></div>
-    <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#0000ff">headboard blue</button></div>
+    <section>
+      <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="0.0">Send (:kitchenLight :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:kitchenLight&p=:brightness" data-body="1.0">Send (:kitchenLight :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:kitchenCounterLight&p=:brightness" data-body="0.0">Send (:kitchenCounterLight :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:kitchenCounterLight&p=:brightness" data-body="1.0">Send (:kitchenCounterLight :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="0.0">Send (:livingLampShelf :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:livingLampShelf&p=:brightness" data-body="1.0">Send (:livingLampShelf :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:livingLampMantleEntry&p=:brightness" data-body="0.0">Send (:livingLamp1 :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:livingLampMantleEntry&p=:brightness" data-body="1.0">Send (:livingLamp1 :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:livingLampMantleChair&p=:brightness" data-body="0.0">Send (:livingLamp2 :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:livingLampMantleChair&p=:brightness" data-body="1.0">Send (:livingLamp2 :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:livingLampToyShelf&p=:brightness" data-body="0.0">Send (:livingLamp3 :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:livingLampToyShelf&p=:brightness" data-body="1.0">Send (:livingLamp3 :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:livingLampPiano&p=:brightness" data-body="0.0">Send (:livingLamp4 :brightness 0.0)</button></div>
+      <div><button data-post="output?s=:livingLampPiano&p=:brightness" data-body="1.0">Send (:livingLamp4 :brightness 1.0)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:theater&p=:inputSelector" data-body="bd">Theater to chromecast</button></div>
+      <div><button data-post="output?s=:theater&p=:inputSelector" data-body="game">Theater to PS4</button></div>
+      <div><button data-post="output?s=:theater&p=:inputSelector" data-body="pc">Theater to VR</button></div>
+      <div><button data-post="output?s=:theater&p=:inputSelector" data-body="cbl">Theater to PS3</button></div>
+      <div><button data-post="output?s=:theater&p=:volumeChange" data-body="3">Theater volume up</button></div>
+      <div><button data-post="output?s=:theater&p=:volumeChange" data-body="-3">Theater volume down</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ffffff">headboard white</button></div>
+      <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#000000">headboard black</button></div>
+      <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#ff0000">headboard red</button></div>
+      <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#00ff00">headboard green</button></div>
+      <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#0000ff">headboard blue</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:syl1&p=:color" data-body="#000000">Send (:syl1 :color black)</button></div>
+      <div><button data-post="output?s=:syl1&p=:color" data-body="#ffffff">Send (:syl1 :color white)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:syl2&p=:color" data-body="#000000">Send (:syl2 :color black)</button></div>
+      <div><button data-post="output?s=:syl2&p=:color" data-body="#ffffff">Send (:syl2 :color white)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:syl3&p=:color" data-body="#000000">Send (:syl3 :color black)</button></div>
+      <div><button data-post="output?s=:syl3&p=:color" data-body="#ffffff">Send (:syl3 :color white)</button></div>
+    </section>
+    <section>
+      <div><button data-post="output?s=:syl4&p=:color" data-body="#000000">Send (:syl4 :color black)</button></div>
+      <div><button data-post="output?s=:syl4&p=:color" data-body="#ffffff">Send (:syl4 :color white)</button></div>
+    </section>
 
     <script>
-     Array.from(document.querySelectorAll("button")).forEach((el) => {
-       el.addEventListener("click", (ev) => {
-         fetch(el.dataset.post, {
-           method: "PUT",
-           body: el.dataset.body
-         });
-       });
-     });
+      Array.from(document.querySelectorAll("button")).forEach((el) => {
+        el.addEventListener("click", (ev) => {
+          fetch(el.dataset.post, {
+            method: "PUT",
+            body: el.dataset.body,
+          });
+        });
+      });
     </script>
 
-      <div class="served-resources">
-        <a href="stats/">/stats/</a>
-        <a href="output">/output (post)</a>
-      </div>
+    <div class="served-resources">
+      <a href="stats/">/stats/</a>
+      <a href="output">/output (post)</a>
+    </div>
   </body>
 </html>
