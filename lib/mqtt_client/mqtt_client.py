@@ -7,6 +7,7 @@ from twisted.internet.defer import inlineCallbacks
 from twisted.internet.endpoints import clientFromString
 
 log = logging.getLogger('mqtt_client')
+AT_MOST_ONCE, AT_LEAST_ONCE, EXACTLY_ONCE = 0, 1, 2
 
 class MQTTService(ClientService):
 
@@ -25,7 +26,7 @@ class MQTTService(ClientService):
 
     def _subscribeToLatestTopic(self, protocol, topic: bytes):
         if protocol.state == protocol.CONNECTED:
-            self.protocol.subscribe(topics=[(topic.decode('utf8'), 2)])
+            self.protocol.subscribe(topics=[(topic.decode('utf8'), AT_LEAST_ONCE)])
         # else it'll get done in the next connectToBroker.
 
     def _subscribeAll(self):
@@ -33,7 +34,7 @@ class MQTTService(ClientService):
         if not topics:
             return
         log.info('subscribing %r', topics)
-        self.protocol.subscribe(topics=[(topic.decode('utf8'), 2) for topic in topics])
+        self.protocol.subscribe(topics=[(topic.decode('utf8'), AT_LEAST_ONCE) for topic in topics])
 
 
     @inlineCallbacks
