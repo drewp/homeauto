@@ -5,24 +5,26 @@ convert those to outputAttrs (:dev1 :red 255; :green 0; :blue 0) and post them t
 This is like light9/bin/collector.
 """
 import json
-from mqtt_client import MqttClient
-from docopt import docopt
-from rdflib import Namespace
-from twisted.internet import reactor
+
 import cyclone.web
+from cycloneerr import PrettyErrorHandler
+from docopt import docopt
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
-
+from mqtt_client import MqttClient
+from rdflib import Namespace
 from standardservice.logsetup import log, verboseLogging
+from twisted.internet import reactor
+
 import rdf_over_http
-from cycloneerr import PrettyErrorHandler
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
-STATS = scales.collection('/root',
-                          scales.PmfStat('putRequests'),
-                          scales.PmfStat('statement'),
-                          scales.PmfStat('mqttPublish'),
+STATS = scales.collection(
+    '/root',
+    scales.PmfStat('putRequests'),
+    scales.PmfStat('statement'),
+    scales.PmfStat('mqttPublish'),
 )
 
 devs = {
@@ -59,12 +61,12 @@ devs = {
     ROOM['bedHeadboard']: {
         'root': 'bed/light/headboard/command',
     },
-#-t theater_blaster/ir_out -m 'input_game'
-#-t theater_blaster/ir_out -m 'input_bd'
-#-t theater_blaster/ir_out -m 'input_cbl'
-#-t theater_blaster/ir_out -m 'input_pc'
-#-t theater_blaster/ir_out/volume_up -m '{"times":1}'
-#-t theater_blaster/ir_out/volume_down -m '{"times":1}'
+    #-t theater_blaster/ir_out -m 'input_game'
+    #-t theater_blaster/ir_out -m 'input_bd'
+    #-t theater_blaster/ir_out -m 'input_cbl'
+    #-t theater_blaster/ir_out -m 'input_pc'
+    #-t theater_blaster/ir_out/volume_up -m '{"times":1}'
+    #-t theater_blaster/ir_out/volume_down -m '{"times":1}'
 }
 
 
@@ -72,8 +74,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
     @STATS.putRequests.time()
     def put(self):
         for stmt in rdf_over_http.rdfStatementsFromRequest(
-                self.request.arguments,
-                self.request.body,
+                self.request.arguments, self.request.body,
                 self.request.headers):
             self._onStatement(stmt)
 
@@ -105,12 +106,20 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                 ignored = False
             if stmt[0:2] == (dev, ROOM['color']):
                 h = stmt[2].toPython()
-                r,g,b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+                r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
                 self._publish(topic=attrs['root'],
-                              message=json.dumps({'state': 'ON' if r or g or b else 'OFF',
-                                                  'color': {'r': r, 'g': g, 'b': b},
-                                                  'white_value': max(r, g, b)}))
-                ignored = false
+                              message=json.dumps({
+                                  'state':
+                                  'ON' if r or g or b else 'OFF',
+                                  'color': {
+                                      'r': r,
+                                      'g': g,
+                                      'b': b
+                                  },
+                                  'white_value':
+                                  max(r, g, b)
+                              }))
+                ignored = False
         if ignored:
             log.warn("ignoring %s", stmt)
 
@@ -121,16 +130,12 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
         self._publish(topic=attrs['root'], message=msg)
 
     def _publishRgbw(self, attrs, brightness):
-        for chan, scale in [('w1', 1),
-                            ('r', 1),
-                            ('g', .8),
-                            ('b', .8)]:
-            self._publish(
-                topic=f"{attrs['root']}/light/kit_{chan}/command",
-                messageJson={
-                    'state': 'ON',
-                    'brightness': int(brightness * 255)
-                })
+        for chan, scale in [('w1', 1), ('r', 1), ('g', .8), ('b', .8)]:
+            self._publish(topic=f"{attrs['root']}/light/kit_{chan}/command",
+                          messageJson={
+                              'state': 'ON',
+                              'brightness': int(brightness * 255)
+                          })
 
     def _publishFrontScreenText(self, stmt):
         ignored = True
@@ -143,14 +148,15 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
         return ignored
 
     @STATS.mqttPublish.time()
-    def _publish(self, topic: str, messageJson: object=None,
-                 message: str=None):
+    def _publish(self,
+                 topic: str,
+                 messageJson: object = None,
+                 message: str = None):
         log.debug(f'mqtt.publish {topic} {message} {messageJson}')
         if messageJson is not None:
             message = json.dumps(messageJson)
-        self.settings.mqtt.publish(
-            topic.encode('ascii'),
-            message.encode('ascii'))
+        self.settings.mqtt.publish(topic.encode('ascii'),
+                                   message.encode('ascii'))
 
 
 if __name__ == '__main__':
@@ -161,15 +167,25 @@ if __name__ == '__main__':
     """)
     verboseLogging(arg['-v'])
 
-    mqtt = MqttClient(clientId='rdf_to_mqtt', brokerPort=1883)
+    mqtt = MqttClient(clientId='rdf_to_mqtt',
+                      brokerHost='mosquitto-ext.default.svc.cluster.local',
+                      brokerPort=1883)
 
     port = 10008
-    reactor.listenTCP(port, cyclone.web.Application([
-        (r"/()", cyclone.web.StaticFileHandler,
-         {"path": ".", "default_filename": "index.html"}),
-        (r'/output', OutputPage),
-        (r'/stats/(.*)', StatsHandler, {'serverName': 'rdf_to_mqtt'}),
-        ], mqtt=mqtt, debug=arg['-v']), interface='::')
+    reactor.listenTCP(port,
+                      cyclone.web.Application([
+                          (r"/()", cyclone.web.StaticFileHandler, {
+                              "path": ".",
+                              "default_filename": "index.html"
+                          }),
+                          (r'/output', OutputPage),
+                          (r'/stats/(.*)', StatsHandler, {
+                              'serverName': 'rdf_to_mqtt'
+                          }),
+                      ],
+                                              mqtt=mqtt,
+                                              debug=arg['-v']),
+                      interface='::')
     log.warn('serving on %s', port)
 
     reactor.run()
