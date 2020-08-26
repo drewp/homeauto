@@ -7,7 +7,15 @@
 namespace mqtt {
 AsyncMqttClient mqttClient;
 TimerHandle_t mqttReconnectTimer;
-std::string pendingCmd = "";
+
+#define MAX_INCOMING_PAYLOAD 1536
+class IncomingMessage {
+ public:
+  bool complete;
+  std::string topic;
+  std::vector<byte> payload;
+};
+IncomingMessage incomingMessage;
 
 void StopTimer() {
   xTimerStop(mqttReconnectTimer,
@@ -17,7 +25,9 @@ void StopTimer() {
 
 void Publish(std::string subtopic, std::string msg) {
   std::string topic = "fingerprint/" + subtopic;
-  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.c_str());
+  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.data(),
+                     msg.size());
+  // yield();
 }
 
 void ConnectToMqtt() {
@@ -37,12 +47,13 @@ void onMqttConnect(bool sessionPresent) {
   Serial.println(sessionPresent);
 
   mqttClient.subscribe("fingerprint/command", 1);
+  mqttClient.subscribe("fingerprint/set/#", 1);
 
   SendTemperature();
 
   mqttClient.setWill("fingerprint/status", 1, /*retain=*/true, "offline");
   mqttClient.publish("fingerprint/status", 1, /*retain=*/true, "online");
-    
+
   Serial.println("queuing a blink change");
   fingerprint::QueueBlinkConnected();
 }
@@ -59,17 +70,28 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
 void onMqttMessage(char* topic, char* payload,
                    AsyncMqttClientMessageProperties properties, size_t len,
                    size_t index, size_t total) {
-  std::string cmd(payload, len);
-  pendingCmd = cmd;
+  if (index == 0) {
+    incomingMessage.complete = false;
+    incomingMessage.topic = std::string(topic);
+    incomingMessage.payload.clear();
+  }
+
+  for (int i = 0; i < len; i++) {
+    incomingMessage.payload.push_back(payload[i]);
+  }
+
+  if (index + len == total) {
+    incomingMessage.complete = true;
+  }
 }
 
-bool HasPendingCommand() {
-    return pendingCmd != "";
-}
-std::string PopPendingCommand() {
-    std::string cmd = pendingCmd;
-    pendingCmd = "";
-    return cmd;
+// Don't do command right away; wait for main loop to ask for it.
+bool HasPendingMessage() { return incomingMessage.complete; }
+std::pair<std::string, std::vector<byte>> PopPendingMessage() {
+  std::pair<std::string, std::vector<byte>> ret{incomingMessage.topic,
+                                                incomingMessage.payload};
+  incomingMessage.complete = false;
+  return ret;
 }
 
 void Setup() {

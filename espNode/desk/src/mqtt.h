@@ -17,8 +17,8 @@ void Setup();
 void Publish(std::string subtopic, std::string msg);
 void StopTimer();
 void ConnectToMqtt();
-bool HasPendingCommand();
-std::string PopPendingCommand();
+bool HasPendingMessage();
+std::pair<std::string /*topic*/, std::vector<byte> /*payload*/> PopPendingMessage();
 
 }  // namespace mqtt
 #endif

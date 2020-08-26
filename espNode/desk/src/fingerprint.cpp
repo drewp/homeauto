@@ -1,6 +1,7 @@
 #include "fingerprint.h"
 
 #include <string>
+#include <vector>
 
 #include "mqtt.h"
 
@@ -51,7 +52,6 @@ void (*queued)() = nullptr;
 void QueueBlinkConnected() { queued = BlinkConnected; }
 void ExecuteAnyQueued() {
   if (queued) {
-    Serial.println("executing queued function");
     queued();
     queued = nullptr;
   }
@@ -93,6 +93,12 @@ void PublishError(std::string caller, int16_t p) {
     case FPM_ENROLLMISMATCH:
       errStr = "Fingerprints did not match";
       break;
+    case FPM_UPLOADFAIL:
+      errStr = "Cannot transfer the image";
+      break;
+    case FPM_DBREADFAIL:
+      errStr = "Invalid model";
+      break;
     default:
       char buf[100];
       snprintf(buf, sizeof(buf), "Unknown error (%d)", p);
@@ -112,7 +118,7 @@ bool GetImage() {
     if (p == FPM_OK) {
       mqtt::Publish("messages", "getImage: Image taken");
     } else if (p == FPM_NOFINGER) {
-      if (mqtt::HasPendingCommand() || queued) {
+      if (mqtt::HasPendingMessage() || queued) {
         return false;
       }
     } else {
@@ -269,11 +275,9 @@ void enroll_finger(int16_t fid) {
 
 void DeleteFingerprint(uint16_t fid) {
   int p = -1;
-
   p = finger.deleteModel(fid);
-
   if (p == FPM_OK) {
-    Serial.println("Deleted!");
+    mqtt::Publish("messages", "Deleted");
   } else {
     PublishError("deleteModel", p);
   }
@@ -292,7 +296,114 @@ void Enroll() {
   }
 }
 
-void DownloadPrintImage(uint16_t fid) {}
+// a GetImage image must be in the buffer to get the real bitmap image
+void DownloadLastImage() {
+  mqtt::Publish("messages", "Starting image stream");
+  finger.downImage();
+  std::vector<char> image(256 * 288 / 2);
+  size_t image_pos = 0;
+  bool read_complete = false;
+  uint16_t read_len;
+
+  while (true) {
+    read_len = image.size() - image_pos;
+    if (!finger.readRaw(FPM_OUTPUT_TO_BUFFER, image.data() + image_pos,
+                        &read_complete, &read_len)) {
+      mqtt::Publish("messages", "readRaw: failed");
+      return;
+    }
+    image_pos += read_len;
+    if (read_complete) {
+      break;
+    }
+  }
+  size_t image_len = image_pos;
+
+  char buf[100];
+  snprintf(buf, sizeof(buf), "got %d bytes to download", image_len);
+  mqtt::Publish("messages", buf);
+
+  std::string msg(image.data(), image_len);
+  char subtopic[50];
+  snprintf(subtopic, sizeof(subtopic), "image/%d", -1);
+  mqtt::Publish(subtopic, msg);
+}
+
+void DownloadModel(uint16_t fid) {
+  int p = -1;
+  mqtt::Publish("messages", "retrieve model for download");
+  p = finger.loadModel(fid);
+  if (p != FPM_OK) {
+    PublishError("loadModel", p);
+    return;
+  }
+  p = finger.downloadModel(fid);
+  if (p != FPM_OK) {
+    PublishError("downloadModel", p);
+    return;
+  }
+  byte model[2048];  // expect 1536 bytes
+  size_t model_pos = 0;
+  bool read_complete = false;
+  uint16_t read_len;
+  while (true) {
+    read_len = sizeof(model) - model_pos;
+    if (!finger.readRaw(FPM_OUTPUT_TO_BUFFER, model + model_pos, &read_complete,
+                        &read_len)) {
+      mqtt::Publish("messages", "readRaw: failed");
+      return;
+    }
+    model_pos += read_len;
+    if (read_complete) {
+      break;
+    }
+  }
+  size_t model_len = model_pos;
+  char buf[100];
+
+  snprintf(buf, sizeof(buf), "got %d bytes to download", model_len);
+  mqtt::Publish("messages", buf);
+
+  std::string msg(reinterpret_cast<char*>(model), model_len);
+  char subtopic[50];
+  snprintf(subtopic, sizeof(subtopic), "model/%d", fid);
+  mqtt::Publish(subtopic, msg);
+}
+
+void SetModel(uint16_t fid, const std::vector<uint8_t>& payload) {
+  int16_t p = -1;
+  mqtt::Publish("messages", "upload buffer to slot 1");
+
+  p = finger.uploadModel();
+  if (p != FPM_OK) {
+    PublishError("uploadModel", p);
+    return;
+  }
+  yield();
+  finger.writeRaw(const_cast<uint8_t*>(payload.data()), payload.size());
+  delay(
+      100);  // load-bearing sleep. Without this, the storeModel doesn't answer.
+
+  mqtt::Publish("messages", "store model from slot 1 to fid");
+  p = finger.storeModel(fid);
+  if (p != FPM_OK) {
+    PublishError("storeModel", p);
+    return;
+  }
+  mqtt::Publish("messages", "SetModel successful");
+}
+
+void DeleteModel(uint16_t fid) {
+  int16_t p = finger.deleteModel(fid);
+  if (p == FPM_OK) {
+    char msg[100];
+    snprintf(msg, sizeof(msg), "deleted id %d", fid);
+    mqtt::Publish("messages", msg);
+  } else {
+    PublishError("deleteModel", p);
+  }
+}
+
 void DeleteAll() {}
 
 void Setup() {
