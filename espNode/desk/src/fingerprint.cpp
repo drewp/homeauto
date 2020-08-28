@@ -135,7 +135,7 @@ bool GetImage() {
 
 bool ConvertImage(uint8_t slot = 1) {
   int16_t p = -1;
-  p = finger.image2Tz();
+  p = finger.image2Tz(slot);
   if (p == FPM_OK) {
     mqtt::Publish("messages", "image2Tz: Image converted");
   } else {
@@ -224,14 +224,14 @@ void WaitForRemove() {
 }
 
 void EnrollFailed() {
-  mqtt::Publish("messages", "exiting enroll");
+  mqtt::Publish("messages", "mode=enroll; exiting enroll");
   BlinkError();
   WaitForRemove();
 }
 
 void enroll_finger(int16_t fid) {
   int16_t p = -1;
-  mqtt::Publish("messages", "Waiting for valid finger to enroll");
+  mqtt::Publish("messages", "mode=enroll; Waiting for valid finger to enroll");
   BlinkStartEnroll();
   if (!GetImage()) {
     return EnrollFailed();
@@ -244,7 +244,7 @@ void enroll_finger(int16_t fid) {
   WaitForRemove();
 
   BlinkStartEnrollRepeat();
-  mqtt::Publish("messages", "Place same finger again");
+  mqtt::Publish("messages", "mode=enroll; Place same finger again");
   if (!GetImage()) {
     return EnrollFailed();
   }
@@ -254,7 +254,7 @@ void enroll_finger(int16_t fid) {
 
   p = finger.createModel();
   if (p == FPM_OK) {
-    mqtt::Publish("messages", "createModel: Prints matched");
+    mqtt::Publish("messages", "mode=enroll; createModel: Prints matched");
   } else {
     PublishError("createModel", p);
     return EnrollFailed();
@@ -262,7 +262,9 @@ void enroll_finger(int16_t fid) {
 
   p = finger.storeModel(fid);
   if (p == FPM_OK) {
-    mqtt::Publish("messages", "Stored!");
+    char buf[100];
+    snprintf(buf, sizeof(buf), "mode=enroll; stored as id %d", fid);
+    mqtt::Publish("messages", "mode=enroll; Stored!");
     BlinkSuccess();
     WaitForRemove();
     BlinkClearSuccess();
@@ -273,25 +275,15 @@ void enroll_finger(int16_t fid) {
   }
 }
 
-void DeleteFingerprint(uint16_t fid) {
-  int p = -1;
-  p = finger.deleteModel(fid);
-  if (p == FPM_OK) {
-    mqtt::Publish("messages", "Deleted");
-  } else {
-    PublishError("deleteModel", p);
-  }
-}
-
 void Enroll() {
   BlinkStartEnroll();
   mqtt::Publish("messages",
-                "Searching for a free slot to store the template...");
+                "mode=enroll; Searching for a free slot to store the template...");
   int16_t fid;
   if (get_free_id(&fid)) {
     enroll_finger(fid);
   } else {
-    mqtt::Publish("messages", "No free slot in flash library!");
+    mqtt::Publish("messages", "mode=enroll; No free slot in flash library!");
     BlinkError();
   }
 }

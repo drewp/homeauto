@@ -25,9 +25,7 @@ void StopTimer() {
 
 void Publish(std::string subtopic, std::string msg) {
   std::string topic = "fingerprint/" + subtopic;
-  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.data(),
-                     msg.size());
-  // yield();
+  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.data(), msg.size());
 }
 
 void ConnectToMqtt() {
