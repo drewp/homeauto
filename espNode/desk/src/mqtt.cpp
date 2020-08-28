@@ -22,10 +22,32 @@ void StopTimer() {
              0);  // ensure we don't reconnect to MQTT while reconnecting
                   // to Wi-Fi
 }
+/*
 
-void Publish(std::string subtopic, std::string msg) {
+Subscribed by MCU:
+
+fingerprint/command =
+    'enroll'
+  | 'show_success'
+  | 'clear_success'
+  | 'delete_all'
+  | 'delete/model/<fid>'
+  | 'get/model/<fid>'
+fingerprint/set/model/<fid> = binary model data
+
+Published from MCU:
+
+fingerprint/<mode>/status = junk
+fingerprint/<mode>/error/<caller> = FPM error message
+fingerprint/store = some change to fingerprint storage
+fingerprint/detect = input finger
+fingerprint/model/<fid> = binary model data
+fingerprint/image/<fid> = binary image data
+*/
+void Publish(const std::string& subtopic, const std::string& msg) {
   std::string topic = "fingerprint/" + subtopic;
-  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.data(), msg.size());
+  mqttClient.publish(topic.c_str(), 1, /*retain=*/false, msg.data(),
+                     msg.size());
 }
 
 void ConnectToMqtt() {

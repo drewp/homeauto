@@ -31,6 +31,26 @@ uint16_t LastComponentNumber(const std::string &s) {
 }
 }  // namespace
 
+void HandleCommand(const std::string &payload_string) {
+  if (payload_string == "enroll") {
+    fingerprint::Enroll();
+  } else if (payload_string == "show_success") {
+    fingerprint::BlinkSuccess();
+    while (!mqtt::HasPendingMessage()) yield();
+    mqtt::PopPendingMessage();
+    // hope it's "clear_success", but who cares
+    fingerprint::BlinkClearSuccess();
+  } else if (payload_string == "delete_all") {
+    fingerprint::DeleteAll();
+  } else if (payload_string.rfind("delete/model/", 0) == 0) {
+    uint16_t fid = LastComponentNumber(payload_string);
+    fingerprint::DeleteModel(fid);
+  } else if (payload_string.rfind("get/model/", 0) == 0) {
+    uint16_t fid = LastComponentNumber(payload_string);
+    fingerprint::DownloadModel(fid);
+  }
+}
+
 void loop() {
   Serial.println("--loop--");
 
@@ -42,26 +62,10 @@ void loop() {
     std::pair<std::string, std::vector<byte>> msg = mqtt::PopPendingMessage();
     const std::string &topic = msg.first;
     const std::vector<byte> &payload = msg.second;
-    const std::string payload_string(payload.begin(), payload.end());
 
     if (topic == "fingerprint/command") {
-      if (payload_string == "enroll") {
-        fingerprint::Enroll();
-      } else if (payload_string == "show_success") {
-        fingerprint::BlinkSuccess();
-        while (!mqtt::HasPendingMessage()) yield();
-        mqtt::PopPendingMessage();
-        // hope it's "clear_success", but who cares
-        fingerprint::BlinkClearSuccess();
-      } else if (payload_string == "delete_all") {
-        fingerprint::DeleteAll();
-      } else if (payload_string.rfind("delete/model/", 0) == 0) {
-        uint16_t fid = LastComponentNumber(payload_string);
-        fingerprint::DeleteModel(fid);
-      } else if (payload_string.rfind("download/model/", 0) == 0) {
-        uint16_t fid = LastComponentNumber(payload_string);
-        fingerprint::DownloadModel(fid);
-      }
+      const std::string payload_string(payload.begin(), payload.end());
+      HandleCommand(payload_string);
     } else if (topic.rfind("fingerprint/set/model/", 0) == 0) {
       uint16_t fid = LastComponentNumber(topic);
 

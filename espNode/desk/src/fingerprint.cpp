@@ -57,7 +57,36 @@ void ExecuteAnyQueued() {
   }
 }
 
-void PublishError(std::string caller, int16_t p) {
+bool NeedToGetBackToMainLoopSoon() {
+  return mqtt::HasPendingMessage() || queued;
+}
+
+void LogStatus(const std::string& log_mode, const std::string& msg) {
+  mqtt::Publish(log_mode + "/status", msg);
+}
+void LogError(const std::string& log_mode, const std::string& caller,
+              const std::string& err) {
+  mqtt::Publish(log_mode + "/error/" + caller, err);
+}
+void LogStore(const std::string& msg) { mqtt::Publish("store", msg); }
+void LogDetect(const std::string& msg) { mqtt::Publish("detected", msg); }
+
+void PublishModel(uint16_t fid, char* model, size_t model_len) {
+  std::string msg(model, model_len);
+  char subtopic[50];
+  snprintf(subtopic, sizeof(subtopic), "model/%d", fid);
+  mqtt::Publish(subtopic, msg);
+}
+
+void PublishImage(char* image_data, size_t image_len) {
+  std::string msg(image_data, image_len);
+  char subtopic[50];
+  snprintf(subtopic, sizeof(subtopic), "image/%d", -1);
+  mqtt::Publish(subtopic, msg);
+}
+
+void LogFpmError(const std::string& log_mode, const std::string& caller,
+                 int16_t p) {
   std::string errStr;
   switch (p) {
     case FPM_FEATUREFAIL:
@@ -105,60 +134,61 @@ void PublishError(std::string caller, int16_t p) {
       errStr = buf;
       break;
   }
-  mqtt::Publish("messages", caller + ": " + errStr);
+  LogError(log_mode, caller, errStr);
 }
 
-bool GetImage() {
+bool GetImage(const std::string& log_mode) {
   int16_t p = -1;
-  mqtt::Publish("messages", "Waiting for valid finger");
+  LogStatus(log_mode, "Waiting for valid finger");
 
   while (p != FPM_OK) {
     p = finger.getImage();
 
     if (p == FPM_OK) {
-      mqtt::Publish("messages", "getImage: Image taken");
+      LogStatus(log_mode, "Image taken");
     } else if (p == FPM_NOFINGER) {
-      if (mqtt::HasPendingMessage() || queued) {
+      if (NeedToGetBackToMainLoopSoon()) {
         return false;
       }
     } else {
-      PublishError("getImage", p);
+      LogFpmError(log_mode, "getImage", p);
       return false;
     }
     yield();
   }
-  mqtt::Publish("messages", "getImage: got image");
+  LogStatus(log_mode, "Got image");
 
   BlinkProgress();
   return true;
 }
 
-bool ConvertImage(uint8_t slot = 1) {
+bool ConvertImage(const std::string& log_mode, uint8_t slot = 1) {
   int16_t p = -1;
   p = finger.image2Tz(slot);
   if (p == FPM_OK) {
-    mqtt::Publish("messages", "image2Tz: Image converted");
+    LogStatus(log_mode, "Image converted");
   } else {
-    PublishError("image2Tz", p);
+    LogFpmError(log_mode, "image2Tz", p);
     return false;
   }
   return true;
 }
 
-bool SearchDatabase(uint16_t* fid, uint16_t* score) {
+bool SearchDatabase(const std::string& log_mode, uint16_t* fid,
+                    uint16_t* score) {
   int16_t p = -1;
   p = finger.searchDatabase(fid, score);
 
   /* now wait to remove the finger, though not necessary;
      this was moved here after the search because of the R503 sensor,
      which seems to wipe its buffers after each scan */
-  mqtt::Publish("messages", "Waiting for finger removal");
+  LogStatus(log_mode, "Waiting for finger removal");
   while (finger.getImage() != FPM_NOFINGER) {
     delay(500);
   }
 
   if (p != FPM_OK) {
-    PublishError("searchDatabase", p);
+    LogFpmError(log_mode, "searchDatabase", p);
 
     if (p == FPM_NOTFOUND) {
       BlinkError();
@@ -170,51 +200,52 @@ bool SearchDatabase(uint16_t* fid, uint16_t* score) {
 
 void ReportFoundMatch(uint16_t fid, uint16_t score) {
   char msg[100];
-  snprintf(msg, sizeof(msg), "found id %d confidence %d", fid, score);
-  mqtt::Publish("match", msg);
+  snprintf(msg, sizeof(msg), "Found id %d confidence %d", fid, score);
+  LogDetect(msg);
 }
 
 void ScanLoop() {
-  if (!GetImage()) {
+  const std::string& log_mode = "scan";
+  if (!GetImage(log_mode)) {
     return;
   }
 
-  if (!ConvertImage()) {
+  if (!ConvertImage(log_mode)) {
     return;
   }
 
   uint16_t fid, score;
-  if (!SearchDatabase(&fid, &score)) {
+  if (!SearchDatabase(log_mode, &fid, &score)) {
     return;
   }
 
   ReportFoundMatch(fid, score);
 }
 
-bool get_free_id(int16_t* fid) {
+bool get_free_id(const std::string& log_mode, int16_t* fid) {
   int16_t p = -1;
   for (int page = 0; page < (params.capacity / FPM_TEMPLATES_PER_PAGE) + 1;
        page++) {
     p = finger.getFreeIndex(page, fid);
     if (p != FPM_OK) {
-      PublishError("getFreeIndex", p);
+      LogFpmError(log_mode, "getFreeIndex", p);
       return false;
     }
     if (*fid != FPM_NOFREEINDEX) {
       char buf[100];
-      snprintf(buf, sizeof(buf), "getFreeIndex: Free slot at id %d", *fid);
-      mqtt::Publish("messages", buf);
+      snprintf(buf, sizeof(buf), "Free slot at id %d", *fid);
+      LogStatus(log_mode, buf);
       return true;
     }
     yield();
   }
-  mqtt::Publish("messages", "getFreeIndex: No free slots");
+  LogStatus(log_mode, "getFreeIndex: No free slots");
   return false;
 }
 
-void WaitForRemove() {
+void WaitForRemove(const std::string& log_mode) {
   int16_t p = -1;
-  mqtt::Publish("messages", "Remove finger");
+  LogStatus(log_mode, "Remove finger");
   delay(2000);
   p = 0;
   while (p != FPM_NOFINGER) {
@@ -223,74 +254,73 @@ void WaitForRemove() {
   }
 }
 
-void EnrollFailed() {
-  mqtt::Publish("messages", "mode=enroll; exiting enroll");
+void EnrollFailed(const std::string& log_mode) {
+  LogStatus(log_mode, "Exiting enroll");
   BlinkError();
-  WaitForRemove();
+  WaitForRemove(log_mode);
 }
 
-void enroll_finger(int16_t fid) {
+void enroll_finger(const std::string& log_mode, int16_t fid) {
   int16_t p = -1;
-  mqtt::Publish("messages", "mode=enroll; Waiting for valid finger to enroll");
+  LogStatus(log_mode, "Waiting for valid finger to enroll");
   BlinkStartEnroll();
-  if (!GetImage()) {
-    return EnrollFailed();
+  if (!GetImage(log_mode)) {
+    return EnrollFailed(log_mode);
   }
 
-  if (!ConvertImage(1)) {
-    return EnrollFailed();
+  if (!ConvertImage(log_mode, 1)) {
+    return EnrollFailed(log_mode);
   }
 
-  WaitForRemove();
+  WaitForRemove(log_mode);
 
   BlinkStartEnrollRepeat();
-  mqtt::Publish("messages", "mode=enroll; Place same finger again");
-  if (!GetImage()) {
-    return EnrollFailed();
+  LogStatus(log_mode, "Place same finger again");
+  if (!GetImage(log_mode)) {
+    return EnrollFailed(log_mode);
   }
-  if (!ConvertImage(2)) {
-    return EnrollFailed();
+  if (!ConvertImage(log_mode, 2)) {
+    return EnrollFailed(log_mode);
   }
 
   p = finger.createModel();
   if (p == FPM_OK) {
-    mqtt::Publish("messages", "mode=enroll; createModel: Prints matched");
+    LogStatus(log_mode, "Prints matched");
   } else {
-    PublishError("createModel", p);
-    return EnrollFailed();
+    LogFpmError(log_mode, "createModel", p);
+    return EnrollFailed(log_mode);
   }
 
   p = finger.storeModel(fid);
   if (p == FPM_OK) {
     char buf[100];
-    snprintf(buf, sizeof(buf), "mode=enroll; stored as id %d", fid);
-    mqtt::Publish("messages", "mode=enroll; Stored!");
+    snprintf(buf, sizeof(buf), "Stored as id %d", fid);
+    LogStore(buf);
     BlinkSuccess();
-    WaitForRemove();
+    WaitForRemove(log_mode);
     BlinkClearSuccess();
     return;
   } else {
-    PublishError("storeModel", p);
-    return EnrollFailed();
+    LogFpmError(log_mode, "storeModel", p);
+    return EnrollFailed(log_mode);
   }
 }
 
 void Enroll() {
+  const std::string log_mode = "enroll";
   BlinkStartEnroll();
-  mqtt::Publish("messages",
-                "mode=enroll; Searching for a free slot to store the template...");
+  LogStatus(log_mode, "Searching for a free slot to store the template...");
   int16_t fid;
-  if (get_free_id(&fid)) {
-    enroll_finger(fid);
-  } else {
-    mqtt::Publish("messages", "mode=enroll; No free slot in flash library!");
+  if (!get_free_id(log_mode, &fid)) {
     BlinkError();
+    return;
   }
+  enroll_finger(log_mode, fid);
 }
 
 // a GetImage image must be in the buffer to get the real bitmap image
-void DownloadLastImage() {
-  mqtt::Publish("messages", "Starting image stream");
+void DownloadLastImage(const std::string& log_mode) {
+  LogStatus(log_mode, "Starting image stream");
   finger.downImage();
   std::vector<char> image(256 * 288 / 2);
   size_t image_pos = 0;
@@ -301,7 +331,7 @@ void DownloadLastImage() {
     read_len = image.size() - image_pos;
     if (!finger.readRaw(FPM_OUTPUT_TO_BUFFER, image.data() + image_pos,
                         &read_complete, &read_len)) {
-      mqtt::Publish("messages", "readRaw: failed");
+      LogFpmError(log_mode, "readRaw", -1);
       return;
     }
     image_pos += read_len;
@@ -312,29 +342,27 @@ void DownloadLastImage() {
   size_t image_len = image_pos;
 
   char buf[100];
-  snprintf(buf, sizeof(buf), "got %d bytes to download", image_len);
-  mqtt::Publish("messages", buf);
+  snprintf(buf, sizeof(buf), "Got %d bytes to download", image_len);
+  LogStatus(log_mode, buf);
 
-  std::string msg(image.data(), image_len);
-  char subtopic[50];
-  snprintf(subtopic, sizeof(subtopic), "image/%d", -1);
-  mqtt::Publish(subtopic, msg);
+  PublishImage(image.data(), image_len);
 }
 
 void DownloadModel(uint16_t fid) {
+  const std::string log_mode = "download";
   int p = -1;
-  mqtt::Publish("messages", "retrieve model for download");
+  LogStatus(log_mode, "Retrieve model for download");
   p = finger.loadModel(fid);
   if (p != FPM_OK) {
-    PublishError("loadModel", p);
+    LogFpmError(log_mode, "loadModel", p);
     return;
   }
   p = finger.downloadModel(fid);
   if (p != FPM_OK) {
-    PublishError("downloadModel", p);
+    LogFpmError(log_mode, "downloadModel", p);
     return;
   }
-  byte model[2048];  // expect 1536 bytes
+  char model[2048];  // expect 1536 bytes
   size_t model_pos = 0;
   bool read_complete = false;
   uint16_t read_len;
@@ -342,7 +370,7 @@ void DownloadModel(uint16_t fid) {
     read_len = sizeof(model) - model_pos;
     if (!finger.readRaw(FPM_OUTPUT_TO_BUFFER, model + model_pos, &read_complete,
                         &read_len)) {
-      mqtt::Publish("messages", "readRaw: failed");
+      LogFpmError(log_mode, "readRaw", -1);
       return;
     }
     model_pos += read_len;
@@ -353,22 +381,20 @@ void DownloadModel(uint16_t fid) {
   size_t model_len = model_pos;
   char buf[100];
 
-  snprintf(buf, sizeof(buf), "got %d bytes to download", model_len);
-  mqtt::Publish("messages", buf);
+  snprintf(buf, sizeof(buf), "Got %d bytes to download", model_len);
+  LogStatus(log_mode, buf);
 
-  std::string msg(reinterpret_cast<char*>(model), model_len);
-  char subtopic[50];
-  snprintf(subtopic, sizeof(subtopic), "model/%d", fid);
-  mqtt::Publish(subtopic, msg);
+  PublishModel(fid, model, model_len);
 }
 
 void SetModel(uint16_t fid, const std::vector<uint8_t>& payload) {
+  const std::string log_mode = "setModel";
   int16_t p = -1;
-  mqtt::Publish("messages", "upload buffer to slot 1");
+  LogStatus(log_mode, "Upload buffer to slot 1");
 
   p = finger.uploadModel();
   if (p != FPM_OK) {
-    PublishError("uploadModel", p);
+    LogFpmError(log_mode, "uploadModel", p);
     return;
   }
   yield();
@@ -376,23 +402,26 @@ void SetModel(uint16_t fid, const std::vector<uint8_t>& payload) {
   delay(
       100);  // load-bearing sleep. Without this, the storeModel doesn't answer.
 
-  mqtt::Publish("messages", "store model from slot 1 to fid");
+  LogStatus(log_mode, "Store model from slot 1 to fid");
   p = finger.storeModel(fid);
   if (p != FPM_OK) {
-    PublishError("storeModel", p);
+    LogFpmError(log_mode, "storeModel", p);
     return;
   }
-  mqtt::Publish("messages", "SetModel successful");
+  char buf[100];
+  snprintf(buf, sizeof(buf), "SetModel successful for id %d", fid);
+  LogStore(buf);
 }
 
 void DeleteModel(uint16_t fid) {
+  const std::string log_mode = "deleteModel";
   int16_t p = finger.deleteModel(fid);
   if (p == FPM_OK) {
     char msg[100];
-    snprintf(msg, sizeof(msg), "deleted id %d", fid);
-    mqtt::Publish("messages", msg);
+    snprintf(msg, sizeof(msg), "Deleted id %d", fid);
+    LogStore(msg);
   } else {
-    PublishError("deleteModel", p);
+    LogFpmError(log_mode, "deleteModel", p);
   }
 }
 
