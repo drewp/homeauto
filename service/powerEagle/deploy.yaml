@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: power-eagle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: power-eagle
+  template:
+    metadata:
+      labels:
+        app: power-eagle
+    spec:
+      containers:
+        - name: power-eagle
+          image: bang5:5000/power_eagle_image
+          imagePullPolicy: "Always"
+          ports:
+          - containerPort: 10016
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "kubernetes.io/hostname"
+                operator: In
+                values: ["bang"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: power-eagle
+spec:
+  ports:
+  - {port: 80, targetPort: 10016, name: http}
+  selector:
+    app: power-eagle
+
+    

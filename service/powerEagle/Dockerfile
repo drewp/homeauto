@@ -1,4 +1,4 @@
-FROM bang6:5000/base_x86
+FROM bang5:5000/base_x86
 
 WORKDIR /opt
 

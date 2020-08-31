@@ -1,0 +1,17 @@
+apiVersion: skaffold/v2beta5
+kind: Config
+metadata:
+  name: power-eagle
+build:
+  tagPolicy:
+    dateTime:
+      format: "2006-01-02_15-04-05"
+      timezone: "Local"
+  artifacts:
+  - image: bang5:5000/power_eagle_image
+    sync: # files that could be patched sans python restart
+      infer: []
+deploy:
+  kubectl:
+    manifests:
+    - deploy.yaml

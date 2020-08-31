@@ -1,7 +1,7 @@
 cyclone
-influxdb==3.0.0
+prometheus_client==0.8.0
+twisted[tls]==20.3.0
 
-git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://github.com/drewp/cyclone/archive/python3.zip
 
 standardservice==0.3.0
