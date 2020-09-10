@@ -177,7 +177,7 @@ if __name__ == '__main__':
     internalMqtt = MqttClient(clientId='mqtt_to_rdf',
                               brokerHost='mosquitto-frontdoor.default.svc.cluster.local',
                               brokerPort=10210)
-    influx = InfluxExporter(config)
+    influx = InfluxExporter(config, influxHost='influxdb.default.svc.cluster.local')
 
     srcs = []
     for src in config.subjects(RDF.type, ROOM['MqttStatementSource']):
