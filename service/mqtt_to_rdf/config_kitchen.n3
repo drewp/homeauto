@@ -1,0 +1,24 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:buttonMap a :ValueMap;
+    :map [:from "OFF"; :to :notPressed], [:from "ON"; :to :pressed]
+  .
+
+
+
+# goal is to read these and have reasoning notice them as the light state so the button works
+#sonoff_0/switch/sonoff_basic_relay/state OFF
+
+
+:kitchenCounterLight a :MqttStatementSource;
+  :mqttTopic ("h801_counter" "light" "kit_r" "state");
+  :parser :jsonBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+    
+:kitchenLight a :MqttStatementSource;
+  :mqttTopic ("h801_skylight" "light" "kit_r" "state");
+  :parser :jsonBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+    

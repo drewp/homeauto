@@ -1,0 +1,29 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:buttonMap a :ValueMap;
+    :map [:from "OFF"; :to :notPressed], [:from "ON"; :to :pressed]
+  .
+
+:bedGreenButton a :MqttStatementSource;
+  :mqttTopic ("bed" "switch" "green_button" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
+
+:bedRedButton a :MqttStatementSource;
+  :mqttTopic ("bed" "switch" "red_button" "state");
+  :parser :buttonMap;
+  :graphStatements [:outputPredicate :state;] .
+
+
+:motionMap a :ValueMap;
+    :map [:from "OFF"; :to :noMotion], [:from "ON"; :to :motion]
+  .
+
+
+
+:bedHeadboardMotion a :MqttStatementSource;
+  :mqttTopic ("bed" "switch" "pir" "state");
+  :parser :motionMap;
+  :graphStatements [:outputPredicate :state;] .

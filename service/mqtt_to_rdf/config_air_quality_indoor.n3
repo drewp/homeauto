@@ -1,0 +1,123 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+#air_quality_indoor/sensor/bme280_temperature/state 23.7
+#air_quality_indoor/sensor/bme280_pressure/state 1006.5
+#air_quality_indoor/sensor/bme280_humidity/state 40.5
+
+
+:airQualityIndoorTemperature a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "bme280_temperature" "state");
+
+  :parser xsd:double;
+  :conversions (:celsiusToFarenheit
+                [:ignoreValueBelow -999]);
+  :graphStatements [
+    :outputPredicate :temperatureF;  
+    :statementLifetime "150s";
+  # ], [
+  #  :conversions ([:recentLow "30s"]);
+  #  :outputPredicate :recentLowTemperatureF;
+  ];
+  
+  :influxMeasurement [ # replaces this block in piNode configs
+    :measurement "temperatureF"; :pointsAtLeastEvery 30;
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+:airQualityIndoorPressure a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "bme280_pressure" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :pressure_hPa;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "pressure_hPa"; :pointsAtLeastEvery 30;
+    :predicate :pressure_hPa;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+
+:airQualityIndoorHumidity a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "bme280_humidity" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :humidity;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "humidity"; :pointsAtLeastEvery 30;
+    :predicate :humidity;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+
+:airQualityIndoorCo a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "ccs811_eco2_value" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :eco2;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "eco2";:pointsAtLeastEvery 60;
+    :predicate :eco2;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+:airQualityIndoorTvoc a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "ccs811_total_volatile_organic_compound" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :tvoc;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "tvoc"; :pointsAtLeastEvery 60;
+    :predicate :tvoc;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+
+:airQualityIndoorPm10 a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "particulate_matter_10m_concentration" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :pm10;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "pm10"; :pointsAtLeastEvery 5;
+    :predicate :pm10;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+:airQualityIndoorPm25 a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "particulate_matter_25m_concentration" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :pm25;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "pm25"; :pointsAtLeastEvery 5;
+    :predicate :pm25;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+
+:airQualityIndoorPm100 a :MqttStatementSource;
+  :mqttTopic ("air_quality_indoor" "sensor" "particulate_matter_100m_concentration" "state");
+  :parser xsd:double;
+  :graphStatements [
+    :outputPredicate :pm100;  
+    :statementLifetime "150s";
+  ];
+  :influxMeasurement [
+    :measurement "pm100"; :pointsAtLeastEvery 5;
+    :predicate :pm100;
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+

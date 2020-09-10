@@ -1,0 +1,44 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:buttonMap a :ValueMap;
+    :map [:from "OFF"; :to :notPressed], [:from "ON"; :to :pressed]
+  .
+
+
+
+# goal is to read these and have reasoning notice them as the light state so the button works
+#sonoff_0/switch/sonoff_basic_relay/state OFF
+
+
+:livingLampShelf a :MqttStatementSource;
+  :mqttTopic ("sonoff_0" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+  
+:livingLamp1 a :MqttStatementSource;
+  :mqttTopic ("sonoff_1" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+
+:livingLamp2 a :MqttStatementSource;
+  :mqttTopic ("sonoff_2" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+
+:livingLamp3 a :MqttStatementSource;
+  :mqttTopic ("sonoff_3" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+
+:livingLamp4 a :MqttStatementSource;
+  :mqttTopic ("sonoff_4" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+
+:livingLamp5 a :MqttStatementSource;
+  :mqttTopic ("sonoff_5" "switch" "sonoff_basic_relay" "state");
+  :parser :onOffBrightness;
+  :graphStatements [:outputPredicate :brightness;] .
+  
