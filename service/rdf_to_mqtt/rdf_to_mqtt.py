@@ -65,34 +65,38 @@ devs = {
         'hasWhite': True,
     },
     # https://github.com/Koenkk/zigbee2mqtt.io/blob/new_api/docs/information/mqtt_topics_and_message_structure.md#general
-    ROOM['syl1']: {
-        'root': 'zigbee2mqtt/syl1/set',
+    ROOM['frontRoom1']: {
+        'root': 'zigbee2mqtt/frontRoom1/set',
         'hasBrightness': True,
         'defaults': {
             'transition': 0,
         }
     },
-    ROOM['syl2']: {
-        'root': 'zigbee2mqtt/syl2/set',
+    ROOM['frontRoom2']: {
+        'root': 'zigbee2mqtt/frontRoom2/set',
         'hasBrightness': True,
         'defaults': {
             'transition': 0,
         }
     },
-    ROOM['syl3']: {
-        'root': 'zigbee2mqtt/syl3/set',
+    ROOM['asherCeiling']: {
+        'root': 'zigbee2mqtt/asherCeiling/set',
         'hasBrightness': True,
         'defaults': {
             'transition': 0,
         }
     },
-    ROOM['syl4']: {
-        'root': 'zigbee2mqtt/syl4/set',
+    ROOM['stairTop']: {
+        'root': 'zigbee2mqtt/stairTop/set',
         'hasBrightness': True,
         'defaults': {
             'transition': 0,
         }
     },
+    ROOM['noname1']: { 'root': 'zigbee2mqtt/0xf0d1b8000001ffc6/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname2']: { 'root': 'zigbee2mqtt/0xf0d1b80000023583/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname3']: { 'root': 'zigbee2mqtt/0xf0d1b80000023708/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname4']: { 'root': 'zigbee2mqtt/0xf0d1b80000022adc/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
 }
 
 
@@ -130,26 +134,26 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                 ignored = False
             if stmt[0:2] == (dev, ROOM['color']):
                 h = stmt[2].toPython()
-                r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
-                msg = {
-                    'state': 'ON' if r or g or b else 'OFF',
-                    'color': {
-                        'r': r,
-                        'g': g,
-                        'b': b
-                    },
-                }
-                if attrs.get('hasBrightness', False):
-                    # todo- still not right for sylvania bulbs; they want color x-y.
+                msg = {}
+                if h.endswith(b'K'):  # accept "0.7*2200K" (brightness 0.7)
                     # see https://www.zigbee2mqtt.io/information/mqtt_topics_and_message_structure.html#zigbee2mqttfriendly_nameset
-                    msg['brightness'] = max(r, g, b)
-                    if msg['brightness'] != 0:
-                        scl = msg['brightness'] / 255
-                        for chan in ['r', 'g', 'b']:
-                            msg['color'][chan] = int(msg['color'][chan] / 255.0 / scl * 255)
+                    bright, kelvin = map(float, h[:-1].split(b'*'))
+                    msg['state'] = 'ON'                    
+                    msg["color_temp"] = round(1000000 / kelvin, 2)
+                    msg['brightness'] = int(bright * 255)  # 1..20 look about the same
+                else:
+                    r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+                    msg = {
+                        'state': 'ON' if r or g or b else 'OFF',
+                        'color': {
+                            'r': r,
+                            'g': g,
+                            'b': b
+                        },
+                    }
 
-                if attrs.get('hasWhite', False):
-                    msg['white_value'] = max(r, g, b)
+                    if attrs.get('hasWhite', False):
+                        msg['white_value'] = max(r, g, b)
                 msg.update(attrs.get('defaults', {}))
                 self._publish(topic=attrs['root'], message=json.dumps(msg))
                 ignored = False

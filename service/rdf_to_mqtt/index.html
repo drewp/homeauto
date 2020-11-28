@@ -1,7 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>rdf_to_mqtt</title>
+    <title>rdf_to_mqtt</title>   
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+
     <meta charset="utf-8" />
     <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
     <script src="/lib/require/require-2.3.3.js"></script>
@@ -67,20 +71,49 @@
       <div><button data-post="output?s=:bedHeadboard&p=:color" data-body="#0000ff">headboard blue</button></div>
     </section>
     <section>
-      <div><button data-post="output?s=:syl1&p=:color" data-body="#000000">Send (:syl1 :color black)</button></div>
-      <div><button data-post="output?s=:syl1&p=:color" data-body="#ffffff">Send (:syl1 :color white)</button></div>
+      <div><button data-post="output?s=:frontRoom1&p=:color" data-body="0*3200K">Send (:frontRoom1 :color black)</button></div>
+      <div><button data-post="output?s=:frontRoom1&p=:color" data-body="1*3200K">Send (:frontRoom1 :color white)</button></div>
     </section>
     <section>
-      <div><button data-post="output?s=:syl2&p=:color" data-body="#000000">Send (:syl2 :color black)</button></div>
-      <div><button data-post="output?s=:syl2&p=:color" data-body="#ffffff">Send (:syl2 :color white)</button></div>
+      <div><button data-post="output?s=:frontRoom2&p=:color" data-body="0*3200K">Send (:frontRoom2 :color black)</button></div>
+      <div><button data-post="output?s=:frontRoom2&p=:color" data-body="1*3200K">Send (:frontRoom2 :color white)</button></div>
     </section>
     <section>
-      <div><button data-post="output?s=:syl3&p=:color" data-body="#000000">Send (:syl3 :color black)</button></div>
-      <div><button data-post="output?s=:syl3&p=:color" data-body="#ffffff">Send (:syl3 :color white)</button></div>
-    </section>
-    <section>
-      <div><button data-post="output?s=:syl4&p=:color" data-body="#000000">Send (:syl4 :color black)</button></div>
-      <div><button data-post="output?s=:syl4&p=:color" data-body="#ffffff">Send (:syl4 :color white)</button></div>
+      <section>
+        <div><button data-post="output?s=:asherCeiling&p=:color" data-body="0*3200K">Send (:asherCeiling :color black)</button></div>
+        <div><button data-post="output?s=:asherCeiling&p=:color" data-body="1*3200K">Send (:asherCeiling :color white)</button></div>
+      </section>
+      <section>
+        <div><button data-post="output?s=:noname1&p=:color" data-body="0*3200K">Send (:noname1 :color black)</button></div>
+        <div><button data-post="output?s=:noname1&p=:color" data-body="1*3200K">Send (:noname1 :color white)</button></div>
+      </section>
+      <section>
+        <div><button data-post="output?s=:noname2&p=:color" data-body="0*3200K">Send (:noname2 :color black)</button></div>
+        <div><button data-post="output?s=:noname2&p=:color" data-body="1*3200K">Send (:noname2 :color white)</button></div>
+      </section>
+      <section>
+        <div><button data-post="output?s=:noname3&p=:color" data-body="0*3200K">Send (:noname3 :color black)</button></div>
+        <div><button data-post="output?s=:noname3&p=:color" data-body="1*3200K">Send (:noname3 :color white)</button></div>
+      </section>
+      <section>
+        <div><button data-post="output?s=:noname4&p=:color" data-body="0*3200K">Send (:noname4 :color black)</button></div>
+        <div><button data-post="output?s=:noname4&p=:color" data-body="1*3200K">Send (:noname4 :color white)</button></div>
+      </section>
+          
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="0*2200K">Send (:stairTop :color black)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*200K">Send (:stairTop :color white 200K)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*1200K">Send (:stairTop :color white)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*2200K">Send (:stairTop :color white)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*3200K">Send (:stairTop :color white)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*4200K">Send (:stairTop :color white)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*5200K">Send (:stairTop :color white)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="1*6200K">Send (:stairTop :color white 6200K)</button></div>
+      <hr>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="0.8*3200K">Send (:stairTop :color white*.8)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="0.6*3200K">Send (:stairTop :color white*.6)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="0.4*3200K">Send (:stairTop :color white*.4)</button></div>
+      <div><button data-post="output?s=:stairTop&p=:color" data-body="0.2*3200K">Send (:stairTop :color white*.2)</button></div>
+      
     </section>
 
     <script>
