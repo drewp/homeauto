@@ -1,9 +1,10 @@
 cyclone
-rdflib-jsonld==0.4.0
+rdflib-jsonld==0.5.0
 rdflib==4.2.2
-twisted-mqtt==0.3.6
+service_identity==18.1.0
+twisted-mqtt==0.3.9
 git+http://github.com/drewp/scales.git@550bcba42c5e96152ff5c5bd753fbb33ffdfe460#egg=scales
-git+https://github.com/ReactiveX/RxPY.git@6deb66e827f34a88b4605773d7671322b9cbbd08#egg=rx
+rx==3.1.1
 docopt
 
 cycloneerr
