@@ -1,0 +1,24 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+:wallButton1 a :MqttStatementSource;
+  :mqttTopic ("rfsetup" "rf_received");
+  :filterPayloadJsonEquals "{\"protocol\":1,\"code0\":0,\"code1\":7906}";
+  :parser :rfCode;
+  :conversions (:buttonPress);
+  :graphStatements [:outputPredicate :state] .
+
+:wallButton2 a :MqttStatementSource;
+  :mqttTopic ("rfsetup" "rf_received");
+  :filterPayloadJsonEquals "{\"protocol\":1,\"code0\":0,\"code1\":7905}";
+  :parser :rfCode;
+  :conversions (:buttonPress);
+  :graphStatements [:outputPredicate :state] .
+
+:wallButton3 a :MqttStatementSource;
+  :mqttTopic ("rfsetup" "rf_received");
+  :filterPayloadJsonEquals "{\"protocol\":1,\"code0\":0,\"code1\":7908}";
+  :parser :rfCode;
+  :conversions (:buttonPress);
+  :graphStatements [:outputPredicate :state] .

@@ -3,6 +3,7 @@ Subscribe to mqtt topics; generate RDF statements.
 """
 import json
 from pathlib import Path
+from typing import Callable, cast
 
 import cyclone.web
 from docopt import docopt
@@ -25,6 +26,8 @@ import rx.scheduler.eventloop
 from standardservice.logsetup import log, verboseLogging
 from standardservice.scalessetup import gatherProcessStats
 from twisted.internet import reactor
+
+from button_events import button_events
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
@@ -55,6 +58,7 @@ class MqttStatementSource:
         self._mqttStats = scales.collection(statPath + '/incoming', scales.IntStat('count'), scales.RecentFpsStat('fps'))
 
         rawBytes = self.subscribeMqtt(self.mqttTopic)
+        rawBytes = self.addFilters(rawBytes)
         rawBytes = rx.operators.do_action(self.countIncomingMessage)(rawBytes)
         parsed = self.getParser()(rawBytes)
 
@@ -66,6 +70,18 @@ class MqttStatementSource:
             *[self.makeQuads(parsed, plan) for plan in g.objects(self.uri, ROOM['graphStatements'])])
 
         outputQuadsSets.subscribe_(self.updateQuads)
+
+    def addFilters(self, rawBytes):
+        jsonEq = self.config.value(self.uri, ROOM['filterPayloadJsonEquals'])
+        if jsonEq:
+            required = json.loads(jsonEq.toPython())
+
+            def eq(jsonBytes):
+                msg = json.loads(jsonBytes.decode('ascii'))
+                return msg == required
+
+            rawBytes = rx.operators.filter(eq)(rawBytes)
+        return rawBytes
 
     def topicFromConfig(self, config) -> bytes:
         topicParts = list(config.items(config.value(self.uri, ROOM['mqttTopic'])))
@@ -94,6 +110,8 @@ class MqttStatementSource:
             return rx.operators.map(self.parseJsonBrightness)
         elif ROOM['ValueMap'] in g.objects(parser, RDF.type):
             return rx.operators.map(lambda v: self.remap(parser, v.decode('ascii')))
+        elif parser == ROOM['rfCode']:
+            return rx.operators.map(self.parseJsonRfCode)
         else:
             raise NotImplementedError(parser)
 
@@ -101,7 +119,11 @@ class MqttStatementSource:
         msg = json.loads(mqttValue.decode('ascii'))
         return Literal(float(msg['brightness'] / 255) if msg['state'] == 'ON' else 0.0)
 
-    def conversionStep(self, conv: Node):
+    def parseJsonRfCode(self, mqttValue: bytes):
+        msg = json.loads(mqttValue.decode('ascii'))
+        return Literal('%08x%08x' % (msg['code0'], msg['code1']))
+
+    def conversionStep(self, conv: Node) -> Callable[[Observable], Observable]:
         g = self.config
         if conv == ROOM['celsiusToFarenheit']:
 
@@ -112,6 +134,9 @@ class MqttStatementSource:
         elif g.value(conv, ROOM['ignoreValueBelow'], default=None) is not None:
             threshold = g.value(conv, ROOM['ignoreValueBelow'])
             return rx.operators.filter(lambda value: value.toPython() >= threshold.toPython())
+        elif conv == ROOM['buttonPress']:
+            loop = rx.scheduler.eventloop.TwistedScheduler(reactor)
+            return button_events(min_hold_sec=1.0, release_after_sec=1.0, scheduler=loop)
         else:
             raise NotImplementedError(conv)
 
