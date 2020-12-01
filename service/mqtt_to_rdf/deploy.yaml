@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-to-rdf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mqtt-to-rdf
+  template:
+    metadata:
+      labels:
+        app: mqtt-to-rdf
+    spec:
+      containers:
+        - name: mqtt-to-rdf
+          image: bang5:5000/mqtt_to_rdf_image
+          imagePullPolicy: "Always"
+          ports:
+          - containerPort: 10018
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "kubernetes.io/hostname"
+                operator: In
+                values: ["bang"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-to-rdf
+spec:
+  ports:
+  - {port: 10018, targetPort: 10018}
+  selector:
+    app: mqtt-to-rdf
