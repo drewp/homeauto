@@ -2,9 +2,10 @@ import json
 import logging
 import urllib
 
-from rdflib import URIRef, Namespace, RDF, Literal
-from twisted.internet import reactor
+import cyclone.sse
 import treq
+from rdflib import RDF, Literal, Namespace, URIRef
+from twisted.internet import reactor
 
 from httpputoutputs import HttpPutOutputs
 from inputgraph import InputGraph
@@ -15,20 +16,25 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 REASONING = Namespace("http://projects.bigasterisk.com/ns/reasoning/")
 
+
 def secsFromLiteral(v):
     if v[-1] != 's':
         raise NotImplementedError(v)
     return float(v[:-1])
 
+
 def ntStatement(stmt):
+
     def compact(u):
         if isinstance(u, URIRef) and u.startswith(ROOM):
             return 'room:' + u[len(ROOM):]
         return u.n3()
+
     return '%s %s %s .' % (compact(stmt[0]), compact(stmt[1]), compact(stmt[2]))
 
 
 class Actions(object):
+
     def __init__(self, inputGraph: InputGraph, sendToLiveClients, mockOutput=False):
         self.inputGraph = inputGraph
         self.mockOutput = mockOutput
@@ -64,21 +70,18 @@ class Actions(object):
             log.debug('inferred stmt we might PUT: %s', ntStatement(stmt))
             putUrl = deviceGraph.value(stmt[0], ROOM['putUrl'])
             putPred = deviceGraph.value(stmt[0], ROOM['putPredicate'])
-            matchPred = deviceGraph.value(stmt[0], ROOM['matchPredicate'],
-                                          default=putPred)
+            matchPred = deviceGraph.value(stmt[0], ROOM['matchPredicate'], default=putPred)
             if putUrl and matchPred == stmt[1]:
-                log.debug('putDevices: stmt %s leads to putting at %s',
-                          ntStatement(stmt), putUrl.n3())
-                self._put(putUrl + '?' + urllib.parse.urlencode([
-                    ('s', str(stmt[0])),
-                    ('p', str(putPred))]),
+                log.debug('putDevices: stmt %s leads to putting at %s', ntStatement(stmt), putUrl.n3())
+                self._put(putUrl + '?' + urllib.parse.urlencode([('s', str(stmt[0])), ('p', str(putPred))]),
                           payload=str(stmt[2].toPython()),
                           agent=agentFor.get(stmt[0], None),
                           refreshSecs=self._getRefreshSecs(stmt[0]))
-                activated.add((stmt[0],
-                               # didn't test that this should be
-                               # stmt[1] and not putPred
-                               stmt[1]))
+                activated.add((
+                    stmt[0],
+                    # didn't test that this should be
+                    # stmt[1] and not putPred
+                    stmt[1]))
         return activated
 
     def _oneShotPostActions(self, deviceGraph, inferred):
@@ -97,18 +100,20 @@ class Actions(object):
         # nothing in this actually makes them one-shot yet. they'll
         # just fire as often as we get in here, which is not desirable
         log.debug("_oneShotPostActions")
+
         def err(e):
             log.warn("post %s failed", postTarget)
+
         for osp in deviceGraph.subjects(RDF.type, ROOM['OneShotPost']):
             s = deviceGraph.value(osp, ROOM['subject'])
             p = deviceGraph.value(osp, ROOM['predicate'])
             if s is None or p is None:
                 continue
-            #log.info("checking for %s %s", s, p)
+            # log.info("checking for %s %s", s, p)
             for postTarget in inferred.objects(s, p):
                 log.debug("post target %r", postTarget)
                 # this packet ought to have 'oneShot' in it somewhere
-                self.sendToLiveClients({"s":s, "p":p, "o":postTarget})
+                self.sendToLiveClients({"s": s, "p": p, "o": postTarget})
 
                 log.debug("    POST %s", postTarget)
                 if not self.mockOutput:
@@ -129,8 +134,7 @@ class Actions(object):
         """
 
         defaultStmts = set()
-        for defaultDesc in deviceGraph.objects(REASONING['defaultOutput'],
-                                               REASONING['default']):
+        for defaultDesc in deviceGraph.objects(REASONING['defaultOutput'], REASONING['default']):
             s = deviceGraph.value(defaultDesc, ROOM['subject'])
             p = deviceGraph.value(defaultDesc, ROOM['predicate'])
             if (s, p) not in activated:
@@ -143,15 +147,14 @@ class Actions(object):
     def _getRefreshSecs(self, target):
         # should be able to map(secsFromLiteral) in here somehow and
         # remove the workaround in httpputoutputs.currentRefreshSecs
-        return self.inputGraph.rxValue(target, ROOM['refreshPutValue'],
-                                       default=Literal('30s'))#.map(secsFromLiteral)
+        return self.inputGraph.rxValue(target, ROOM['refreshPutValue'], default=Literal('30s'))  # .map(secsFromLiteral)
 
     def _put(self, url, payload: str, refreshSecs, agent=None):
         self.putOutputs.put(url, payload, agent, refreshSecs)
 
-import cyclone.sse
 
 class PutOutputsTable(cyclone.sse.SSEHandler):
+
     def __init__(self, application, request):
         cyclone.sse.SSEHandler.__init__(self, application, request)
         self.actions = self.settings.reasoning.actions
@@ -167,8 +170,7 @@ class PutOutputsTable(cyclone.sse.SSEHandler):
         if not self.bound:
             return
         puts = {
-            'puts': [row.report() for _, row in
-                     sorted(self.actions.putOutputs.state.items())],
+            'puts': [row.report() for _, row in sorted(self.actions.putOutputs.state.items())],
         }
         self.sendEvent(message=json.dumps(puts).encode('utf8'), event=b'update')
         reactor.callLater(1, self.loop)

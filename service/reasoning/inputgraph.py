@@ -1,39 +1,36 @@
-import logging, time
+import logging
+import time
 import weakref
 from typing import Callable
 
-from greplin import scales
-from rdflib import Graph, ConjunctiveGraph
-from rdflib import Namespace, URIRef, RDFS
+from patchablegraph.patchsource import ReconnectingPatchSource
+from prometheus_client import Summary
+from rdfdb.patch import Patch
+from rdfdb.rdflibpatch import patchQuads
+from rdflib import RDFS, ConjunctiveGraph, Graph, Namespace, URIRef
 from rdflib.parser import StringInputSource
 from rx.subjects import BehaviorSubject
-from twisted.python.filepath import FilePath
 from twisted.internet import reactor
-
-from patchablegraph.patchsource import ReconnectingPatchSource
-from rdfdb.rdflibpatch import patchQuads
-from rdfdb.patch import Patch
+from twisted.python.filepath import FilePath
 
 log = logging.getLogger('fetch')
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 
-
-STATS = scales.collection('/web',
-                          scales.PmfStat('combineGraph'),
-)
+COMBINE_GRAPH_CALLS = Summary('combine_graph_calls', 'calls')
 
 
 def parseRdf(text: str, contentType: str):
     g = Graph()
     g.parse(StringInputSource(text), format={
         'text/n3': 'n3',
-        }[contentType])
+    }[contentType])
     return g
 
 
 class RemoteData(object):
+
     def __init__(self, onChange: Callable[[], None]):
         """we won't fire onChange during init"""
         self.onChange = onChange
@@ -42,17 +39,16 @@ class RemoteData(object):
 
     def _finishInit(self):
         self.patchSource = ReconnectingPatchSource(
-            URIRef('http://bang:9072/graph/home'),
-            #URIRef('http://frontdoor:10012/graph/events'),
-            self.onPatch, reconnectSecs=10, agent='reasoning')
+            URIRef('http://collector.default.svc.cluster.local:9072/graph/home'),
+            # URIRef('http://frontdoor:10012/graph/events'),
+            self.onPatch,
+            reconnectSecs=10,
+            agent='reasoning')
 
     def onPatch(self, p: Patch, fullGraph: bool):
         if fullGraph:
             self.graph = ConjunctiveGraph()
-        patchQuads(self.graph,
-                   deleteQuads=p.delQuads,
-                   addQuads=p.addQuads,
-                   perfect=True)
+        patchQuads(self.graph, deleteQuads=p.delQuads, addQuads=p.addQuads, perfect=True)
 
         ignorePredicates = [
             ROOM['signalStrength'],
@@ -73,10 +69,9 @@ class RemoteData(object):
         ]
         ignoreContexts = [
             URIRef('http://bigasterisk.com/sse_collector/'),
-            ]
+        ]
         for affected in p.addQuads + p.delQuads:
-            if (affected[1] not in ignorePredicates and
-                affected[3] not in ignoreContexts):
+            if (affected[1] not in ignorePredicates and affected[3] not in ignoreContexts):
                 log.debug("  remote graph changed")
                 self.onChange()
                 break
@@ -85,6 +80,7 @@ class RemoteData(object):
 
 
 class InputGraph(object):
+
     def __init__(self, inputDirs, onChange):
         """
         this has one Graph that's made of:
@@ -118,7 +114,7 @@ class InputGraph(object):
     def _rxUpdate(self, subj, pred, default, rxv):
         rxv.on_next(self.getGraph().value(subj, pred, default=default))
 
-    def rxValue(self, subj, pred, default):# -> BehaviorSubject:
+    def rxValue(self, subj, pred, default):  # -> BehaviorSubject:
         value = BehaviorSubject(default)
         self._rxValues[value] = (subj, pred, default)
         self._rxUpdate(subj, pred, default, value)
@@ -166,13 +162,13 @@ class InputGraph(object):
         self.addOneShot(g)
         return time.time() - t1
 
-    @STATS.combineGraph.time()
-    def getGraph(self):
+    @COMBINE_GRAPH_CALLS.time()
+    def getGraph(self) -> ConjunctiveGraph:
         """rdflib Graph with the file+remote contents of the input graph"""
         # this could be much faster with the combined readonly graph
         # view from rdflib
         if self._combinedGraph is None:
-            self._combinedGraph = Graph()
+            self._combinedGraph = ConjunctiveGraph()
             if self._fileGraph:
                 for s in self._fileGraph:
                     self._combinedGraph.add(s)

@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reasoning
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reasoning
+  template:
+    metadata:
+      labels:
+        app: reasoning
+    spec:
+      containers:
+        - name: reasoning
+          image: bang5:5000/reasoning_image
+          imagePullPolicy: "Always"
+          ports:
+          - containerPort: 9071
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "kubernetes.io/hostname"
+                operator: In
+                values: ["bang"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reasoning
+spec:
+  ports:
+  - {port: 9071, targetPort: 9071}
+  selector:
+    app: reasoning

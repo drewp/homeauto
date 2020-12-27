@@ -1,19 +1,16 @@
 colorlog==2.6.0
-crochet==1.12.0
-
 docopt
+prometheus_client==0.9.0
+rdflib_jsonld==0.5.0
+rdflib==5.0.0
 rx==1.6.1
-service_identity
-treq==18.6.0
-twisted
-
-rdflib==4.2.2
-rdflib_jsonld==0.4.0
-git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
+service_identity==18.1.0
+six==1.15.0
+treq==20.9.0
+twisted==20.3.0
 https://github.com/drewp/cyclone/archive/python3.zip
 
 cycloneerr
-export_to_influxdb==0.4.0
-patchablegraph==0.11.0
+patchablegraph==0.9.0
 rdfdb==0.21.0
 standardservice==0.6.0

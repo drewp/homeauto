@@ -1,0 +1,20 @@
+apiVersion: skaffold/v2beta5
+kind: Config
+metadata:
+  name: reasoning
+build:
+  local: 
+    useDockerCLI: true
+  tagPolicy:
+    dateTime:
+      format: "2006-01-02_15-04-05"
+      timezone: "Local"
+  artifacts:
+    - image: bang5:5000/reasoning_image
+      sync:
+        infer:
+          - rules.n3
+deploy:
+  kubectl:
+    manifests:
+    - deploy.yaml
