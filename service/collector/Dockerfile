@@ -1,4 +1,4 @@
-FROM bang6:5000/base_x86
+FROM bang5:5000/base_x86
 
 WORKDIR /opt
 
@@ -13,4 +13,4 @@ COPY *.py *.html req* *.ini ./
 
 EXPOSE 9072
 
-CMD [ "python3", "./sse_collector.py" ]
+CMD [ "python3", "./collector.py" ]

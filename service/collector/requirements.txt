@@ -1,18 +1,16 @@
 docopt
 ipdb
-service_identity==18.1.0
-twisted==19.2.0
-py-spy
 mypy
+prometheus_client==0.9.0
+py-spy
+rdflib-jsonld==0.5.0
+rdflib==5.0.0
+service_identity==18.1.0
+twisted==20.3.0
 
-rdflib==4.2.2
-rdflib-jsonld==0.4.0
-
-git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://github.com/drewp/cyclone/archive/python3.zip
-influxdb==5.2.2
 
 cycloneerr
-patchablegraph==0.7.0
-rdfdb==0.8.0
-standardservice==0.4.0
+patchablegraph==0.9.0
+rdfdb==0.21.0
+standardservice==0.6.0

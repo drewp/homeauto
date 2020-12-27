@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: collector
+  template:
+    metadata:
+      labels:
+        app: collector
+    spec:
+      containers:
+        - name: collector
+          image: bang5:5000/collector_image
+          imagePullPolicy: "Always"
+          ports:
+          - containerPort: 9072
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "kubernetes.io/hostname"
+                operator: In
+                values: ["bang"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collector
+spec:
+  ports:
+  - {port: 9072, targetPort: 9072}
+  selector:
+    app: collector
