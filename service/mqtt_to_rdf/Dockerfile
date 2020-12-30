@@ -9,7 +9,8 @@ RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url
 RUN pip3 install -U 'https://github.com/drewp/cyclone/archive/python3.zip?v3'
 RUN pip3 install -U attrs
 
-COPY *.py *.html *.css *.js *.n3 ./
+COPY *.py *.html *.css *.js ./
+COPY conf/ ./conf
 COPY build/bundle.js build/
 
 EXPOSE 10018:10018

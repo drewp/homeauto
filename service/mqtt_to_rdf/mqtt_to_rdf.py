@@ -209,7 +209,7 @@ if __name__ == '__main__':
     verboseLogging(arg['-v'])
 
     config = Graph()
-    for fn in Path('.').glob('config_*.n3'):
+    for fn in Path('.').glob('conf/*.n3'):
         if not arg['--cs'] or str(arg['--cs']) in str(fn):
             log.debug(f'loading {fn}')
             config.parse(str(fn), format='n3')

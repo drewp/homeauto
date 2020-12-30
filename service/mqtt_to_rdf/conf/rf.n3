@@ -2,6 +2,9 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix fr: <http://bigasterisk.com/foaf/> .
 
+# to discover new codes:
+# mosquitto_sub -v -t rfsetup/rf_received
+
 :wallButton1 a :MqttStatementSource;
   :mqttTopic ("rfsetup" "rf_received");
   :filterPayloadJsonEquals "{\"protocol\":1,\"code0\":0,\"code1\":7906}";
@@ -22,3 +25,11 @@
   :parser :rfCode;
   :conversions (:buttonPress);
   :graphStatements [:outputPredicate :state] .
+
+:wallButton4 a :MqttStatementSource;
+  :mqttTopic ("rfsetup" "rf_received");
+  :filterPayloadJsonEquals "{\"protocol\":1,\"code0\":0,\"code1\":53825}";
+  :parser :rfCode;
+  :conversions (:buttonPress);
+  :graphStatements [:outputPredicate :state] .
+
