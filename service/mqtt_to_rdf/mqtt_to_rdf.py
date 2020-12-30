@@ -6,34 +6,29 @@ from pathlib import Path
 from typing import Callable, cast
 
 import cyclone.web
-from docopt import docopt
-from mqtt_client import MqttClient
-from patchablegraph import (
-    CycloneGraphEventsHandler,
-    CycloneGraphHandler,
-    PatchableGraph,
-)
-from rdfdb.rdflibpatch import graphFromQuads
-from rdflib import Graph, Literal, Namespace, RDF, URIRef, XSD
-from rdflib.term import Node
+import prometheus_client
 import rx
-from rx.core import Observable
 import rx.operators
 import rx.scheduler.eventloop
-from standardservice.logsetup import log, verboseLogging
-from twisted.internet import reactor
-import prometheus_client
-from prometheus_client import Counter, Gauge, Histogram
-from prometheus_client import Summary
+from docopt import docopt
+from mqtt_client import MqttClient
+from patchablegraph import (CycloneGraphEventsHandler, CycloneGraphHandler, PatchableGraph)
+from prometheus_client import Counter, Gauge, Histogram, Summary
 from prometheus_client.exposition import generate_latest
 from prometheus_client.registry import REGISTRY
+from rdfdb.rdflibpatch import graphFromQuads
+from rdflib import RDF, XSD, Graph, Literal, Namespace, URIRef
+from rdflib.term import Node
+from rx.core import Observable
+from standardservice.logsetup import log, verboseLogging
+from twisted.internet import reactor
 
 from button_events import button_events
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
-
 collectors = {}
+
 
 def parseDurationLiteral(lit: Literal) -> float:
     if lit.endswith('s'):
