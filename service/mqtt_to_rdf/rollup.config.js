@@ -3,6 +3,7 @@ import commonjs from "@rollup/plugin-commonjs";
 import resolve from "@rollup/plugin-node-resolve";
 import typescript from "rollup-plugin-typescript2";
 import replace from "@rollup/plugin-replace";
+import postcss from "rollup-plugin-postcss";
 
 const workaround_jsonld_module_system_picker = "process = {version: '1.0.0'}";
 const workaround_some_browser_detector = "global = window";
@@ -39,6 +40,7 @@ export default {
     }),
     typescript(),
     commonjs(workaround_jsonld_expand_issue),
+    postcss({ inject: false }),
     replace({ ...replacements, delimiters: ["", ""] }),
   ],
 };

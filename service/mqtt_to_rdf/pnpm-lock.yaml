@@ -1,11 +1,8 @@
 dependencies:
   '@polymer/polymer': 3.3.1
   '@types/jsonld': 1.5.0
-  '@types/n3': 1.1.5
   jsonld: 2.0.2
   lit-element: 2.2.1
-  n3: 'link:../../../../../../my/dl/modified/N3.js'
-  streamed-graph: 'link:../../../../../../my/proj/streamed-graph'
 devDependencies:
   '@rollup/plugin-commonjs': 11.0.2_rollup@1.31.0
   '@rollup/plugin-node-resolve': 7.1.1_rollup@1.31.0
@@ -444,26 +441,14 @@ packages:
     dev: false
     resolution:
       integrity: sha512-EG2N8JLQ1xDfO6Z/1QRdiUcYX3428CqVRqmY7LyK5or5J1RQ16dpKH6qQ4umVD0vBHU47xHlMeyMbQ6o+6tiYg==
-  /@types/n3/1.1.5:
-    dependencies:
-      '@types/node': 13.7.0
-      '@types/rdf-js': 2.0.11
-    dev: false
-    resolution:
-      integrity: sha512-FaW94FyqTIrPP3ZEiwX745xQhzeoTlNiFsXjxPWsKBd+yvBtIW3ykd9kGnGWI/jz2Rp2iFKto3Tc+IcBL6a6yA==
   /@types/node/13.7.0:
+    dev: true
     resolution:
       integrity: sha512-GnZbirvmqZUzMgkFn70c74OQpTTUcCzlhQliTzYjQMqg+hVKcDnxdL19Ne3UdYzdMA/+W3eb646FWn/ZaT1NfQ==
   /@types/q/1.5.2:
     dev: true
     resolution:
       integrity: sha512-ce5d3q03Ex0sy4R14722Rmt6MT07Ua+k4FwDfdcToYJcMKNtRVQvJ6JCAPdAmAnbRb6CsX6aYb9m96NGod9uTw==
-  /@types/rdf-js/2.0.11:
-    dependencies:
-      '@types/node': 13.7.0
-    dev: false
-    resolution:
-      integrity: sha512-GC5MZU2HbL5JnlrLAzoxSqLprqtKwocz0TNVugqM04t1ZeeNFpZRqqBQc9Jhev35hEwdH84siRLaCesxHHYlmA==
   /@types/resolve/0.0.8:
     dependencies:
       '@types/node': 13.7.0
@@ -2927,6 +2912,8 @@ packages:
     engines:
       node: '>=4.0'
     optional: true
+    os:
+      - darwin
     requiresBuild: true
     resolution:
       integrity: sha512-+ux3lx6peh0BpvY0JebGyZoiR4D+oYzdPZMKJwkZ+sFkNJzpL7tXc/wehS49gUAxg3tmMHPHZkA8JU2rhhgDHw==
@@ -3902,6 +3889,9 @@ packages:
       node: '>=6'
     peerDependencies:
       jest-resolve: '*'
+    peerDependenciesMeta:
+      jest-resolve:
+        optional: true
     resolution:
       integrity: sha512-pgFw2tm54fzgYvc/OHrnysABEObZCUNFnhjoRjaVOCN8NYc032/gVjPaHD4Aq6ApkSieWtfKAFQtmDKAmhupnQ==
   /jest-regex-util/24.9.0:
@@ -4713,6 +4703,9 @@ packages:
     engines:
       node: '>=6'
       npm: ' >=4'
+    os:
+      - darwin
+      - linux
     resolution:
       integrity: sha1-zgW68PKik01AH1X4hwuj9T74CcI=
   /node-int64/0.4.0:
@@ -7092,20 +7085,17 @@ specifiers:
   '@rollup/plugin-replace': ^2.3.0
   '@types/jest': ^24.9.0
   '@types/jsonld': ^1.5.0
-  '@types/n3': ^1.1.5
   '@types/rollup-plugin-postcss': ^2.0.0
   add: ^2.0.6
   jest: ^24.9.0
   jsonld: ^2.0.1
   lit-element: ^2.2.1
-  n3: 'link:/my/dl/modified/N3.js'
   node-globals: ^0.1.5
   rollup: ^1.29.0
   rollup-plugin-node-builtins: ^2.1.2
   rollup-plugin-postcss: ^2.0.3
   rollup-plugin-terser: ^5.2.0
   rollup-plugin-typescript2: ^0.25.3
-  streamed-graph: 'file:/my/proj/streamed-graph'
   stylus: ^0.54.7
   ts-jest: ^24.3.0
   tslib: ^1.10.0

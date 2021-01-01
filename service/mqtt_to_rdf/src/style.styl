@@ -1,5 +1,22 @@
 
-:host
-  display: flex
-  flex-direction: column
-  padding: 2px 0
+:host {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0;
+}
+
+.grid {
+  display: grid;
+  grid-auto-columns: minmax(10em, auto);
+  grid-auto-rows: minmax(10em, auto);
+  grid-template-rows: 3em;
+}
+
+.grid * {
+  outline: 1px solid gray;
+  overflow: auto;
+  padding: 3px
+}
+
+.hd 
+  font-weight: bold

@@ -11,9 +11,9 @@
     "@polymer/polymer": "^3.3.1",
     "@types/jsonld": "^1.5.0",
     "jsonld": "^2.0.1",
-    "streamed-graph": "file:/my/proj/streamed-graph",
-    "@types/n3": "^1.1.5",
-    "n3": "link:/my/dl/modified/N3.js",
+    // "streamed-graph": "file:/my/proj/streamed-graph",
+    // "@types/n3": "^1.1.5",
+    // "n3": "link:/my/dl/modified/N3.js",
     "lit-element": "^2.2.1"
   },
   "devDependencies": {
