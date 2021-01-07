@@ -4,7 +4,7 @@ pymongo
 git+http://github.com/drewp/scales.git@448d59fb491b7631877528e7695a93553bfaaa93#egg=scales
 https://github.com/drewp/cyclone/archive/python3.zip
 influxdb==3.0.0
-lxml==4.3.3
+lxml==4.6.2
 pystache==0.5.2
 rdflib==4.2.2
 ago==0.0.93
