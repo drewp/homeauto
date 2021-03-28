@@ -5,10 +5,18 @@ esphome:
 
 # MAC: 3c:71:bf:ab:6e:94
 
+logger:
+  baud_rate: 0
+  level: INFO
+  logs:
+    out: INFO
+
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   use_address: 10.2.0.38
+  
+ota:
 
 mqtt:
   broker: '10.2.0.1'
@@ -64,12 +72,6 @@ mqtt:
             address: 0x4BB6
             command: 0x39C6
             
-logger:
-  baud_rate: 115200
-  level: DEBUG
-  
-ota:
-
 
 remote_receiver:
   -  id: ir_in
@@ -78,15 +80,25 @@ remote_receiver:
        mode: INPUT
        inverted: True
      dump: nec
-  -  id: rf_in
-     pin: GPIO13
-     dump: all
-     # Settings to optimize recognition of RF devices
-     tolerance: 50%
-     filter: 250us
-     idle: 4ms
-     buffer_size: 2kb
-   
+  - id: rf_in
+    pin: GPIO13
+    tolerance: 20%
+    filter: 250us
+    idle: 8ms
+    dump: rc_switch
+    on_rc_switch:
+      then:
+        - logger.log: 
+            level: INFO
+            tag: out
+            format: "RF read; proto %d; code %08llx"
+            args: [x.protocol, x.code]
+        - mqtt.publish_json:
+            topic: theater_blaster/rf_received
+            payload: !lambda |-
+              root["protocol"] = x.protocol;
+              root["code0"] = static_cast<unsigned long>(x.code >> 32); 
+              root["code1"] = static_cast<unsigned long>(x.code & 0xffff);
 remote_transmitter:
   id: ir_out
   pin: GPIO14
