@@ -1,0 +1,135 @@
+
+esphome:
+  name: theater_lcd
+  platform: ESP32
+  board: esp32cam
+  build_path: build
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: ''
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+
+# image:
+#   - file: "colorscape.png"
+#     id: colorscape
+#     type: RGB24
+
+font:
+  - file: "bluefish-scratched/BLUEFISH BLACK SCRATCHED_Demo.ttf"
+    id: font_bluefish_big
+    size: 120
+    glyphs: "0123456789ms "
+  - file: "Teko/Teko-Regular.ttf"
+    id: font_teko_small
+    size: 60
+    glyphs: "+-_.:0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+
+display:
+  - platform: ili9486_8bit
+    model: 'TFT_3.5'
+    id: lcd
+    cs_pin: GPIO16   # wh
+    dc_pin: GPIO17   # gy
+    wr_pin: GPIO5    # pu
+    rd_pin: GPIO18   # bk
+    data_pins:
+      - GPIO33   # gy
+      - GPIO32   # bk
+      - GPIO13   # pu
+      - GPIO12   # bl
+      - GPIO14   # gn
+      - GPIO27   # ye
+      - GPIO26   # or
+      - GPIO25   # re
+    rotation: 90
+    lambda: |-
+      it.clear(); // may be cheaper to get text extent and fill that box only
+      {
+        const std::string line = id(line1).state;
+        const char color_letter = line[0];
+        const char* text = line.c_str() + (line.size() > 1 ? 1 : 0);
+        Color color;
+        switch(color_letter) {
+          // from https://coolors.co/e75d18-48a8a8-ededca-ac162a-550589-ed787f
+          case 'o': color = Color(0xe75d18);break;
+          case 'b': color = Color(0x48a8a8);break;
+          case 'y': color = Color(0xededca);break;
+          case 'r': color = Color(0xac162a);break;
+          case 'i': color = Color(0x550589);break;
+          case 'p': color = Color(0xed787f);break;
+          default: color = COLOR_WHITE;
+        }
+        it.print(0, 0, id(font_bluefish_big), color, text);
+      }
+      {
+        const std::string line = id(line2).state;
+        const char color_letter = line[0];
+        const char* text = line.c_str() + (line.size() > 1 ? 1 : 0);
+        Color color;
+        switch(color_letter) {
+          case 'o': color = Color(0xe75d18);break;
+          case 'b': color = Color(0x48a8a8);break;
+          case 'y': color = Color(0xededca);break;
+          case 'r': color = Color(0xac162a);break;
+          case 'i': color = Color(0x550589);break;
+          case 'p': color = Color(0xed787f);break;
+          default: color = COLOR_WHITE;
+        }
+        it.print(0, 150, id(font_teko_small), color, text);
+
+      }
+
+
+text_sensor:
+  - platform: mqtt_subscribe
+    name: "line1"
+    id: line1
+    topic: theater_lcd/line1
+    on_value:
+      then:
+        - component.update: lcd
+  - platform: mqtt_subscribe
+    name: "line2"
+    id: line2
+    topic: theater_lcd/line2
+    on_value:
+      then:
+        - component.update: lcd
+
+# ili9486 setup
+# http://www.lcdwiki.com/3.5inch_Arduino_Display-UNO
+# (https://www.aliexpress.com/item/4000055026873.html $12)
+# and https://circuits4you.com/wp-content/uploads/2018/12/ESP32-Pinout.jpg
+#
+#	GND      - GND	Power ground
+#	5V       - 5V	5V power input
+#	NC       - 3V3	3.3V power input, this pin can be disconnected
+#	GND      - LCD_RST	LCD bus reset signal, low level reset
+#
+#	GPIO16   - LCD_CS	LCD bus chip select signal, low level enable
+#
+#	GPIO17   - LCD_RS	LCD bus command / data selection signal, low level: command, high level: data
+#	GPIO5    - LCD_WR	LCD bus write signal
+#	GPIO18   - LCD_RD	LCD bus read signal
+
+#	GPIO33   - LCD_D0	LCD 8-bit data Bit0
+#	GPIO32   - LCD_D1	LCD 8-bit data Bit1
+#	GPIO13   - LCD_D2	LCD 8-bit data Bit2
+#	GPIO12   - LCD_D3	LCD 8-bit data Bit3
+#	GPIO14   - LCD_D4	LCD 8-bit data Bit4
+#	GPIO27   - LCD_D5	LCD 8-bit data Bit5
+#	GPIO26   - LCD_D6	LCD 8-bit data Bit6
+#	GPIO25   - LCD_D7	LCD 8-bit data Bit7
