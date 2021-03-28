@@ -1,0 +1,45 @@
+esphome:
+  name: rfsetup
+  platform: esp32
+  board: lolin32
+            
+logger:
+  baud_rate: 115200
+  level: VERBOSE
+  logs:
+    out: VERBOSE
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # use_address: 10.2.0.38
+
+ota:
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  
+
+remote_receiver:
+  - id: rf_in
+    pin: GPIO4
+    tolerance: 20%
+    filter: 250us
+    idle: 8ms
+    dump: rc_switch
+    on_rc_switch:
+      then:
+        # - logger.log: 
+        #     level: INFO
+        #     tag: out
+        #     format: "RF read; proto %d; code %08llx"
+        #     args: [x.protocol, x.code]
+        - mqtt.publish_json:
+            topic: rfsetup/rf_received
+            payload: !lambda |-
+              root["protocol"] = x.protocol;
+              root["code0"] = static_cast<unsigned long>(x.code >> 32); 
+              root["code1"] = static_cast<unsigned long>(x.code & 0xffff);
