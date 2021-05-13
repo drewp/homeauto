@@ -1,0 +1,55 @@
+
+# mosquitto_sub  -v -t workshop/status
+
+esphome:
+  name: workshop
+  platform: ESP32
+  board: lolin32
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  domain: ''
+
+mqtt:
+  broker: '10.2.0.1'
+  port: 1883
+  username: ''
+  password: ''
+  
+logger:
+  baud_rate: 115200
+  level: DEBUG
+  
+ota:
+
+i2c:
+  sda: 21
+  scl: 22
+  scan: True
+  id: bus_a
+  
+pca9685:
+  - frequency: 500
+    address: 0x40
+
+output:
+  - { platform: pca9685, id: 'out0', channel: 0 }
+  - { platform: pca9685, id: 'out1', channel: 1 }
+  - { platform: pca9685, id: 'out2', channel: 2 }
+  - { platform: pca9685, id: 'out3', channel: 3 }
+  - { platform: pca9685, id: 'out4', channel: 4 }
+  - { platform: pca9685, id: 'out5', channel: 5 }
+  - { platform: pca9685, id: 'out6', channel: 6 }
+  - { platform: pca9685, id: 'out7', channel: 7 }
+
+light:
+  - { platform: monochromatic, name: high0, output: out1 }
+  - { platform: monochromatic, name: high1, output: out4 }
+  - { platform: monochromatic, name: high2, output: out2 }
+  - { platform: monochromatic, name: high3, output: out6 }
+  - { platform: monochromatic, name: kid, output: out3 }
+  - { platform: monochromatic, name: out5, output: out5 }
+  - { platform: monochromatic, name: out7, output: out7 }
+  - { platform: monochromatic, name: sewing, output: out0 }
+  
