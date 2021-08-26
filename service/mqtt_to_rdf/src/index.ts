@@ -2,13 +2,7 @@
 export { DomBind } from "@polymer/polymer/lib/elements/dom-bind.js";
 // export { StreamedGraph } from "streamed-graph";
 
-import {
-  LitElement,
-  property,
-  html,
-  customElement,
-  unsafeCSS,
-} from "lit-element";
+import { LitElement, property, html, customElement, unsafeCSS } from "lit-element";
 
 // import { Literal, N3Store } from "n3";
 // import { NamedNode, DataFactory } from "n3";
@@ -106,46 +100,24 @@ export class MqttToRdfPage extends LitElement {
     const recentMsg = (m: Msg) => html` <div>${ago(m.t)} msg=${m.msg}</div> `;
     const topicItem = (t: Subscribed, index: number) =>
       html`<div class="topic" style="grid-column: 1; grid-row: ${index + 2}">
-        ${t.topic} ${t.recentMessages.map(recentMsg)}
+        <span class="topic">${t.topic}</span>
+        ${t.recentMessages.map(recentMsg)}
       </div>`;
 
-    const parsedMessage = (g: GraphAtTime) =>
-      html` <div class="graph">graph: ${g.n3}</div> `;
+    const parsedMessage = (g: GraphAtTime) => html` <div class="graph">graph: ${g.n3}</div> `;
     const parsedMessages = (t: Subscribed, index: number) =>
-      html`
-        <div style="grid-column: 2; grid-row: ${index + 2}">
-          topic=${t.topic} ${t.recentParsed.map(parsedMessage)}
-        </div>
-      `;
+      html` <div style="grid-column: 2; grid-row: ${index + 2}">${t.recentParsed.map(parsedMessage)}</div> `;
 
-    const metric = (m: Metric) =>
-      html`<div>
-        metrix ${m.name} ${JSON.stringify(m.labels)} = ${m.value}
-      </div>`;
+    const metric = (m: Metric) => html`<div>metrix ${m.name} ${JSON.stringify(m.labels)} = ${m.value}</div>`;
     const conversions = (t: Subscribed, index: number) =>
-      html`
-        <div style="grid-column: 3; grid-row: ${index + 2}">
-          topic=${t.topic} ${t.recentConversions.map(parsedMessage)}
-        </div>
-      `;
-    const outputMetrics = (t: Subscribed, index: number) =>
-      html`
-        <div style="grid-column: 4; grid-row: ${index + 2}">
-          topic=${t.topic} ${t.currentMetrics.map(metric)}
-        </div>
-      `;
+      html` <div style="grid-column: 3; grid-row: ${index + 2}">${t.recentConversions.map(parsedMessage)}</div> `;
+    const outputMetrics = (t: Subscribed, index: number) => html` <div style="grid-column: 4; grid-row: ${index + 2}">${t.currentMetrics.map(metric)}</div> `;
     const outputGraph = (t: Subscribed, index: number) =>
-      html`
-        <div style="grid-column: 5; grid-row: ${index + 2}">
-          topic=${t.topic} ${parsedMessage(t.currentOutputGraph)}
-        </div>
-      `;
+      html` <div style="grid-column: 5; grid-row: ${index + 2}">${parsedMessage(t.currentOutputGraph)}</div> `;
     return html`
       <h1>mqtt_to_rdf</h1>
 
-      <section>connected to ${d.server}; messages received ${
-      d.messagesSeen
-    }</section>
+      <section>connected to ${d.server}; messages received ${d.messagesSeen}</section>
 
       <div class="grid">
         <div class="hd" style="grid-row: 1; grid-column: 1">subscribed topics</div>

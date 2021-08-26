@@ -1,22 +1,37 @@
 
-:host {
-  display: flex;
-  flex-direction: column;
-  padding: 2px 0;
-}
+:host
+  display: flex
+  flex-direction: column
+  padding: 5px
+  background: black
+  color: #aaa
+  font-family: sans
 
-.grid {
-  display: grid;
-  grid-auto-columns: minmax(10em, auto);
-  grid-auto-rows: minmax(10em, auto);
-  grid-template-rows: 3em;
-}
+section
+  padding: 5px
 
-.grid * {
-  outline: 1px solid gray;
-  overflow: auto;
+.grid
+  display: grid
+  margin: 8px
+  grid-auto-columns: minmax(15em, auto)
+  grid-auto-rows: minmax(10em, auto)
+  grid-template-rows: 4em
+
+.grid *
+  overflow: auto
   padding: 3px
-}
 
-.hd 
+.grid > *
+  outline: 1px solid gray
+
+.hd
   font-weight: bold
+
+span.topic
+  color: rgb(109, 241, 109)
+  font-weight: bold
+  font-family: monospace
+
+.graph
+  white-space: pre-line
+  font-family: monospace
