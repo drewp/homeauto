@@ -1,0 +1,20 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+# debug: 
+# mosquitto_sub -v -t zigbee-frontbed/\#
+
+:mqttConnectedStatusMap a :ValueMap;
+   :map [:from "offline"; :to :Offline], 
+        [:from "online"; :to :Online] .
+
+:zigbeeBridge a :MqttStatementSource;
+  :mqttTopic ("zigbee-frontbed" "bridge" "state");
+  :parser :mqttConnectedStatusMap
+.
+
+:demoBulb a :MqttStatementSource;
+  :mqttTopic ("zigbee-frontbed/0xd0cf5efffe158e49");
+  :zzzparser :bulbReport
+  .

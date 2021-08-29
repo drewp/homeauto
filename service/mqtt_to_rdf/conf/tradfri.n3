@@ -1,0 +1,11 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+
+# debug: 
+# mosquitto_sub -v -t tradfri-raw/\#
+
+:tradfri a :MqttStatementSource;
+  :mqttTopic ("tradfri-raw" "15001");
+  :parser :tradfri;
+.
