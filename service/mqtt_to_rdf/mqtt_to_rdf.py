@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from typing import Callable, Sequence, Set, Tuple, Union, cast
 from cyclone.util import ObjectDict
+from rdflib.graph import ConjunctiveGraph
 
 from rx.core.typing import Mapper
 
@@ -33,14 +34,17 @@ from standardservice.logsetup import log, verboseLogging
 from twisted.internet import reactor, task
 from dataclasses import dataclass
 from button_events import button_events
+from patch_cyclone_sse import patchCycloneSse
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
-
+MESSAGES_SEEN = Counter('mqtt_messages_seen', '')
 collectors = {}
 
 import export_to_influxdb
 
 print(f'merge me back {export_to_influxdb}')
+
+patchCycloneSse()
 
 
 def appendLimit(lst, elem, n=10):
@@ -168,8 +172,11 @@ class Converters(StreamPipelineStep):
 class Rdfizer(StreamPipelineStep):
 
     def makeOutputStream(self, inStream: Observable) -> Observable:
-        outputQuadsSets = rx.combine_latest(
-            *[self.makeQuads(inStream, plan) for plan in self.config.objects(self.uri, ROOM['graphStatements'])])
+        plans = list(self.config.objects(self.uri, ROOM['graphStatements']))
+        log.debug(f'{self.uri=} has {len(plans)=}')
+        if not plans:
+            return rx.empty()
+        outputQuadsSets = rx.combine_latest(*[self.makeQuads(inStream, plan) for plan in plans])
         return outputQuadsSets
 
     def makeQuads(self, inStream: Observable, plan: URIRef) -> Observable:
@@ -203,8 +210,8 @@ def tightN3(node: Union[URIRef, Literal]) -> str:
     return node.n3().replace('http://www.w3.org/2001/XMLSchema#', 'xsd:')
 
 
-def serializeWithNs(graph: PatchableGraph) -> bytes:
-    graph._graph.bind('', 'http://projects.bigasterisk.com/room/')
+def serializeWithNs(graph: ConjunctiveGraph) -> bytes:
+    graph.bind('', ROOM)
     return cast(bytes, graph.serialize(format='n3'))
 
 
@@ -248,6 +255,7 @@ class MqttStatementSource:
         convertedObjs.subscribe_(lambda v: appendLimit(self.debugSub['recentConversions'], {'t': truncTime(), 'n3': tightN3(v)}))
 
         outputQuadsSets = Rdfizer(uri, config).makeOutputStream(convertedObjs)
+        outputQuadsSets.subscribe_(self.updateInflux)
 
         outputQuadsSets.subscribe_(self.updateMasterGraph)
 
@@ -262,11 +270,16 @@ class MqttStatementSource:
 
     def countIncomingMessage(self, msg: bytes):
         self.debugPageData['messagesSeen'] += 1
+        MESSAGES_SEEN.inc()
 
         appendLimit(self.debugSub['recentMessages'], {
             't': truncTime(),
             'msg': msg.decode('ascii'),
         })
+
+    def updateInflux(self, newGraphs):
+        for g in newGraphs:
+            self.influxExport.exportToInflux(g)
 
     def updateMasterGraph(self, newGraphs):
         newQuads = set.union(*newGraphs)
@@ -287,7 +300,7 @@ class MqttStatementSource:
                 collectors[metric].labels(**tags).set(val)
 
         self.masterGraph.patchSubgraph(self.uri, g)
-        self.debugSub['currentOutputGraph']['n3'] = cast(bytes, self.masterGraph.serialize(format='n3')).decode('utf8')
+        self.debugSub['currentOutputGraph']['n3'] = serializeWithNs(g).decode('utf8')
 
 
 class Metrics(cyclone.web.RequestHandler):
