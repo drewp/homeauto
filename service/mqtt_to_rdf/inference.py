@@ -222,19 +222,20 @@ def withBinding(toBind: Graph, bindings: Dict[BindableTerm, Node], includeStatic
 
 def verifyBinding(lhs: Graph, binding: Dict[BindableTerm, Node], workingSet: Graph, usedByFuncs: Graph) -> bool:
     """Can this lhs be true all at once in workingSet? Does it match with these bindings?"""
-    log.debug(f'                verify all bindings against this lhs:')
     boundLhs = list(withBinding(lhs, binding))
-    for stmt in boundLhs:
-        log.debug(f'                    {stmt}')
-
-    log.debug(f'                and against this workingSet:')
-    for stmt in workingSet:
-        log.debug(f'                    {stmt}')
-
-    log.debug(f'                ignoring these usedByFuncs:')
     boundUsedByFuncs = list(withBinding(usedByFuncs, binding))
-    for stmt in boundUsedByFuncs:
-        log.debug(f'                    {stmt}')
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(f'                verify all bindings against this lhs:')
+        for stmt in boundLhs:
+            log.debug(f'                    {stmt}')
+
+        log.debug(f'                and against this workingSet:')
+        for stmt in workingSet:
+            log.debug(f'                    {stmt}')
+
+        log.debug(f'                ignoring these usedByFuncs:')
+        for stmt in boundUsedByFuncs:
+            log.debug(f'                    {stmt}')
     # The static stmts in lhs are obviously going
     # to match- we only need to verify the ones
     # that needed bindings.
