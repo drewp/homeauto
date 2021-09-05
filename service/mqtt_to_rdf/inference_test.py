@@ -201,6 +201,10 @@ class TestInferenceWithMathFunctions(WithGraphEqual):
         self.assertGraphEqual(inf.infer(N3(":a :b 5 .")), N3(""))
         self.assertGraphEqual(inf.infer(N3(":a :b 6 .")), N3(":new :stmt 6 ."))
 
+    def testNonFiringMathRule(self):
+        inf = makeInferenceWithRules("{ :a :b ?x . (?x 1) math:sum ?y } => { :new :stmt ?y } .")
+        self.assertGraphEqual(inf.infer(N3("")), N3(""))
+
     def testStatementGeneratingRule(self):
         inf = makeInferenceWithRules("{ :a :b ?x . (?x 1) math:sum ?y } => { :new :stmt ?y } .")
         self.assertGraphEqual(inf.infer(N3(":a :b 3 .")), N3(":new :stmt 4 ."))
