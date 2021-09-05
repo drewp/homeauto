@@ -1,12 +1,13 @@
 """
 also see https://github.com/w3c/N3/tree/master/tests/N3Tests
 """
-import unittest
 import itertools
-from rdflib import ConjunctiveGraph, Namespace, Graph, BNode
+import unittest
+
+from rdflib import RDF, BNode, ConjunctiveGraph, Graph, Literal, Namespace
 from rdflib.parser import StringInputSource
 
-from inference import Inference
+from inference import Inference, parseList
 
 
 def patchSlimReprs():
@@ -60,6 +61,7 @@ def patchBnodeCounter():
 
 patchBnodeCounter()
 
+EX = Namespace('http://example.com/')
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
 
 
@@ -213,9 +215,34 @@ class TestInferenceWithMathFunctions(WithGraphEqual):
         inf = makeInferenceWithRules("{ :a :b ?x . (2 ?x 2) math:sum ?y } => { :new :stmt ?y } .")
         self.assertGraphEqual(inf.infer(N3(":a :b 2 .")), N3(":new :stmt 6 ."))
 
+    def test0Operands(self):
+        inf = makeInferenceWithRules("{ :a :b ?x . () math:sum ?y } => { :new :stmt ?y } .")
+        self.assertGraphEqual(inf.infer(N3(":a :b 2 .")), N3(":new :stmt 0 ."))
+
 
 class TestInferenceWithCustomFunctions(WithGraphEqual):
 
     def testAsFarenheit(self):
         inf = makeInferenceWithRules("{ :a :b ?x . ?x room:asFarenheit ?f } => { :new :stmt ?f } .")
         self.assertGraphEqual(inf.infer(N3(":a :b 12 .")), N3(":new :stmt 53.6 ."))
+
+
+class TestParseList(unittest.TestCase):
+
+    def test0Elements(self):
+        g = N3(":a :b () .")
+        bn = g.value(EX['a'], EX['b'])
+        elems, used = parseList(g, bn)
+        self.assertEqual(elems, [])
+        self.assertFalse(used)
+
+    def test1Element(self):
+        g = N3(":a :b (0) .")
+        bn = g.value(EX['a'], EX['b'])
+        elems, used = parseList(g, bn)
+        self.assertEqual(elems, [Literal(0)])
+        used = sorted(used)
+        self.assertEqual(used, [
+            (bn, RDF.first, Literal(0)),
+            (bn, RDF.rest, RDF.nil),
+        ])
