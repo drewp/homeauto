@@ -7,7 +7,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Dict, Iterator, List, Set, Tuple, Union, cast
+from typing import Dict, Iterable, Iterator, List, Set, Tuple, Union, cast
 
 from prometheus_client import Summary
 from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
@@ -241,59 +241,56 @@ class Evaluation:
     def findEvals(lhs: Lhs) -> Iterator['Evaluation']:
         for stmt in lhs.graph.triples((None, MATH['sum'], None)):
             operands, operandsStmts = parseList(lhs.graph, stmt[0])
-            g = Graph()
-            g += operandsStmts
-            yield Evaluation(operands, g, stmt)
+            yield Evaluation(operands, stmt, operandsStmts)
 
         for stmt in lhs.graph.triples((None, MATH['greaterThan'], None)):
-            g = Graph()
-            g.add(stmt)
-            yield Evaluation([stmt[0], stmt[2]], g, stmt)
+            yield Evaluation([stmt[0], stmt[2]], stmt, [])
 
         for stmt in lhs.graph.triples((None, ROOM['asFarenheit'], None)):
-            g = Graph()
-            g.add(stmt)
-            yield Evaluation([stmt[0]], g, stmt)
+            yield Evaluation([stmt[0]], stmt, [])
 
     # internal, use findEvals
-    def __init__(self, operands: List[Node], operandsStmts: Graph, stmt: Triple) -> None:
+    def __init__(self, operands: List[Node], mainStmt: Triple, otherStmts: Iterable[Triple]) -> None:
         self.operands = operands
-        self.operandsStmts = operandsStmts  # may grow
-        self.stmt = stmt
+        self.operandsStmts = Graph()
+        self.operandsStmts += otherStmts  # may grow
+        self.operandsStmts.add(mainStmt)
+        self.stmt = mainStmt
 
     def resultBindings(self, inputBindings) -> Tuple[Dict[BindableTerm, Node], Graph]:
         """under the bindings so far, what would this evaluation tell us, and which stmts would be consumed from doing so?"""
         pred = self.stmt[1]
         objVar: Node = self.stmt[2]
         boundOperands = []
-        for o in self.operands:
-            if isinstance(o, Variable):
+        for op in self.operands:
+            if isinstance(op, Variable):
                 try:
-                    o = inputBindings[o]
+                    op = inputBindings[op]
                 except KeyError:
                     return {}, self.operandsStmts
 
-            boundOperands.append(o)
+            boundOperands.append(op)
 
         if pred == MATH['sum']:
             obj = Literal(sum(map(numericNode, boundOperands)))
-            self.operandsStmts.add(self.stmt)
             if not isinstance(objVar, Variable):
                 raise TypeError(f'expected Variable, got {objVar!r}')
-            return {objVar: obj}, self.operandsStmts
+            res: Dict[BindableTerm, Node] = {objVar: obj}
         elif pred == ROOM['asFarenheit']:
             if len(boundOperands) != 1:
                 raise ValueError(":asFarenheit takes 1 subject operand")
             f = Literal(Decimal(numericNode(boundOperands[0])) * 9 / 5 + 32)
             if not isinstance(objVar, Variable):
                 raise TypeError(f'expected Variable, got {objVar!r}')
-            return {objVar: f}, self.operandsStmts
+            res: Dict[BindableTerm, Node] = {objVar: f}
         elif pred == MATH['greaterThan']:
             if not (numericNode(boundOperands[0]) > numericNode(boundOperands[1])):
                 raise EvaluationFailed()
-            return {}, self.operandsStmts
+            res: Dict[BindableTerm, Node] = {}
         else:
             raise NotImplementedError(repr(pred))
+
+        return res, self.operandsStmts
 
 
 def numericNode(n: Node):
@@ -413,10 +410,3 @@ def organize(candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Tuple[List[
         orderedValueSets.append(orderedValues)
 
     return orderedVars, orderedValueSets
-
-
-def isStatic(spo: Triple):
-    for t in spo:
-        if isinstance(t, (Variable, BNode)):
-            return False
-    return True
