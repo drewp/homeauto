@@ -6,7 +6,7 @@ import unittest
 from rdflib import RDF, BNode, ConjunctiveGraph, Graph, Literal, Namespace
 from rdflib.parser import StringInputSource
 
-from inference import Inference, _parseList
+from inference import Inference
 from rdflib_debug_patches import patchBnodeCounter, patchSlimReprs
 
 patchSlimReprs()
@@ -176,27 +176,6 @@ class TestInferenceWithCustomFunctions(WithGraphEqual):
     def testAsFarenheit(self):
         inf = makeInferenceWithRules("{ :a :b ?x . ?x room:asFarenheit ?f } => { :new :stmt ?f } .")
         self.assertGraphEqual(inf.infer(N3(":a :b 12 .")), N3(":new :stmt 53.6 ."))
-
-
-class TestParseList(unittest.TestCase):
-
-    def test0Elements(self):
-        g = N3(":a :b () .")
-        bn = g.value(EX['a'], EX['b'])
-        elems, used = _parseList(g, bn)
-        self.assertEqual(elems, [])
-        self.assertFalse(used)
-
-    def test1Element(self):
-        g = N3(":a :b (0) .")
-        bn = g.value(EX['a'], EX['b'])
-        elems, used = _parseList(g, bn)
-        self.assertEqual(elems, [Literal(0)])
-        used = sorted(used)
-        self.assertEqual(used, [
-            (bn, RDF.first, Literal(0)),
-            (bn, RDF.rest, RDF.nil),
-        ])
 
 
 class TestUseCases(WithGraphEqual):
