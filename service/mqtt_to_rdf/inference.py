@@ -97,25 +97,26 @@ class CandidateBinding:
             elif stmt in workingSet:
                 pass
             else:
-                log.debug(f'{INDENT*5} binding was invalid because {stmt}) is not known to be true')
+                log.debug(f'{INDENT*5} stmt not known to be true')
                 return False
-        log.debug(f"{INDENT*5} this rule's lhs can work under this binding")
         return True
 
     def logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
         if not log.isEnabledFor(logging.DEBUG):
             return
-        log.debug(f'{INDENT*4}/ verify all bindings against this lhs:')
+        log.debug(f'{INDENT*4}/ verify all bindings against this boundLhs:')
         for stmt in sorted(boundLhs):
             log.debug(f'{INDENT*4}|{INDENT} {stmt}')
 
-        log.debug(f'{INDENT*4}| and against this workingSet:')
-        for stmt in sorted(workingSet):
-            log.debug(f'{INDENT*4}|{INDENT} {stmt}')
+        # log.debug(f'{INDENT*4}| and against this workingSet:')
+        # for stmt in sorted(workingSet):
+        #     log.debug(f'{INDENT*4}|{INDENT} {stmt}')
 
-        log.debug(f'{INDENT*4}| while ignoring these usedByFuncs:')
-        for stmt in sorted(boundUsedByFuncs):
-            log.debug(f'{INDENT*4}|{INDENT} {stmt}')
+        stmts = sorted(boundUsedByFuncs)
+        if stmts:
+            log.debug(f'{INDENT*4}| while ignoring these usedByFuncs:')
+            for stmt in stmts:
+                log.debug(f'{INDENT*4}|{INDENT} {stmt}')
         log.debug(f'{INDENT*4}\\')
 
 
@@ -138,7 +139,7 @@ class Lhs:
     def findCandidateBindings(self, workingSet: ReadOnlyWorkingSet) -> Iterator[CandidateBinding]:
         """bindings that fit the LHS of a rule, using statements from workingSet and functions
         from LHS"""
-        log.debug(f'{INDENT*2} nodesToBind: {self.lhsBindables}')
+        log.debug(f'{INDENT*3} nodesToBind: {self.lhsBindables}')
 
         if not self.allStaticStatementsMatch(workingSet):
             return
@@ -149,12 +150,12 @@ class Lhs:
 
         self.logCandidates(orderedVars, orderedValueSets)
 
-        log.debug(f'{INDENT*2} trying all permutations:')
+        log.debug(f'{INDENT*3} trying all permutations:')
 
         for perm in itertools.product(*orderedValueSets):
             binding = CandidateBinding(dict(zip(orderedVars, perm)))
             log.debug('')
-            log.debug(f'{INDENT*3}*trying {binding}')
+            log.debug(f'{INDENT*4}*trying {binding}')
 
             try:
                 usedByFuncs = binding.applyFunctions(self)
@@ -162,7 +163,7 @@ class Lhs:
                 continue
 
             if not binding.verify(self, workingSet, usedByFuncs):
-                log.debug(f'{INDENT*3} this binding did not verify')
+                log.debug(f'{INDENT*4} this binding did not verify')
                 continue
             yield binding
 
@@ -178,9 +179,9 @@ class Lhs:
 
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = defaultdict(set)
         for lhsStmt in self.graph:
-            log.debug(f'{INDENT*3} possibles for this lhs stmt: {lhsStmt}')
+            log.debug(f'{INDENT*4} possibles for this lhs stmt: {lhsStmt}')
             for i, trueStmt in enumerate(sorted(workingSet)):
-                log.debug(f'{INDENT*4} consider this true stmt ({i}): {trueStmt}')
+                # log.debug(f'{INDENT*5} consider this true stmt ({i}): {trueStmt}')
 
                 for v, vals in self._bindingsFromStatement(lhsStmt, trueStmt):
                     candidateTermMatches[v].update(vals)
@@ -207,6 +208,7 @@ class Lhs:
                 break
         else:
             for v, vals in bindingsFromStatement.items():
+                log.debug(f'{INDENT*5} {v=} {vals=}')
                 yield v, vals
 
     def graphWithoutEvals(self, binding: CandidateBinding) -> Graph:
@@ -221,11 +223,11 @@ class Lhs:
     def logCandidates(self, orderedVars, orderedValueSets):
         if not log.isEnabledFor(logging.DEBUG):
             return
-        log.debug(f'{INDENT*2} resulting candidate terms:')
+        log.debug(f'{INDENT*3} resulting candidate terms:')
         for v, vals in zip(orderedVars, orderedValueSets):
-            log.debug(f'{INDENT*3} {v} could be:')
+            log.debug(f'{INDENT*4} {v!r} could be:')
             for val in vals:
-                log.debug(f'{INDENT*4}{val}')
+                log.debug(f'{INDENT*5}{val!r}')
 
 
 class Evaluation:
@@ -314,7 +316,7 @@ class Inference:
         """
         returns new graph of inferred statements.
         """
-        log.debug(f'{INDENT*0} Begin inference of graph len={graph.__len__()} with rules len={len(self.rules)}:')
+        log.info(f'{INDENT*0} Begin inference of graph len={graph.__len__()} with rules len={len(self.rules)}:')
 
         # everything that is true: the input graph, plus every rule conclusion we can make
         workingSet = Graph()
@@ -326,15 +328,15 @@ class Inference:
         bailout_iterations = 100
         delta = 1
         while delta > 0 and bailout_iterations > 0:
-            log.debug(f'{INDENT*1}*iteration ({bailout_iterations} left)')
+            log.info(f'{INDENT*1}*iteration ({bailout_iterations} left)')
             bailout_iterations -= 1
             delta = -len(implied)
             self._iterateAllRules(workingSet, implied)
             delta += len(implied)
-            log.info(f'{INDENT*1} this inference round added {delta} more implied stmts')
-        log.info(f'{INDENT*0} {len(implied)} stmts implied:')
+            log.info(f'{INDENT*2} this inference iteration added {delta} more implied stmts')
+        log.info(f'{INDENT*0} Inference done; {len(implied)} stmts implied:')
         for st in implied:
-            log.info(f'{INDENT*2} {st}')
+            log.info(f'{INDENT*1} {st}')
         return implied
 
     def _iterateAllRules(self, workingSet: Graph, implied: Graph):
@@ -351,8 +353,8 @@ class Inference:
 
         log.debug('')
         log.debug(f'{INDENT*2} workingSet:')
-        for i, stmt in enumerate(sorted(workingSet)):
-            log.debug(f'{INDENT*3} ({i}) {stmt}')
+        for j, stmt in enumerate(sorted(workingSet)):
+            log.debug(f'{INDENT*3} ({j}) {stmt}')
 
         log.debug('')
         log.debug(f'{INDENT*2}-applying rule {i}')
@@ -362,9 +364,13 @@ class Inference:
 
 def applyRule(lhs: Lhs, rhs: Graph, workingSet: Graph, implied: Graph):
     for binding in lhs.findCandidateBindings(ReadOnlyGraphAggregate([workingSet])):
+        log.debug(f'{INDENT*3} rule has a working binding:')
+
         for lhsBoundStmt in binding.apply(lhs.graphWithoutEvals(binding)):
+            log.debug(f'{INDENT*5} adding {lhsBoundStmt=}')
             workingSet.add(lhsBoundStmt)
         for newStmt in binding.apply(rhs):
+            log.debug(f'{INDENT*5} adding {newStmt=}')
             workingSet.add(newStmt)
             implied.add(newStmt)
 
