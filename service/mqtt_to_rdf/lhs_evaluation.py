@@ -1,21 +1,18 @@
 import logging
-from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Dict, Iterable, Iterator, List, Set, Tuple, Union, cast
+from typing import Dict, Iterable, Iterator, List, Set, Tuple
 
 from prometheus_client import Summary
-from rdflib import RDF, BNode, Graph, Literal, Namespace, URIRef
-from rdflib.graph import ReadOnlyGraphAggregate
+from rdflib import RDF, Graph, Literal, Namespace, URIRef
 from rdflib.term import Node, Variable
+
+from candidate_binding import CandidateBinding
+from inference import CandidateBinding
+from inference_types import BindableTerm, EvaluationFailed, Triple
 
 log = logging.getLogger('infer')
 
 INDENT = '    '
-
-Triple = Tuple[Node, Node, Node]
-Rule = Tuple[Graph, Node, Graph]
-BindableTerm = Union[Variable, BNode]
-ReadOnlyWorkingSet = ReadOnlyGraphAggregate
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 LOG = Namespace('http://www.w3.org/2000/10/swap/log#')
@@ -26,10 +23,7 @@ MATH = Namespace('http://www.w3.org/2000/10/swap/math#')
 GRAPH_ID = URIRef('dont/care')
 
 
-class EvaluationFailed(ValueError):
-    """e.g. we were given (5 math:greaterThan 6)"""
-
-
+# alternate name LhsComponent
 class Evaluation:
     """some lhs statements need to be evaluated with a special function 
     (e.g. math) and then not considered for the rest of the rule-firing 
@@ -59,7 +53,7 @@ class Evaluation:
         self.operandsStmts.add(mainStmt)
         self.stmt = mainStmt
 
-    def resultBindings(self, inputBindings) -> Tuple[Dict[BindableTerm, Node], Graph]:
+    def resultBindings(self, inputBindings: CandidateBinding) -> Tuple[CandidateBinding, Graph]:
         """under the bindings so far, what would this evaluation tell us, and which stmts would be consumed from doing so?"""
         pred = self.stmt[1]
         objVar: Node = self.stmt[2]
@@ -67,9 +61,9 @@ class Evaluation:
         for op in self.operands:
             if isinstance(op, Variable):
                 try:
-                    op = inputBindings[op]
+                    op = inputBindings.binding[op]
                 except KeyError:
-                    return {}, self.operandsStmts
+                    return CandidateBinding(binding={}), self.operandsStmts
 
             boundOperands.append(op)
 
@@ -77,18 +71,18 @@ class Evaluation:
             obj = Literal(sum(map(numericNode, boundOperands)))
             if not isinstance(objVar, Variable):
                 raise TypeError(f'expected Variable, got {objVar!r}')
-            res: Dict[BindableTerm, Node] = {objVar: obj}
+            res = CandidateBinding({objVar: obj})
         elif pred == ROOM['asFarenheit']:
             if len(boundOperands) != 1:
                 raise ValueError(":asFarenheit takes 1 subject operand")
             f = Literal(Decimal(numericNode(boundOperands[0])) * 9 / 5 + 32)
             if not isinstance(objVar, Variable):
                 raise TypeError(f'expected Variable, got {objVar!r}')
-            res: Dict[BindableTerm, Node] = {objVar: f}
+            res = CandidateBinding({objVar: f})
         elif pred == MATH['greaterThan']:
             if not (numericNode(boundOperands[0]) > numericNode(boundOperands[1])):
                 raise EvaluationFailed()
-            res: Dict[BindableTerm, Node] = {}
+            res= CandidateBinding({})
         else:
             raise NotImplementedError(repr(pred))
 
