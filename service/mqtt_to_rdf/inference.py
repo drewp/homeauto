@@ -33,6 +33,12 @@ class EvaluationFailed(ValueError):
     """e.g. we were given (5 math:greaterThan 6)"""
 
 
+class BindingUnknown(ValueError):
+    """e.g. we were asked to make the bound version 
+    of (A B ?c) and we don't have a binding for ?c
+    """
+
+
 @dataclass
 class CandidateBinding:
     binding: Dict[BindableTerm, Node]
@@ -43,12 +49,18 @@ class CandidateBinding:
 
     def apply(self, g: Graph) -> Iterator[Triple]:
         for stmt in g:
-            yield (self._applyTerm(stmt[0]), self._applyTerm(stmt[1]), self._applyTerm(stmt[2]))
+            try:
+                bound = (self._applyTerm(stmt[0]), self._applyTerm(stmt[1]), self._applyTerm(stmt[2]))
+            except BindingUnknown:
+                continue
+            yield bound
 
     def _applyTerm(self, term: Node):
         if isinstance(term, (Variable, BNode)):
             if term in self.binding:
                 return self.binding[term]
+            else:
+                raise BindingUnknown()
         return term
 
     def applyFunctions(self, lhs) -> Graph:
@@ -310,7 +322,11 @@ class Inference:
         self.rules = ConjunctiveGraph()
 
     def setRules(self, g: ConjunctiveGraph):
-        self.rules = g
+        self.rules = ConjunctiveGraph()
+        for stmt in g:
+            if stmt[1] == LOG['implies']:
+                self.rules.add(stmt)
+            # others should go to a default working set?
 
     def infer(self, graph: Graph):
         """
@@ -342,10 +358,7 @@ class Inference:
     def _iterateAllRules(self, workingSet: Graph, implied: Graph):
         for i, r in enumerate(self.rules):
             self.logRuleApplicationHeader(workingSet, i, r)
-            if r[1] == LOG['implies']:
-                applyRule(Lhs(r[0]), r[2], workingSet, implied)
-            else:
-                log.info(f'{INDENT*2} {r} not a rule?')
+            applyRule(Lhs(r[0]), r[2], workingSet, implied)
 
     def logRuleApplicationHeader(self, workingSet, i, r):
         if not log.isEnabledFor(logging.DEBUG):

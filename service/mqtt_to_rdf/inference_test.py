@@ -198,3 +198,38 @@ class TestParseList(unittest.TestCase):
             (bn, RDF.first, Literal(0)),
             (bn, RDF.rest, RDF.nil),
         ])
+
+
+class TestUseCases(WithGraphEqual):
+
+    def testSimpleTopic(self):
+        inf = makeInferenceWithRules('''
+{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+ { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+
+{
+  ?msg a :MqttMessage ;
+     :topic :foo;
+     :onlineTerm ?onlineness . } => {
+  :frontDoorLockStatus :connectedStatus ?onlineness .
+} .
+        ''')
+
+        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
+        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+
+    def testTopicIsListhg(self):
+        inf = makeInferenceWithRules('''
+{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+{ ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+
+{
+  ?msg a :MqttMessage ;
+     :topic ( "frontdoorlock" "status" );
+     :onlineTerm ?onlineness . } => {
+  :frontDoorLockStatus :connectedStatus ?onlineness .
+} .
+        ''')
+
+        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
+        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
