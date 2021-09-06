@@ -79,7 +79,7 @@ class CandidateBinding:
     def _applyFunctionsIteration(self, lhs, usedByFuncs: Graph):
         before = len(self.binding)
         delta = 0
-        for ev in Evaluation.findEvals(lhs.graph):
+        for ev in lhs.evaluations:
             log.debug(f'{INDENT*3} found Evaluation')
 
             newBindings, usedGraph = ev.resultBindings(self.binding)
@@ -152,6 +152,9 @@ class Lhs:
             self.lhsBnodes.update(x for x in varsAndBnodesInStmt if isinstance(x, BNode))
             if not varsAndBnodesInStmt:
                 self.staticRuleStmts.add(ruleStmt)
+
+        self.evaluations = list(Evaluation.findEvals(self.graph))
+
 
     def findCandidateBindings(self, workingSet: ReadOnlyWorkingSet) -> Iterator[CandidateBinding]:
         """bindings that fit the LHS of a rule, using statements from workingSet and functions
