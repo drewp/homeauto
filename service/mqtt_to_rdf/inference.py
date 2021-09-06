@@ -86,10 +86,11 @@ class CandidateBinding:
             usedByFuncs += usedGraph
             self._addNewBindings(newBindings)
             delta = len(self.binding) - before
-            dump = "(...)"
-            if log.isEnabledFor(logging.DEBUG) and cast(int, usedGraph.__len__()) < 20:
-                dump = graphDump(usedGraph)
-            log.debug(f'{INDENT*4} rule {dump} made {delta} new bindings')
+            if log.isEnabledFor(logging.DEBUG):
+                dump = "(...)"
+                if cast(int, usedGraph.__len__()) < 20:
+                    dump = graphDump(usedGraph)
+                log.debug(f'{INDENT*4} rule {dump} made {delta} new bindings')
         return delta
 
     def _addNewBindings(self, newBindings):
@@ -160,8 +161,10 @@ class Lhs:
         """bindings that fit the LHS of a rule, using statements from workingSet and functions
         from LHS"""
         log.debug(f'{INDENT*3} nodesToBind: {self.lhsBindables}')
+        self.stats['findCandidateBindingsCalls'] += 1
 
         if not self._allStaticStatementsMatch(workingSet):
+            self.stats['findCandidateBindingEarlyExits'] += 1
             return
 
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = self._allCandidateTermMatches(workingSet)
