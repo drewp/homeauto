@@ -1,6 +1,8 @@
 """
 also see https://github.com/w3c/N3/tree/master/tests/N3Tests
 """
+from decimal import Decimal
+from typing import cast
 import unittest
 
 from rdflib import RDF, BNode, ConjunctiveGraph, Graph, Literal, Namespace
@@ -182,32 +184,102 @@ class TestUseCases(WithGraphEqual):
 
     def testSimpleTopic(self):
         inf = makeInferenceWithRules('''
-{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
- { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+            { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+            { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
 
-{
-  ?msg a :MqttMessage ;
-     :topic :foo;
-     :onlineTerm ?onlineness . } => {
-  :frontDoorLockStatus :connectedStatus ?onlineness .
-} .
+            {
+            ?msg a :MqttMessage ;
+                :topic :foo;
+                :onlineTerm ?onlineness . } => {
+            :frontDoorLockStatus :connectedStatus ?onlineness .
+            } .
         ''')
 
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
-    def testTopicIsListhg(self):
+#     def testTopicIsList(self):
+#         inf = makeInferenceWithRules('''
+#             { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+#             { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+
+#             {
+#             ?msg a :MqttMessage ;
+#                 :topic ( "frontdoorlock" "status" );
+#                 :onlineTerm ?onlineness . } => {
+#             :frontDoorLockStatus :connectedStatus ?onlineness .
+#             } .
+#         ''')
+
+#         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
+#         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+
+    def testPerformance0(self):
         inf = makeInferenceWithRules('''
-{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
-{ ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
-
-{
-  ?msg a :MqttMessage ;
-     :topic ( "frontdoorlock" "status" );
-     :onlineTerm ?onlineness . } => {
-  :frontDoorLockStatus :connectedStatus ?onlineness .
-} .
+            {
+              ?msg a :MqttMessage;
+                :topic :topic1;
+                :bodyFloat ?valueC .
+              ?valueC math:greaterThan -999 .
+              ?valueC room:asFarenheit ?valueF .
+            } => {
+              :airQualityIndoorTemperature :temperatureF ?valueF .
+            } .
         ''')
+        out = inf.infer(
+            N3('''
+            <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
+                :body "23.9" ;
+                :bodyFloat 2.39e+01 ;
+                :topic :topic1 .
+            '''))
 
-        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
-        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+        vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+        valueF = cast(Decimal, vlit.toPython())
+        self.assertAlmostEqual(float(valueF), 75.02)
+
+#     def testPerformance1(self):
+#         inf = makeInferenceWithRules('''
+#             {
+#               ?msg a :MqttMessage;
+#                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
+#                 :bodyFloat ?valueC .
+#               ?valueC math:greaterThan -999 .
+#               ?valueC :asFarenheit ?valueF .
+#             } => {
+#               :airQualityIndoorTemperature :temperatureF ?valueF .
+#             } .
+#         ''')
+#         out = inf.infer(
+#             N3('''
+#             <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
+#                 :body "23.9" ;
+#                 :bodyFloat 2.39e+01 ;
+#                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
+#         '''))
+#         vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+#         valueF = cast(Decimal, vlit.toPython())
+#         self.assertAlmostEqual(float(valueF), 75.02)
+
+
+class TestListPerformance(WithGraphEqual):
+
+    def testList1(self):
+        inf = makeInferenceWithRules("{ :a :b (:e0) . } => { :new :stmt :here } .")
+        implied = inf.infer(N3(":a :b (:e0) ."))
+        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+
+    def testList2(self):
+        inf = makeInferenceWithRules("{ :a :b (:e0 :e1) . } => { :new :stmt :here } .")
+        implied = inf.infer(N3(":a :b (:e0 :e1) ."))
+        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+
+    def testList3(self):
+        inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2) . } => { :new :stmt :here } .")
+        implied = inf.infer(N3(":a :b (:e0 :e1 :e2) ."))
+        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+
+    # def testList4(self):
+    #     inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
+    #     implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
+    #     self.assertGraphEqual(implied, N3(":new :stmt :here ."))
