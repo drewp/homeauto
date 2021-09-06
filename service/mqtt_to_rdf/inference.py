@@ -99,7 +99,7 @@ class CandidateBinding:
         boundLhs = list(self.apply(lhs.graph))
         boundUsedByFuncs = list(self.apply(usedByFuncs))
 
-        self.logVerifyBanner(boundLhs, workingSet, boundUsedByFuncs)
+        self._logVerifyBanner(boundLhs, workingSet, boundUsedByFuncs)
 
         for stmt in boundLhs:
             log.debug(f'{INDENT*4} check for {stmt}')
@@ -113,7 +113,7 @@ class CandidateBinding:
                 return False
         return True
 
-    def logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
+    def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
         if not log.isEnabledFor(logging.DEBUG):
             return
         log.debug(f'{INDENT*4}/ verify all bindings against this boundLhs:')
@@ -153,14 +153,14 @@ class Lhs:
         from LHS"""
         log.debug(f'{INDENT*3} nodesToBind: {self.lhsBindables}')
 
-        if not self.allStaticStatementsMatch(workingSet):
+        if not self._allStaticStatementsMatch(workingSet):
             return
 
-        candidateTermMatches: Dict[BindableTerm, Set[Node]] = self.allCandidateTermMatches(workingSet)
+        candidateTermMatches: Dict[BindableTerm, Set[Node]] = self._allCandidateTermMatches(workingSet)
 
-        orderedVars, orderedValueSets = organize(candidateTermMatches)
+        orderedVars, orderedValueSets = _organize(candidateTermMatches)
 
-        self.logCandidates(orderedVars, orderedValueSets)
+        self._logCandidates(orderedVars, orderedValueSets)
 
         log.debug(f'{INDENT*3} trying all permutations:')
 
@@ -179,14 +179,14 @@ class Lhs:
                 continue
             yield binding
 
-    def allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
+    def _allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
         for ruleStmt in self.staticRuleStmts:
             if ruleStmt not in workingSet:
                 log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
                 return False
         return True
 
-    def allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
+    def _allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
         """the total set of terms each variable could possibly match"""
 
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = defaultdict(set)
@@ -232,7 +232,7 @@ class Lhs:
                 g.add(stmt)
         return g
 
-    def logCandidates(self, orderedVars, orderedValueSets):
+    def _logCandidates(self, orderedVars, orderedValueSets):
         if not log.isEnabledFor(logging.DEBUG):
             return
         log.debug(f'{INDENT*3} resulting candidate terms:')
@@ -254,7 +254,7 @@ class Evaluation:
     @staticmethod
     def findEvals(graph: Graph) -> Iterator['Evaluation']:
         for stmt in graph.triples((None, MATH['sum'], None)):
-            operands, operandsStmts = parseList(graph, stmt[0])
+            operands, operandsStmts = _parseList(graph, stmt[0])
             yield Evaluation(operands, stmt, operandsStmts)
 
         for stmt in graph.triples((None, MATH['greaterThan'], None)):
@@ -357,10 +357,10 @@ class Inference:
 
     def _iterateAllRules(self, workingSet: Graph, implied: Graph):
         for i, r in enumerate(self.rules):
-            self.logRuleApplicationHeader(workingSet, i, r)
-            applyRule(Lhs(r[0]), r[2], workingSet, implied)
+            self._logRuleApplicationHeader(workingSet, i, r)
+            _applyRule(Lhs(r[0]), r[2], workingSet, implied)
 
-    def logRuleApplicationHeader(self, workingSet, i, r):
+    def _logRuleApplicationHeader(self, workingSet, i, r):
         if not log.isEnabledFor(logging.DEBUG):
             return
 
@@ -375,7 +375,7 @@ class Inference:
         log.debug(f'{INDENT*3} rule def rhs: {graphDump(r[2])}')
 
 
-def applyRule(lhs: Lhs, rhs: Graph, workingSet: Graph, implied: Graph):
+def _applyRule(lhs: Lhs, rhs: Graph, workingSet: Graph, implied: Graph):
     for binding in lhs.findCandidateBindings(ReadOnlyGraphAggregate([workingSet])):
         log.debug(f'{INDENT*3} rule has a working binding:')
 
@@ -388,7 +388,7 @@ def applyRule(lhs: Lhs, rhs: Graph, workingSet: Graph, implied: Graph):
             implied.add(newStmt)
 
 
-def parseList(graph, subj) -> Tuple[List[Node], Set[Triple]]:
+def _parseList(graph, subj) -> Tuple[List[Node], Set[Triple]]:
     """"Do like Collection(g, subj) but also return all the 
     triples that are involved in the list"""
     out = []
@@ -417,7 +417,7 @@ def graphDump(g: Union[Graph, List[Triple]]):
     return ' '.join(lines)
 
 
-def organize(candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Tuple[List[BindableTerm], List[List[Node]]]:
+def _organize(candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Tuple[List[BindableTerm], List[List[Node]]]:
     items = list(candidateTermMatches.items())
     items.sort()
     orderedVars: List[BindableTerm] = []

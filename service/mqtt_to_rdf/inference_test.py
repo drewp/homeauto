@@ -1,14 +1,13 @@
 """
 also see https://github.com/w3c/N3/tree/master/tests/N3Tests
 """
-import itertools
 import unittest
 
 from rdflib import RDF, BNode, ConjunctiveGraph, Graph, Literal, Namespace
 from rdflib.parser import StringInputSource
 
 from inference import Inference, parseList
-from rdflib_debug_patches import patchSlimReprs, patchBnodeCounter
+from rdflib_debug_patches import patchBnodeCounter, patchSlimReprs
 
 patchSlimReprs()
 patchBnodeCounter()
