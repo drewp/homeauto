@@ -63,7 +63,7 @@ class CandidateBinding:
     def _applyFunctionsIteration(self, lhs, usedByFuncs: Graph):
         before = len(self.binding)
         delta = 0
-        for ev in Evaluation.findEvals(lhs):
+        for ev in Evaluation.findEvals(lhs.graph):
             log.debug(f'{INDENT*3} found Evaluation')
 
             newBindings, usedGraph = ev.resultBindings(self.binding)
@@ -240,15 +240,15 @@ class Evaluation:
     """
 
     @staticmethod
-    def findEvals(lhs: Lhs) -> Iterator['Evaluation']:
-        for stmt in lhs.graph.triples((None, MATH['sum'], None)):
-            operands, operandsStmts = parseList(lhs.graph, stmt[0])
+    def findEvals(graph: Graph) -> Iterator['Evaluation']:
+        for stmt in graph.triples((None, MATH['sum'], None)):
+            operands, operandsStmts = parseList(graph, stmt[0])
             yield Evaluation(operands, stmt, operandsStmts)
 
-        for stmt in lhs.graph.triples((None, MATH['greaterThan'], None)):
+        for stmt in graph.triples((None, MATH['greaterThan'], None)):
             yield Evaluation([stmt[0], stmt[2]], stmt, [])
 
-        for stmt in lhs.graph.triples((None, ROOM['asFarenheit'], None)):
+        for stmt in graph.triples((None, ROOM['asFarenheit'], None)):
             yield Evaluation([stmt[0]], stmt, [])
 
     # internal, use findEvals
