@@ -50,6 +50,9 @@ class Lhs:
 
         self.evaluations = list(Evaluation.findEvals(self.graph))
 
+    def __repr__(self):
+        return f"Lhs({graphDump(self.graph)})"
+
     def findCandidateBindings(self, workingSet: ReadOnlyWorkingSet, stats) -> Iterator['BoundLhs']:
         """bindings that fit the LHS of a rule, using statements from workingSet and functions
         from LHS"""
@@ -143,7 +146,6 @@ class Lhs:
 @dataclass
 class BoundLhs:
     lhs: Lhs
-    binding: CandidateBinding # mutable
 
     def __post_init__(self):
         self.usedByFuncs = Graph(identifier=GRAPH_ID)
@@ -187,7 +189,6 @@ class BoundLhs:
                 log.debug(f'{INDENT*5} stmt not known to be true')
                 return False
         return True
-
 
     def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
         if not log.isEnabledFor(logging.DEBUG):
