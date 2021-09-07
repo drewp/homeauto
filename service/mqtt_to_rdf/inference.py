@@ -36,11 +36,11 @@ GRAPH_ID = URIRef('dont/care')
 class Lhs:
     graph: Graph
 
-    staticRuleStmts: Graph = field(default_factory=Graph)
-    lhsBindables: Set[BindableTerm] = field(default_factory=set)
-    lhsBnodes: Set[BNode] = field(default_factory=set)
-
     def __post_init__(self):
+        # do precomputation in here that's not specific to the workingSet
+        self.staticRuleStmts = Graph()
+        self.lhsBindables: Set[BindableTerm] = set()
+        self.lhsBnodes: Set[BNode] = set()
         for ruleStmt in self.graph:
             varsAndBnodesInStmt = [term for term in ruleStmt if isinstance(term, (Variable, BNode))]
             self.lhsBindables.update(varsAndBnodesInStmt)
@@ -72,6 +72,13 @@ class Lhs:
             stats['permCountSucceeding'] += 1
             yield binding
 
+    def _allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
+        for ruleStmt in self.staticRuleStmts:
+            if ruleStmt not in workingSet:
+                log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
+                return False
+        return True
+
     def _possibleBindings(self, workingSet, stats) -> Iterator['BoundLhs']:
         """this yields at least the working bindings, and possibly others"""
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = self._allCandidateTermMatches(workingSet)
@@ -86,20 +93,13 @@ class Lhs:
             except EvaluationFailed:
                 stats['permCountFailingEval'] += 1
 
-    def _allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
-        for ruleStmt in self.staticRuleStmts:
-            if ruleStmt not in workingSet:
-                log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
-                return False
-        return True
-
     def _allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
         """the total set of terms each variable could possibly match"""
 
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = defaultdict(set)
         for lhsStmt in self.graph:
             log.debug(f'{INDENT*4} possibles for this lhs stmt: {lhsStmt}')
-            for i, trueStmt in enumerate(sorted(workingSet)):
+            for i, trueStmt in enumerate(workingSet):
                 # log.debug(f'{INDENT*5} consider this true stmt ({i}): {trueStmt}')
 
                 for v, vals in self._bindingsFromStatement(lhsStmt, trueStmt):
@@ -143,20 +143,13 @@ class Lhs:
 @dataclass
 class BoundLhs:
     lhs: Lhs
-    binding: CandidateBinding
+    binding: CandidateBinding # mutable
 
     def __post_init__(self):
         self.usedByFuncs = Graph(identifier=GRAPH_ID)
-        self.graphWithoutEvals = self._graphWithoutEvals()
-
-    def _graphWithoutEvals(self) -> Graph:
-        g = Graph(identifier=GRAPH_ID)
         self._applyFunctions()
 
-        for stmt in self.lhs.graph:
-            if stmt not in self.usedByFuncs:
-                g.add(stmt)
-        return g
+        self.graphWithoutEvals = self.lhs.graph - self.usedByFuncs
 
     def _applyFunctions(self):
         """may grow the binding with some results"""
@@ -169,23 +162,16 @@ class BoundLhs:
         before = len(self.binding.binding)
         delta = 0
         for ev in self.lhs.evaluations:
-            log.debug(f'{INDENT*3} found Evaluation')
-
             newBindings, usedGraph = ev.resultBindings(self.binding)
             self.usedByFuncs += usedGraph
             self.binding.addNewBindings(newBindings)
-            delta = len(self.binding.binding) - before
-            if log.isEnabledFor(logging.DEBUG):
-                dump = "(...)"
-                if cast(int, usedGraph.__len__()) < 20:
-                    dump = graphDump(usedGraph)
-                log.debug(f'{INDENT*4} rule {dump} made {delta} new bindings')
+        delta = len(self.binding.binding) - before
+        log.debug(f'{INDENT*4} eval rules made {delta} new bindings')
         return delta
-
 
     def verify(self, workingSet: ReadOnlyWorkingSet) -> bool:
         """Can this bound lhs be true all at once in workingSet?"""
-        boundLhs = list(self.binding.apply(self.lhs.graph))
+        boundLhs = list(self.binding.apply(self.lhs.graph))  # leave out statics and evals!
         boundUsedByFuncs = list(self.binding.apply(self.usedByFuncs))
 
         self._logVerifyBanner(boundLhs, workingSet, boundUsedByFuncs)
@@ -202,9 +188,11 @@ class BoundLhs:
                 return False
         return True
 
+
     def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
         if not log.isEnabledFor(logging.DEBUG):
             return
+
         log.debug(f'{INDENT*4}/ verify all bindings against this boundLhs:')
         for stmt in sorted(boundLhs):
             log.debug(f'{INDENT*4}|{INDENT} {stmt}')
