@@ -27,10 +27,6 @@ ROOM = Namespace("http://projects.bigasterisk.com/room/")
 LOG = Namespace('http://www.w3.org/2000/10/swap/log#')
 MATH = Namespace('http://www.w3.org/2000/10/swap/math#')
 
-# Graph() makes a BNode if you don't pass
-# identifier, which can be a bottleneck.
-GRAPH_ID = URIRef('dont/care')
-
 
 @dataclass
 class Lhs:
@@ -80,6 +76,8 @@ class Lhs:
             yield binding
 
     def _allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
+        # bug: see TestSelfFulfillingRule.test3 for a case where this rule's
+        # static stmt is matched by a non-static stmt in the rule itself
         for ruleStmt in self.staticRuleStmts:
             if ruleStmt not in workingSet:
                 log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
@@ -153,7 +151,7 @@ class BoundLhs:
     binding: CandidateBinding
 
     def __post_init__(self):
-        self.usedByFuncs = Graph(identifier=GRAPH_ID)
+        self.usedByFuncs = Graph()
         self._applyFunctions()
 
         self.graphWithoutEvals = self.lhs.graph - self.usedByFuncs
