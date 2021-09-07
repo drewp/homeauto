@@ -174,7 +174,11 @@ class BoundLhs:
         self.usedByFuncs = Graph()
         self._applyFunctions()
 
-        self.graphWithoutEvals = self.lhs.graph - self.usedByFuncs
+    def lhsStmtsWithoutEvals(self):
+        for stmt in self.lhs.graph:
+            if stmt in self.usedByFuncs:
+                continue
+            yield stmt
 
     def _applyFunctions(self):
         """may grow the binding with some results"""
@@ -235,7 +239,7 @@ class Rule:
         for bound in self.lhs.findCandidateBindings(ReadOnlyGraphAggregate([workingSet]), stats):
             log.debug(f'{INDENT*3} rule has a working binding:')
 
-            for lhsBoundStmt in bound.binding.apply(bound.graphWithoutEvals):
+            for lhsBoundStmt in bound.binding.apply(bound.lhsStmtsWithoutEvals()):
                 log.debug(f'{INDENT*5} adding {lhsBoundStmt=}')
                 workingSet.add(lhsBoundStmt)
             for newStmt in bound.binding.apply(self.rhsGraph):
