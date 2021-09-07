@@ -146,6 +146,7 @@ class Lhs:
 @dataclass
 class BoundLhs:
     lhs: Lhs
+    binding: CandidateBinding
 
     def __post_init__(self):
         self.usedByFuncs = Graph(identifier=GRAPH_ID)
