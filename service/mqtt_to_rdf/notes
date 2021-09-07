@@ -1,0 +1,27 @@
+
+columns:
+  - watched topics, and one for 'nonmatching'
+
+  - incoming messages
+
+  - generic graph
+
+  - output graphs
+
+  - generated influx points
+
+
+config:
+  - expand to generic graph, parsing json
+  - rules to make output graph, with some custom predicates
+  - influx as before
+  - buttonPress and statementLifetime as before, as conversions
+
+  https://www.w3.org/2000/10/swap/doc/Built-In.html#:~:text=%7B%20%20%20((%3Fx.-,tempInF,-%2232%22).math%3Adifference%20%220.5555
+
+  ----
+  inference
+
+  ~/.venvs/mqtt_to_rdf/bin/nosetests --with-cprof --logging-level=INFO inference_test
+  ~/.venvs/mqtt_to_rdf/bin/pyprof2calltree -i stats.dat -k
+  
