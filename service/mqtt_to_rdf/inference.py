@@ -48,6 +48,8 @@ class Lhs:
             else:
                 self.nonStaticRuleStmts.add(ruleStmt)
 
+        self.nonStaticRuleStmtsSet = set(self.nonStaticRuleStmts)
+
         self.evaluations = list(Evaluation.findEvals(self.graph))
 
     def __repr__(self):
@@ -194,7 +196,8 @@ class BoundLhs:
 
     def verify(self, workingSet: ReadOnlyWorkingSet) -> bool:
         """Can this bound lhs be true all at once in workingSet?"""
-        boundLhs = self.binding.apply(self.lhs.nonStaticRuleStmts - self.usedByFuncs)
+        rem = cast(Set[Triple], self.lhs.nonStaticRuleStmtsSet.difference(self.usedByFuncs))
+        boundLhs = self.binding.apply(rem)
 
         if log.isEnabledFor(logging.DEBUG):
             boundLhs = list(boundLhs)

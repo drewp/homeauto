@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Iterator
+from typing import Dict, Iterable, Iterator, Union
 
 from prometheus_client import Summary
 from rdflib import BNode, Graph
@@ -16,7 +16,7 @@ class CandidateBinding:
         b = " ".join("%s=%s" % (k, v) for k, v in sorted(self.binding.items()))
         return f'CandidateBinding({b})'
 
-    def apply(self, g: Graph) -> Iterator[Triple]:
+    def apply(self, g: Union[Graph, Iterable[Triple]]) -> Iterator[Triple]:
         for stmt in g:
             try:
                 bound = (self._applyTerm(stmt[0]), self._applyTerm(stmt[1]), self._applyTerm(stmt[2]))
@@ -35,6 +35,5 @@ class CandidateBinding:
     def addNewBindings(self, newBindings: 'CandidateBinding'):
         for k, v in newBindings.binding.items():
             if k in self.binding and self.binding[k] != v:
-                raise ValueError(
-                    f'conflict- thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
+                raise ValueError(f'conflict- thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
             self.binding[k] = v
