@@ -87,16 +87,34 @@ class Lhs:
     def _possibleBindings(self, workingSet, stats) -> Iterator['BoundLhs']:
         """this yields at least the working bindings, and possibly others"""
         candidateTermMatches: Dict[BindableTerm, Set[Node]] = self._allCandidateTermMatches(workingSet)
-
-        orderedVars, orderedValueSets = _organize(candidateTermMatches)
-        self._logCandidates(orderedVars, orderedValueSets)
-
-        log.debug(f'{INDENT*3} trying all permutations:')
-        for valueSet in itertools.product(*orderedValueSets):
+        for bindRow in self._product(candidateTermMatches):
             try:
-                yield BoundLhs(self, CandidateBinding(dict(zip(orderedVars, valueSet))))
+                yield BoundLhs(self, bindRow)
             except EvaluationFailed:
                 stats['permCountFailingEval'] += 1
+
+    def _product(self, candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Iterator[CandidateBinding]:
+        orderedVars, orderedValueSets = _organize(candidateTermMatches)
+        self._logCandidates(orderedVars, orderedValueSets)
+        log.debug(f'{INDENT*3} trying all permutations:')
+        if not orderedValueSets:
+            yield CandidateBinding({})
+            return
+        if not orderedValueSets or not all(orderedValueSets):
+            # some var or bnode has no options at all
+            return
+        rings: List[Iterator[Node]] = [itertools.cycle(valSet) for valSet in orderedValueSets]
+        currentSet: List[Node] = [next(ring) for ring in rings]
+        starts = [valSet[-1] for valSet in orderedValueSets]
+        while True:
+            for col, curr in enumerate(currentSet):
+                currentSet[col] = next(rings[col])
+                log.debug(repr(currentSet))
+                yield CandidateBinding(dict(zip(orderedVars, currentSet)))
+                if curr is not starts[col]:
+                    break
+                if col == len(orderedValueSets) - 1:
+                    return
 
     def _allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
         """the total set of terms each variable could possibly match"""
