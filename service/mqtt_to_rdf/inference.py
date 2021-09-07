@@ -39,6 +39,8 @@ class Lhs:
     def __post_init__(self):
         # do precomputation in here that's not specific to the workingSet
         self.staticRuleStmts = Graph()
+        self.nonStaticRuleStmts = Graph()
+
         self.lhsBindables: Set[BindableTerm] = set()
         self.lhsBnodes: Set[BNode] = set()
         for ruleStmt in self.graph:
@@ -47,6 +49,8 @@ class Lhs:
             self.lhsBnodes.update(x for x in varsAndBnodesInStmt if isinstance(x, BNode))
             if not varsAndBnodesInStmt:
                 self.staticRuleStmts.add(ruleStmt)
+            else:
+                self.nonStaticRuleStmts.add(ruleStmt)
 
         self.evaluations = list(Evaluation.findEvals(self.graph))
 
@@ -174,27 +178,21 @@ class BoundLhs:
 
     def verify(self, workingSet: ReadOnlyWorkingSet) -> bool:
         """Can this bound lhs be true all at once in workingSet?"""
-        boundLhs = list(self.binding.apply(self.lhs.graph))  # leave out statics and evals!
-        boundUsedByFuncs = list(self.binding.apply(self.usedByFuncs))
+        boundLhs = self.binding.apply(self.lhs.nonStaticRuleStmts - self.usedByFuncs)
 
-        self._logVerifyBanner(boundLhs, workingSet, boundUsedByFuncs)
+        if log.isEnabledFor(logging.DEBUG):
+            boundLhs = list(boundLhs)
+            self._logVerifyBanner(boundLhs, workingSet)
 
         for stmt in boundLhs:
-            log.debug(f'{INDENT*4} check for {stmt}')
+            log.debug(f'{INDENT*4} check for %s', stmt)
 
-            if stmt in boundUsedByFuncs:
-                pass
-            elif stmt in workingSet:
-                pass
-            else:
+            if stmt not in workingSet:
                 log.debug(f'{INDENT*5} stmt not known to be true')
                 return False
         return True
 
-    def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet, boundUsedByFuncs):
-        if not log.isEnabledFor(logging.DEBUG):
-            return
-
+    def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet):
         log.debug(f'{INDENT*4}/ verify all bindings against this boundLhs:')
         for stmt in sorted(boundLhs):
             log.debug(f'{INDENT*4}|{INDENT} {stmt}')
@@ -203,11 +201,6 @@ class BoundLhs:
         # for stmt in sorted(workingSet):
         #     log.debug(f'{INDENT*4}|{INDENT} {stmt}')
 
-        stmts = sorted(boundUsedByFuncs)
-        if stmts:
-            log.debug(f'{INDENT*4}| while ignoring these usedByFuncs:')
-            for stmt in stmts:
-                log.debug(f'{INDENT*4}|{INDENT} {stmt}')
         log.debug(f'{INDENT*4}\\')
 
 
