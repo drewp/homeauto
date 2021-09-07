@@ -94,9 +94,9 @@ class Lhs:
         self._logCandidates(orderedVars, orderedValueSets)
 
         log.debug(f'{INDENT*3} trying all permutations:')
-        for perm in itertools.product(*orderedValueSets):
+        for valueSet in itertools.product(*orderedValueSets):
             try:
-                yield BoundLhs(self, CandidateBinding(dict(zip(orderedVars, perm))))
+                yield BoundLhs(self, CandidateBinding(dict(zip(orderedVars, valueSet))))
             except EvaluationFailed:
                 stats['permCountFailingEval'] += 1
 
@@ -212,6 +212,18 @@ class Rule:
     def __post_init__(self):
         self.lhs = Lhs(self.lhsGraph)
 
+    def applyRule(self, workingSet: Graph, implied: Graph, stats: Dict):
+        for bound in self.lhs.findCandidateBindings(ReadOnlyGraphAggregate([workingSet]), stats):
+            log.debug(f'{INDENT*3} rule has a working binding:')
+
+            for lhsBoundStmt in bound.binding.apply(bound.graphWithoutEvals):
+                log.debug(f'{INDENT*5} adding {lhsBoundStmt=}')
+                workingSet.add(lhsBoundStmt)
+            for newStmt in bound.binding.apply(self.rhsGraph):
+                log.debug(f'{INDENT*5} adding {newStmt=}')
+                workingSet.add(newStmt)
+                implied.add(newStmt)
+
 
 class Inference:
 
@@ -223,7 +235,7 @@ class Inference:
         for stmt in g:
             if stmt[1] == LOG['implies']:
                 self.rules.append(Rule(stmt[0], stmt[2]))
-            # others should go to a default working set?
+            # other stmts should go to a default working set?
 
     @INFER_CALLS.time()
     def infer(self, graph: Graph):
@@ -259,9 +271,9 @@ class Inference:
         return implied
 
     def _iterateAllRules(self, workingSet: Graph, implied: Graph, stats):
-        for i, r in enumerate(self.rules):
-            self._logRuleApplicationHeader(workingSet, i, r)
-            _applyRule(r.lhs, r.rhsGraph, workingSet, implied, stats)
+        for i, rule in enumerate(self.rules):
+            self._logRuleApplicationHeader(workingSet, i, rule)
+            rule.applyRule(workingSet, implied, stats)
 
     def _logRuleApplicationHeader(self, workingSet, i, r: Rule):
         if not log.isEnabledFor(logging.DEBUG):
@@ -278,19 +290,6 @@ class Inference:
         log.debug(f'{INDENT*3} rule def rhs: {graphDump(r.rhsGraph)}')
 
 
-def _applyRule(lhs: Lhs, rhs: Graph, workingSet: Graph, implied: Graph, stats: Dict):
-    for bound in lhs.findCandidateBindings(ReadOnlyGraphAggregate([workingSet]), stats):
-        log.debug(f'{INDENT*3} rule has a working binding:')
-
-        for lhsBoundStmt in bound.binding.apply(bound.graphWithoutEvals):
-            log.debug(f'{INDENT*5} adding {lhsBoundStmt=}')
-            workingSet.add(lhsBoundStmt)
-        for newStmt in bound.binding.apply(rhs):
-            log.debug(f'{INDENT*5} adding {newStmt=}')
-            workingSet.add(newStmt)
-            implied.add(newStmt)
-
-
 def graphDump(g: Union[Graph, List[Triple]]):
     if not isinstance(g, Graph):
         log.warning(f"it's a {type(g)}")
@@ -300,7 +299,7 @@ def graphDump(g: Union[Graph, List[Triple]]):
     g.bind('', ROOM)
     g.bind('ex', Namespace('http://example.com/'))
     lines = cast(bytes, g.serialize(format='n3')).decode('utf8').splitlines()
-    lines = [line for line in lines if not line.startswith('@prefix')]
+    lines = [line.strip() for line in lines if not line.startswith('@prefix')]
     return ' '.join(lines)
 
 

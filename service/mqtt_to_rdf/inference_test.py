@@ -149,6 +149,11 @@ class TestSelfFulfillingRule(WithGraphEqual):
         inf = makeInferenceWithRules("{ (2) math:sum ?x } => { :new :stmt ?x } .")
         self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt 2 ."))
 
+    @unittest.skip("too hard for now")
+    def test3(self):
+        inf = makeInferenceWithRules("{ :a :b :c . :a :b ?x . } => { :new :stmt ?x } .")
+        self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt :c ."))
+
 
 class TestInferenceWithMathFunctions(WithGraphEqual):
 
@@ -200,21 +205,22 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
-#     def testTopicIsList(self):
-#         inf = makeInferenceWithRules('''
-#             { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
-#             { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+    @unittest.skip("still too slow")
+    def testTopicIsList(self):
+        inf = makeInferenceWithRules('''
+            { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+            { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
 
-#             {
-#             ?msg a :MqttMessage ;
-#                 :topic ( "frontdoorlock" "status" );
-#                 :onlineTerm ?onlineness . } => {
-#             :frontDoorLockStatus :connectedStatus ?onlineness .
-#             } .
-#         ''')
+            {
+            ?msg a :MqttMessage ;
+                :topic ( "frontdoorlock" "status" );
+                :onlineTerm ?onlineness . } => {
+            :frontDoorLockStatus :connectedStatus ?onlineness .
+            } .
+        ''')
 
-#         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
-#         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
+        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
     def testPerformance0(self):
         inf = makeInferenceWithRules('''
@@ -240,28 +246,29 @@ class TestUseCases(WithGraphEqual):
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
-#     def testPerformance1(self):
-#         inf = makeInferenceWithRules('''
-#             {
-#               ?msg a :MqttMessage;
-#                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
-#                 :bodyFloat ?valueC .
-#               ?valueC math:greaterThan -999 .
-#               ?valueC :asFarenheit ?valueF .
-#             } => {
-#               :airQualityIndoorTemperature :temperatureF ?valueF .
-#             } .
-#         ''')
-#         out = inf.infer(
-#             N3('''
-#             <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
-#                 :body "23.9" ;
-#                 :bodyFloat 2.39e+01 ;
-#                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
-#         '''))
-#         vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
-#         valueF = cast(Decimal, vlit.toPython())
-#         self.assertAlmostEqual(float(valueF), 75.02)
+    @unittest.skip("still too slow")
+    def testPerformance1(self):
+        inf = makeInferenceWithRules('''
+            {
+              ?msg a :MqttMessage;
+                :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
+                :bodyFloat ?valueC .
+              ?valueC math:greaterThan -999 .
+              ?valueC :asFarenheit ?valueF .
+            } => {
+              :airQualityIndoorTemperature :temperatureF ?valueF .
+            } .
+        ''')
+        out = inf.infer(
+            N3('''
+            <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
+                :body "23.9" ;
+                :bodyFloat 2.39e+01 ;
+                :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
+        '''))
+        vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+        valueF = cast(Decimal, vlit.toPython())
+        self.assertAlmostEqual(float(valueF), 75.02)
 
 
 class TestListPerformance(WithGraphEqual):
@@ -281,10 +288,11 @@ class TestListPerformance(WithGraphEqual):
         implied = inf.infer(N3(":a :b (:e0 :e1 :e2) ."))
         self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
-    # def testList4(self):
-    #     inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
-    #     implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
-    #     self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+    @unittest.skip("still too slow")
+    def testList4(self):
+        inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
+        implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
+        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
 
 def fakeStats():
@@ -304,6 +312,7 @@ class TestLhsFindCandidateBindings(WithGraphEqual):
         cands = list(l.findCandidateBindings(ws, fakeStats()))
         self.assertEqual(len(cands), 1)
 
+    @unittest.skip("still too slow")
     def testListsOnlyMatchEachOther(self):
         l = Lhs(N3(":a :b (:e0 :e1) ."))
         ws = ReadOnlyGraphAggregate([N3(":a :b (:e0 :e1) .")])
