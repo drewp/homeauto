@@ -131,11 +131,6 @@ class Lhs:
                 for v, vals in self._bindingsFromStatement(lhsStmt, trueStmt):
                     candidateTermMatches[v].update(vals)
 
-        for trueStmt in itertools.chain(workingSet, self.graph):
-            for b in self.lhsBnodes:
-                for t in [trueStmt[0], trueStmt[2]]:
-                    if isinstance(t, (URIRef, BNode)):
-                        candidateTermMatches[b].add(t)
         return candidateTermMatches
 
     def _bindingsFromStatement(self, stmt1: Triple, stmt2: Triple) -> Iterator[Tuple[Variable, Set[Node]]]:
