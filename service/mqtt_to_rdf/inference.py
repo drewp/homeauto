@@ -55,21 +55,21 @@ class Lhs:
     def __repr__(self):
         return f"Lhs({graphDump(self.graph)})"
 
-    def findCandidateBindings(self, workingSet: ReadOnlyWorkingSet, stats) -> Iterator['BoundLhs']:
+    def findCandidateBindings(self, knownTrue: ReadOnlyWorkingSet, stats) -> Iterator['BoundLhs']:
         """bindings that fit the LHS of a rule, using statements from workingSet and functions
         from LHS"""
         log.debug(f'{INDENT*3} nodesToBind: {self.lhsBindables}')
         stats['findCandidateBindingsCalls'] += 1
 
-        if not self._allStaticStatementsMatch(workingSet):
+        if not self._allStaticStatementsMatch(knownTrue):
             stats['findCandidateBindingEarlyExits'] += 1
             return
 
-        for binding in self._possibleBindings(workingSet, stats):
+        for binding in self._possibleBindings(knownTrue, stats):
             log.debug('')
             log.debug(f'{INDENT*4}*trying {binding.binding}')
 
-            if not binding.verify(workingSet):
+            if not binding.verify(knownTrue):
                 log.debug(f'{INDENT*4} this binding did not verify')
                 stats['permCountFailingVerify'] += 1
                 continue
@@ -77,11 +77,11 @@ class Lhs:
             stats['permCountSucceeding'] += 1
             yield binding
 
-    def _allStaticStatementsMatch(self, workingSet: ReadOnlyWorkingSet) -> bool:
+    def _allStaticStatementsMatch(self, knownTrue: ReadOnlyWorkingSet) -> bool:
         # bug: see TestSelfFulfillingRule.test3 for a case where this rule's
         # static stmt is matched by a non-static stmt in the rule itself
         for ruleStmt in self.staticRuleStmts:
-            if ruleStmt not in workingSet:
+            if ruleStmt not in knownTrue:
                 log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
                 return False
         return True
