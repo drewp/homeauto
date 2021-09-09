@@ -205,7 +205,6 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
-    @unittest.skip("still too slow")
     def testTopicIsList(self):
         inf = makeInferenceWithRules('''
             { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
