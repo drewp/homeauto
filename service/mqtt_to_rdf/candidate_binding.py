@@ -16,20 +16,24 @@ class CandidateBinding:
         b = " ".join("%s=%s" % (k, v) for k, v in sorted(self.binding.items()))
         return f'CandidateBinding({b})'
 
-    def apply(self, g: Union[Graph, Iterable[Triple]]) -> Iterator[Triple]:
+    def apply(self, g: Union[Graph, Iterable[Triple]], returnBoundStatementsOnly=True) -> Iterator[Triple]:
         for stmt in g:
             try:
-                bound = (self._applyTerm(stmt[0]), self._applyTerm(stmt[1]), self._applyTerm(stmt[2]))
+                bound = (
+                    self._applyTerm(stmt[0], returnBoundStatementsOnly), 
+                    self._applyTerm(stmt[1], returnBoundStatementsOnly), 
+                    self._applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
                 continue
             yield bound
 
-    def _applyTerm(self, term: Node):
+    def _applyTerm(self, term: Node, failUnbound=True):
         if isinstance(term, (Variable, BNode)):
             if term in self.binding:
                 return self.binding[term]
             else:
-                raise BindingUnknown()
+                if failUnbound:
+                    raise BindingUnknown()
         return term
 
     def addNewBindings(self, newBindings: 'CandidateBinding'):
