@@ -6,7 +6,7 @@ from decimal import Decimal
 from typing import cast
 import unittest
 
-from rdflib import RDF, BNode, ConjunctiveGraph, Graph, Literal, Namespace
+from rdflib import ConjunctiveGraph, Graph, Literal, Namespace
 from rdflib.graph import ReadOnlyGraphAggregate
 from rdflib.parser import StringInputSource
 
@@ -245,7 +245,6 @@ class TestUseCases(WithGraphEqual):
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
-    @unittest.skip("still too slow")
     def testPerformance1(self):
         inf = makeInferenceWithRules('''
             {
@@ -253,7 +252,7 @@ class TestUseCases(WithGraphEqual):
                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
                 :bodyFloat ?valueC .
               ?valueC math:greaterThan -999 .
-              ?valueC :asFarenheit ?valueF .
+              ?valueC room:asFarenheit ?valueF .
             } => {
               :airQualityIndoorTemperature :temperatureF ?valueF .
             } .
@@ -287,7 +286,6 @@ class TestListPerformance(WithGraphEqual):
         implied = inf.infer(N3(":a :b (:e0 :e1 :e2) ."))
         self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
-    @unittest.skip("still too slow")
     def testList4(self):
         inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
         implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
@@ -311,11 +309,9 @@ class TestLhsFindCandidateBindings(WithGraphEqual):
         cands = list(l.findCandidateBindings(ws, fakeStats()))
         self.assertEqual(len(cands), 1)
 
-    @unittest.skip("still too slow")
     def testListsOnlyMatchEachOther(self):
         l = Lhs(N3(":a :b (:e0 :e1) ."))
         ws = ReadOnlyGraphAggregate([N3(":a :b (:e0 :e1) .")])
         stats = fakeStats()
         cands = list(l.findCandidateBindings(ws, stats))
         self.assertLess(stats['permCountFailingVerify'], 20)
-        self.fail(str(cands))
