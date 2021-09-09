@@ -102,6 +102,7 @@ class Lhs:
         if not orderedValueSets:
             yield CandidateBinding({})
             return
+
         if not orderedValueSets or not all(orderedValueSets):
             # some var or bnode has no options at all
             return
@@ -111,7 +112,7 @@ class Lhs:
         while True:
             for col, curr in enumerate(currentSet):
                 currentSet[col] = next(rings[col])
-                log.debug(repr(currentSet))
+                log.debug(f'{INDENT*4} currentSet: {repr(currentSet)}')
                 yield CandidateBinding(dict(zip(orderedVars, currentSet)))
                 if curr is not starts[col]:
                     break
@@ -240,10 +241,10 @@ class Rule:
             log.debug(f'{INDENT*3} rule has a working binding:')
 
             for lhsBoundStmt in bound.binding.apply(bound.lhsStmtsWithoutEvals()):
-                log.debug(f'{INDENT*5} adding {lhsBoundStmt=}')
+                log.debug(f'{INDENT*4} adding {lhsBoundStmt=}')
                 workingSet.add(lhsBoundStmt)
             for newStmt in bound.binding.apply(self.rhsGraph):
-                log.debug(f'{INDENT*5} adding {newStmt=}')
+                log.debug(f'{INDENT*4} adding {newStmt=}')
                 workingSet.add(newStmt)
                 implied.add(newStmt)
 
@@ -279,6 +280,7 @@ class Inference:
         delta = 1
         stats['initWorkingSet'] = cast(int, workingSet.__len__())
         while delta > 0 and bailout_iterations > 0:
+            log.debug('')
             log.info(f'{INDENT*1}*iteration ({bailout_iterations} left)')
             bailout_iterations -= 1
             delta = -len(implied)
