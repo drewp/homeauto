@@ -6,10 +6,10 @@ import itertools
 import logging
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from dataclasses import dataclass
+from typing import Dict, Iterator, List, Set, Tuple, Union, cast
 
-from prometheus_client import Summary
+from prometheus_client import Summary, Histogram
 from rdflib import BNode, Graph, Namespace, URIRef
 from rdflib.graph import ConjunctiveGraph, ReadOnlyGraphAggregate
 from rdflib.term import Node, Variable
@@ -21,7 +21,8 @@ from lhs_evaluation import Evaluation
 log = logging.getLogger('infer')
 INDENT = '    '
 
-INFER_CALLS = Summary('read_rules_calls', 'calls')
+INFER_CALLS = Summary('inference_infer_calls', 'calls')
+INFER_GRAPH_SIZE = Histogram('inference_graph_size', 'statements', buckets=[2**x for x in range(2, 20, 2)])
 
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 LOG = Namespace('http://www.w3.org/2000/10/swap/log#')
@@ -312,7 +313,9 @@ class Inference:
         """
         returns new graph of inferred statements.
         """
-        log.info(f'{INDENT*0} Begin inference of graph len={graph.__len__()} with rules len={len(self.rules)}:')
+        n = graph.__len__()
+        INFER_GRAPH_SIZE.observe(n)
+        log.info(f'{INDENT*0} Begin inference of graph len={n} with rules len={len(self.rules)}:')
         startTime = time.time()
         stats: Dict[str, Union[int, float]] = defaultdict(lambda: 0)
         # everything that is true: the input graph, plus every rule conclusion we can make
