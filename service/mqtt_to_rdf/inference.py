@@ -96,30 +96,6 @@ class Lhs:
             except EvaluationFailed:
                 stats['permCountFailingEval'] += 1
 
-    def _product(self, candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Iterator[CandidateBinding]:
-        orderedVars, orderedValueSets = _organize(candidateTermMatches)
-        self._logCandidates(orderedVars, orderedValueSets)
-        log.debug(f'{INDENT*3} trying all permutations:')
-        if not orderedValueSets:
-            yield CandidateBinding({})
-            return
-
-        if not orderedValueSets or not all(orderedValueSets):
-            # some var or bnode has no options at all
-            return
-        rings: List[Iterator[Node]] = [itertools.cycle(valSet) for valSet in orderedValueSets]
-        currentSet: List[Node] = [next(ring) for ring in rings]
-        starts = [valSet[-1] for valSet in orderedValueSets]
-        while True:
-            for col, curr in enumerate(currentSet):
-                currentSet[col] = next(rings[col])
-                log.debug(f'{INDENT*4} currentSet: {repr(currentSet)}')
-                yield CandidateBinding(dict(zip(orderedVars, currentSet)))
-                if curr is not starts[col]:
-                    break
-                if col == len(orderedValueSets) - 1:
-                    return
-
     def _allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
         """the total set of terms each variable could possibly match"""
 
@@ -152,6 +128,30 @@ class Lhs:
                 log.debug(f'{INDENT*5} {v=} {vals=}')
                 yield v, vals
 
+    def _product(self, candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Iterator[CandidateBinding]:
+        orderedVars, orderedValueSets = _organize(candidateTermMatches)
+        self._logCandidates(orderedVars, orderedValueSets)
+        log.debug(f'{INDENT*3} trying all permutations:')
+        if not orderedValueSets:
+            yield CandidateBinding({})
+            return
+
+        if not orderedValueSets or not all(orderedValueSets):
+            # some var or bnode has no options at all
+            return
+        rings: List[Iterator[Node]] = [itertools.cycle(valSet) for valSet in orderedValueSets]
+        currentSet: List[Node] = [next(ring) for ring in rings]
+        starts = [valSet[-1] for valSet in orderedValueSets]
+        while True:
+            for col, curr in enumerate(currentSet):
+                currentSet[col] = next(rings[col])
+                log.debug(f'{INDENT*4} currentSet: {repr(currentSet)}')
+                yield CandidateBinding(dict(zip(orderedVars, currentSet)))
+                if curr is not starts[col]:
+                    break
+                if col == len(orderedValueSets) - 1:
+                    return
+
     def _logCandidates(self, orderedVars, orderedValueSets):
         if not log.isEnabledFor(logging.DEBUG):
             return
@@ -162,55 +162,39 @@ class Lhs:
                 log.debug(f'{INDENT*5}{val!r}')
 
 
-@dataclass
-class CandidateTermMatches:
-    """lazily find the possible matches for this term"""
-    term: BindableTerm
-    lhs: Lhs
-    workingSet: Graph
-    boundSoFar: CandidateBinding
+# @dataclass
+# class CandidateTermMatches:
+#     """lazily find the possible matches for this term"""
+#     terms: List[BindableTerm]
+#     lhs: Lhs
+#     knownTrue: Graph
+#     boundSoFar: CandidateBinding
 
-    def __post_init__(self):
-        self.results: List[Node] = []  # we have to be able to repeat the results
+#     def __post_init__(self):
+#         self.results: List[Node] = []  # we have to be able to repeat the results
 
-        res: Set[Node] = set()
-        for trueStmt in self.workingSet:  # all bound
-            lStmts = list(self.lhsStmtsContainingTerm())
-            log.debug(f'{INDENT*4} {trueStmt=} {len(lStmts)}')
-            for pat in self.boundSoFar.apply(lStmts, returnBoundStatementsOnly=False):
-                log.debug(f'{INDENT*4} {pat=}')
-                implied = self._stmtImplies(pat, trueStmt)
-                if implied is not None:
-                    res.add(implied)
-        self.results = list(res)
-        # self.results.sort()
+#         res: Set[Node] = set()
+#         for trueStmt in self.knownTrue:  # all bound
+#             lStmts = list(self.lhsStmtsContainingTerm())
+#             log.debug(f'{INDENT*4} {trueStmt=} {len(lStmts)}')
+#             for pat in self.boundSoFar.apply(lStmts, returnBoundStatementsOnly=False):
+#                 log.debug(f'{INDENT*4} {pat=}')
+#                 implied = self._stmtImplies(pat, trueStmt)
+#                 if implied is not None:
+#                     res.add(implied)
+#         self.results = list(res)
+#         # self.results.sort()
 
-        log.debug(f'{INDENT*3} CandTermMatches: {self.term} {graphDump(self.lhs.graph)} {self.boundSoFar=} ===> {self.results=}')
+#         log.debug(f'{INDENT*3} CandTermMatches: {self.term} {graphDump(self.lhs.graph)} {self.boundSoFar=} ===> {self.results=}')
 
-    def _stmtImplies(self, pat: Triple, trueStmt: Triple) -> Optional[Node]:
-        """what value, if any, do we learn for our term from this LHS pattern statement and this known-true stmt"""
-        r = None
-        for p, t in zip(pat, trueStmt):
-            if isinstance(p, (Variable, BNode)):
-                if p != self.term:
-                    # stmt is unbound in more than just our term
-                    continue  # unsure what to do - err on the side of too many bindings, since they get rechecked later
-                if r is None:
-                    r = t
-                    log.debug(f'{INDENT*4}  implied term value {p=} {t=}')
-                elif r != t:
-                    # (?x c ?x) matched with (a b c) doesn't work
-                    return None
-        return r
+#     def lhsStmtsContainingTerm(self):
+#         # lhs could precompute this
+#         for lhsStmt in self.lhs.graph:
+#             if self.term in lhsStmt:
+#                 yield lhsStmt
 
-    def lhsStmtsContainingTerm(self):
-        # lhs could precompute this
-        for lhsStmt in self.lhs.graph:
-            if self.term in lhsStmt:
-                yield lhsStmt
-
-    def __iter__(self):
-        return iter(self.results)
+#     def __iter__(self):
+#         return iter(self.results)
 
 
 @dataclass

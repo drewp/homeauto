@@ -268,6 +268,19 @@ class TestUseCases(WithGraphEqual):
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
+    def testEmitBnodes(self):
+        inf = makeInferenceWithRules('''
+            { ?s a :AirQualitySensor; :label ?name . } => {
+                [ a :MqttStatementSource;
+                :mqttTopic (?name "sensor" "bme280_temperature" "state") ] .
+            } .
+        ''')
+        out = inf.infer(N3('''
+            :airQualityOutdoor a :AirQualitySensor; :label "air_quality_outdoor" .
+        '''))
+
+        self.assertEqual(len(out), 1)
+
 
 class TestListPerformance(WithGraphEqual):
 
@@ -294,6 +307,7 @@ class TestListPerformance(WithGraphEqual):
 
 def fakeStats():
     return defaultdict(lambda: 0)
+
 
 class TestLhsFindCandidateBindings(WithGraphEqual):
 
