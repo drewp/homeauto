@@ -21,10 +21,6 @@ import style from "./style.styl";
 //   return "(unknown)";
 // }
 
-interface Msg {
-  t: number;
-  msg: string;
-}
 interface GraphAtTime {
   t: number;
   n3: string;
@@ -36,10 +32,8 @@ interface Metric {
 }
 interface Subscribed {
   topic: string;
-  recentMessages: Msg[];
-  recentParsed: GraphAtTime[];
-  recentConversions: GraphAtTime[];
-  currentMetrics: Metric[];
+  recentMessageGraphs: GraphAtTime[];
+  recentMetrics: Metric[];
   currentOutputGraph: GraphAtTime;
 }
 interface PageData {
@@ -81,13 +75,8 @@ export class MqttToRdfPage extends LitElement {
     subscribed: [
       {
         topic: "top1",
-        recentMessages: [
-          { t: 123456, msg: "one" },
-          { t: 234567, msg: "two" },
-        ],
-        recentParsed: [{ t: 123, n3: ":a :b :c ." }],
-        recentConversions: [],
-        currentMetrics: [],
+        recentMessageGraphs: [],
+        recentMetrics: [],
         currentOutputGraph: { t: 1, n3: "(n3)" },
       },
     ],
@@ -97,23 +86,19 @@ export class MqttToRdfPage extends LitElement {
     const d = this.pageData;
     const now = Date.now() / 1000;
     const ago = (t: number) => html`${Math.round(now - t)}s ago`;
-    const recentMsg = (m: Msg) => html` <div>${ago(m.t)} msg=${m.msg}</div> `;
     const topicItem = (t: Subscribed, index: number) =>
       html`<div class="topic" style="grid-column: 1; grid-row: ${index + 2}">
-        <span class="topic">${t.topic}</span>
-        ${t.recentMessages.map(recentMsg)}
+        <span class="topic">${t.topic} sticky this to graph column</span>
       </div>`;
 
-    const parsedMessage = (g: GraphAtTime) => html` <div class="graph">graph: ${g.n3}</div> `;
-    const parsedMessages = (t: Subscribed, index: number) =>
-      html` <div style="grid-column: 2; grid-row: ${index + 2}">${t.recentParsed.map(parsedMessage)}</div> `;
+    const parsedGraphAtTime = (g: GraphAtTime) => html` <div class="graph">graph: ${g.n3}</div> `;
+    const recentMessageGraphs = (t: Subscribed, index: number) =>
+      html` <div style="grid-column: 2; grid-row: ${index + 2}">${t.recentMessageGraphs.map(parsedGraphAtTime)}</div> `;
 
     const metric = (m: Metric) => html`<div>metrix ${m.name} ${JSON.stringify(m.labels)} = ${m.value}</div>`;
-    const conversions = (t: Subscribed, index: number) =>
-      html` <div style="grid-column: 3; grid-row: ${index + 2}">${t.recentConversions.map(parsedMessage)}</div> `;
-    const outputMetrics = (t: Subscribed, index: number) => html` <div style="grid-column: 4; grid-row: ${index + 2}">${t.currentMetrics.map(metric)}</div> `;
+    const outputMetrics = (t: Subscribed, index: number) => html` <div style="grid-column: 3; grid-row: ${index + 2}">${t.recentMetrics.map(metric)}</div> `;
     const outputGraph = (t: Subscribed, index: number) =>
-      html` <div style="grid-column: 5; grid-row: ${index + 2}">${parsedMessage(t.currentOutputGraph)}</div> `;
+      html` <div style="grid-column: 4; grid-row: ${index + 2}">${parsedGraphAtTime(t.currentOutputGraph)}</div> `;
     return html`
       <h1>mqtt_to_rdf</h1>
 
@@ -123,16 +108,13 @@ export class MqttToRdfPage extends LitElement {
         <div class="hd" style="grid-row: 1; grid-column: 1">subscribed topics</div>
         ${d.subscribed.map(topicItem)}
 
-        <div class="hd" style="grid-row: 1; grid-column: 2">parsed message: rx stream of Graph</div>
-        ${d.subscribed.map(parsedMessages)}
+        <div class="hd" style="grid-row: 1; grid-column: 2">recent incoming messages</div>
+        ${d.subscribed.map(recentMessageGraphs)}
 
-        <div class="hd" style="grid-row: 1; grid-column: 3">conversions: rx stream (possible separate times from the previous) of Callable[[Graph], Graph]</div>
-        ${d.subscribed.map(conversions)}
-
-        <div class="hd" style="grid-row: 1; grid-column: 4">output metrics: prom collection according to converted graph</div>
+        <div class="hd" style="grid-row: 1; grid-column: 3">output metrics: prom collection according to converted graph</div>
         ${d.subscribed.map(outputMetrics)}
 
-        <div class="hd" style="grid-row: 1; grid-column: 5">output graph: PatchableGraph</div>
+        <div class="hd" style="grid-row: 1; grid-column: 4">output subgraph</div>
         ${d.subscribed.map(outputGraph)}
       </section>
     `;
