@@ -36,7 +36,7 @@ class Evaluation:
     @staticmethod
     def findEvals(graph: Graph) -> Iterator['Evaluation']:
         for stmt in graph.triples((None, MATH['sum'], None)):
-            operands, operandsStmts = _parseList(graph, stmt[0])
+            operands, operandsStmts = parseList(graph, stmt[0])
             yield Evaluation(operands, stmt, operandsStmts)
 
         for stmt in graph.triples((None, MATH['greaterThan'], None)):
@@ -98,17 +98,22 @@ def numericNode(n: Node):
     return val
 
 
-def _parseList(graph, subj) -> Tuple[List[Node], Set[Triple]]:
+def parseList(graph, subj) -> Tuple[List[Node], Set[Triple]]:
     """"Do like Collection(g, subj) but also return all the 
     triples that are involved in the list"""
     out = []
     used = set()
     cur = subj
     while cur != RDF.nil:
-        out.append(graph.value(cur, RDF.first))
+        elem = graph.value(cur, RDF.first)
+        if elem is None:
+            raise ValueError('bad list')
+        out.append(elem)
         used.add((cur, RDF.first, out[-1]))
 
         next = graph.value(cur, RDF.rest)
+        if next is None:
+            raise ValueError('bad list')
         used.add((cur, RDF.rest, next))
 
         cur = next

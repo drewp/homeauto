@@ -7,7 +7,7 @@ from rdflib import BNode, Graph
 from rdflib.term import Node, Variable
 
 from inference_types import BindableTerm, BindingUnknown, Triple
-log = logging.getLogger()
+log = logging.getLogger('cbind')
 INDENT = '    '
 
 @dataclass
