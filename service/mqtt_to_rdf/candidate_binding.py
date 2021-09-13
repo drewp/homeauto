@@ -22,9 +22,9 @@ class CandidateBinding:
         for stmt in g:
             try:
                 bound = (
-                    self._applyTerm(stmt[0], returnBoundStatementsOnly), 
-                    self._applyTerm(stmt[1], returnBoundStatementsOnly), 
-                    self._applyTerm(stmt[2], returnBoundStatementsOnly))
+                    self.applyTerm(stmt[0], returnBoundStatementsOnly), 
+                    self.applyTerm(stmt[1], returnBoundStatementsOnly), 
+                    self.applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
                 log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
 
@@ -33,7 +33,7 @@ class CandidateBinding:
 
             yield bound
 
-    def _applyTerm(self, term: Node, failUnbound=True):
+    def applyTerm(self, term: Node, failUnbound=True):
         if isinstance(term, (Variable, BNode)):
             if term in self.binding:
                 return self.binding[term]
@@ -47,3 +47,9 @@ class CandidateBinding:
             if k in self.binding and self.binding[k] != v:
                 raise ValueError(f'conflict- thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
             self.binding[k] = v
+
+    def copy(self):
+        return CandidateBinding(self.binding.copy())
+
+    def contains(self, term: BindableTerm):
+        return term in self.binding
