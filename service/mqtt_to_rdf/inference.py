@@ -15,8 +15,8 @@ from rdflib.graph import ConjunctiveGraph, ReadOnlyGraphAggregate
 from rdflib.term import Literal, Node, Variable
 
 from candidate_binding import CandidateBinding
-from inference_types import (BindableTerm, BindingUnknown, EvaluationFailed, ReadOnlyWorkingSet, Triple)
-from lhs_evaluation import Decimal, Evaluation, numericNode, parseList
+from inference_types import (BindableTerm, BindingUnknown, ReadOnlyWorkingSet, Triple)
+from lhs_evaluation import Decimal, numericNode, parseList
 
 log = logging.getLogger('infer')
 INDENT = '    '
@@ -233,10 +233,6 @@ class StmtLooper:
             raise NotImplementedError()
         return self._current
 
-    def newLhsStmts(self) -> List[Triple]:
-        """under the curent bindings, what new stmts beyond workingSet are also true? includes all `prev`"""
-        return []
-
     def pastEnd(self) -> bool:
         return self._pastEnd
 
@@ -253,24 +249,7 @@ class Lhs:
     graph: Graph
 
     def __post_init__(self):
-        # do precomputation in here that's not specific to the workingSet
-        # self.staticRuleStmts = Graph()
-        # self.nonStaticRuleStmts = Graph()
-
-        # self.lhsBindables: Set[BindableTerm] = set()
-        # self.lhsBnodes: Set[BNode] = set()
-        # for ruleStmt in self.graph:
-        #     varsAndBnodesInStmt = [term for term in ruleStmt if isinstance(term, (Variable, BNode))]
-        #     self.lhsBindables.update(varsAndBnodesInStmt)
-        #     self.lhsBnodes.update(x for x in varsAndBnodesInStmt if isinstance(x, BNode))
-        #     if not varsAndBnodesInStmt:
-        #         self.staticRuleStmts.add(ruleStmt)
-        #     else:
-        #         self.nonStaticRuleStmts.add(ruleStmt)
-
-        # self.nonStaticRuleStmtsSet = set(self.nonStaticRuleStmts)
-
-        self.evaluations = list(Evaluation.findEvals(self.graph))
+        pass
 
     def __repr__(self):
         return f"Lhs({graphDump(self.graph)})"
@@ -380,150 +359,11 @@ class Lhs:
             log.debug(f'{INDENT*5} some rings started at pastEnd {stmtStack}')
             raise NoOptions()
 
-    def _allStaticStatementsMatch(self, knownTrue: ReadOnlyWorkingSet) -> bool:
-        # bug: see TestSelfFulfillingRule.test3 for a case where this rule's
-        # static stmt is matched by a non-static stmt in the rule itself
-        for ruleStmt in self.staticRuleStmts:
-            if ruleStmt not in knownTrue:
-                log.debug(f'{INDENT*3} {ruleStmt} not in working set- skip rule')
-                return False
-        return True
-
-    def _possibleBindings(self, workingSet, stats) -> Iterator['BoundLhs']:
-        """this yields at least the working bindings, and possibly others"""
-        candidateTermMatches: Dict[BindableTerm, Set[Node]] = self._allCandidateTermMatches(workingSet)
-        for bindRow in self._product(candidateTermMatches):
-            try:
-                yield BoundLhs(self, bindRow)
-            except EvaluationFailed:
-                stats['permCountFailingEval'] += 1
-
-    def _allCandidateTermMatches(self, workingSet: ReadOnlyWorkingSet) -> Dict[BindableTerm, Set[Node]]:
-        """the total set of terms each variable could possibly match"""
-
-        candidateTermMatches: Dict[BindableTerm, Set[Node]] = defaultdict(set)
-        for lhsStmt in self.graph:
-            log.debug(f'{INDENT*4} possibles for this lhs stmt: {lhsStmt}')
-            for i, trueStmt in enumerate(workingSet):
-                # log.debug(f'{INDENT*5} consider this true stmt ({i}): {trueStmt}')
-
-                for v, vals in self._bindingsFromStatement(lhsStmt, trueStmt):
-                    candidateTermMatches[v].update(vals)
-
-        return candidateTermMatches
-
-    def _bindingsFromStatement(self, stmt1: Triple, stmt2: Triple) -> Iterator[Tuple[Variable, Set[Node]]]:
-        """if these stmts match otherwise, what BNode or Variable mappings do we learn?
-        
-        e.g. stmt1=(?x B ?y) and stmt2=(A B C), then we yield (?x, {A}) and (?y, {C})
-        or   stmt1=(_:x B C) and stmt2=(A B C), then we yield (_:x, {A})
-        or   stmt1=(?x B C)  and stmt2=(A B D), then we yield nothing
-        """
-        bindingsFromStatement = {}
-        for term1, term2 in zip(stmt1, stmt2):
-            if isinstance(term1, (BNode, Variable)):
-                bindingsFromStatement.setdefault(term1, set()).add(term2)
-            elif term1 != term2:
-                break
-        else:
-            for v, vals in bindingsFromStatement.items():
-                log.debug(f'{INDENT*5} {v=} {vals=}')
-                yield v, vals
-
-    def _product(self, candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Iterator[CandidateBinding]:
-        orderedVars, orderedValueSets = _organize(candidateTermMatches)
-        self._logCandidates(orderedVars, orderedValueSets)
-        log.debug(f'{INDENT*3} trying all permutations:')
-        if not orderedValueSets:
-            yield CandidateBinding({})
-            return
-
-        if not orderedValueSets or not all(orderedValueSets):
-            # some var or bnode has no options at all
-            return
-        rings: List[Iterator[Node]] = [itertools.cycle(valSet) for valSet in orderedValueSets]
-        currentSet: List[Node] = [next(ring) for ring in rings]
-        starts = [valSet[-1] for valSet in orderedValueSets]
-        while True:
-            for col, curr in enumerate(currentSet):
-                currentSet[col] = next(rings[col])
-                log.debug(f'{INDENT*4} currentSet: {repr(currentSet)}')
-                yield CandidateBinding(dict(zip(orderedVars, currentSet)))
-                if curr is not starts[col]:
-                    break
-                if col == len(orderedValueSets) - 1:
-                    return
-
-    def _logCandidates(self, orderedVars, orderedValueSets):
-        if not log.isEnabledFor(logging.DEBUG):
-            return
-        log.debug(f'{INDENT*3} resulting candidate terms:')
-        for v, vals in zip(orderedVars, orderedValueSets):
-            log.debug(f'{INDENT*4} {v!r} could be:')
-            for val in vals:
-                log.debug(f'{INDENT*5}{val!r}')
-
 
 @dataclass
 class BoundLhs:
     lhs: Lhs
     binding: CandidateBinding
-
-    def __post_init__(self):
-        self.usedByFuncs = Graph()
-        # self._applyFunctions()
-
-    def lhsStmtsWithoutEvals(self):
-        for stmt in self.lhs.graph:
-            if stmt in self.usedByFuncs:
-                continue
-            yield stmt
-
-    def _applyFunctions(self):
-        """may grow the binding with some results"""
-        while True:
-            delta = self._applyFunctionsIteration()
-            if delta == 0:
-                break
-
-    def _applyFunctionsIteration(self):
-        before = len(self.binding.binding)
-        delta = 0
-        for ev in self.lhs.evaluations:
-            newBindings, usedGraph = ev.resultBindings(self.binding)
-            self.usedByFuncs += usedGraph
-            self.binding.addNewBindings(newBindings)
-        delta = len(self.binding.binding) - before
-        log.debug(f'{INDENT*4} eval rules made {delta} new bindings')
-        return delta
-
-    def verify(self, workingSet: ReadOnlyWorkingSet) -> bool:
-        """Can this bound lhs be true all at once in workingSet?"""
-        rem = cast(Set[Triple], self.lhs.nonStaticRuleStmtsSet.difference(self.usedByFuncs))
-        boundLhs = self.binding.apply(rem)
-
-        if log.isEnabledFor(logging.DEBUG):
-            boundLhs = list(boundLhs)
-            self._logVerifyBanner(boundLhs, workingSet)
-
-        for stmt in boundLhs:
-            log.debug(f'{INDENT*4} check for %s', stmt)
-
-            if stmt not in workingSet:
-                log.debug(f'{INDENT*5} stmt not known to be true')
-                return False
-        return True
-
-    def _logVerifyBanner(self, boundLhs, workingSet: ReadOnlyWorkingSet):
-        log.debug(f'{INDENT*4}/ verify all bindings against this boundLhs:')
-        for stmt in sorted(boundLhs):
-            log.debug(f'{INDENT*4}|{INDENT} {stmt}')
-
-        # log.debug(f'{INDENT*4}| and against this workingSet:')
-        # for stmt in sorted(workingSet):
-        #     log.debug(f'{INDENT*4}|{INDENT} {stmt}')
-
-        log.debug(f'{INDENT*4}\\')
 
 
 @dataclass
@@ -647,17 +487,3 @@ def graphDump(g: Union[Graph, List[Triple]]):
     lines = cast(bytes, g.serialize(format='n3')).decode('utf8').splitlines()
     lines = [line.strip() for line in lines if not line.startswith('@prefix')]
     return ' '.join(lines)
-
-
-def _organize(candidateTermMatches: Dict[BindableTerm, Set[Node]]) -> Tuple[List[BindableTerm], List[List[Node]]]:
-    items = list(candidateTermMatches.items())
-    items.sort()
-    orderedVars: List[BindableTerm] = []
-    orderedValueSets: List[List[Node]] = []
-    for v, vals in items:
-        orderedVars.append(v)
-        orderedValues: List[Node] = list(vals)
-        orderedValues.sort(key=str)
-        orderedValueSets.append(orderedValues)
-
-    return orderedVars, orderedValueSets
