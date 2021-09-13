@@ -104,14 +104,7 @@ class StmtLooper:
         if self._advanceWithPlainMatches(augmentedWorkingSet):
             return
 
-        curBind = self.prev.currentBinding() if self.prev else CandidateBinding({})
-        [lhsStmtBound] = curBind.apply([self.lhsStmt], returnBoundStatementsOnly=False)
-
-        fullWorkingSet = self.workingSet + self.parent.graph
-        boundFullWorkingSet = list(curBind.apply(fullWorkingSet, returnBoundStatementsOnly=False))
-        log.debug(f'{fullWorkingSet.__len__()=} {len(boundFullWorkingSet)=}')
-
-        if self._advanceWithFunctions(augmentedWorkingSet, boundFullWorkingSet, lhsStmtBound):
+        if self._advanceWithFunctions():
             return
 
         log.debug(f'{INDENT*6} {self} is past end')
@@ -137,7 +130,7 @@ class StmtLooper:
                 return True
         return False
 
-    def _advanceWithFunctions(self, augmentedWorkingSet: Sequence[Triple], boundFullWorkingSet, lhsStmtBound) -> bool:
+    def _advanceWithFunctions(self) -> bool:
         pred: Node = self.lhsStmt[1]
 
         for functionType in functionsFor(pred):
@@ -338,7 +331,6 @@ class Rule:
 
                 key = tuple(sorted(bound.binding.binding.items())), b
                 self.rhsBnodeMap.setdefault(key, BNode())
-
                 try:
                     bound.binding.addNewBindings(CandidateBinding({b: self.rhsBnodeMap[key]}))
                 except BindingConflict:
