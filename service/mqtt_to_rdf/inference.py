@@ -45,16 +45,25 @@ class Inconsistent(ValueError):
     """adding this stmt would be inconsistent with an existing binding"""
 
 
+_stmtLooperShortId = itertools.count()
+
+
 @dataclass
 class StmtLooper:
+    """given one LHS stmt, iterate through the possible matches for it,
+    returning what bindings they would imply. Only distinct bindings are
+    returned. The bindings build on any `prev` StmtLooper's results.
+
+    This iterator is restartable."""
     lhsStmt: Triple
     prev: Optional['StmtLooper']
     workingSet: ReadOnlyWorkingSet
 
     def __repr__(self):
-        return f'StmtLooper({graphDump([self.lhsStmt])} {"<pastEnd>" if self.pastEnd() else ""})'
+        return f'StmtLooper{self._shortId}({graphDump([self.lhsStmt])} {"<pastEnd>" if self.pastEnd() else ""})'
 
     def __post_init__(self):
+        self._shortId = next(_stmtLooperShortId)
         self._myWorkingSetMatches = self._myMatches(self.workingSet)
 
         self._current = CandidateBinding({})
@@ -86,12 +95,12 @@ class StmtLooper:
             except Inconsistent:
                 log.debug(f'{INDENT*7} {self} - {stmt} would be inconsistent with prev bindings')
                 continue
-            log.debug(f'seen {outBinding.binding} in {self._seenBindings}')
+
+            log.debug(f'{INDENT*6} {outBinding=} {self._seenBindings=}')
             if outBinding.binding not in self._seenBindings:
                 self._seenBindings.append(outBinding.binding.copy())
-                log.debug(f'no, adding')
                 self._current = outBinding
-                log.debug(f'{INDENT*7} {self} - Looper matches {stmt} which tells us {outBinding}')
+                log.debug(f'{INDENT*7} new binding from {self} -> {outBinding}')
                 return
             log.debug(f'yes we saw')
 
@@ -99,6 +108,8 @@ class StmtLooper:
 
         if self.lhsStmt[1] == ROOM['asFarenheit']:
             pb: Dict[BindableTerm, Node] = self._prevBindings()
+            log.debug(f'{INDENT*6} {self} consider ?x faren ?y where ?x={self.lhsStmt[0]} and {pb=}')
+
             if self.lhsStmt[0] in pb:
                 operands = [pb[cast(BindableTerm, self.lhsStmt[0])]]
                 f = cast(Literal, Literal(Decimal(numericNode(operands[0])) * 9 / 5 + 32))
@@ -182,12 +193,10 @@ class Lhs:
                 stmtStack.append(StmtLooper(s, prev, knownTrue))
                 prev = stmtStack[-1]
         except NoOptions:
-            log.debug(f'{INDENT*5} no options; 0 bindings')
+            log.debug(f'{INDENT*5} start up with no options; 0 bindings')
             return
+        self._debugStmtStack('initial odometer', stmtStack)
 
-        log.debug(f'{INDENT*5} initial odometer:')
-        for l in stmtStack:
-            log.debug(f'{INDENT*6} {l}')
 
         if any(ring.pastEnd() for ring in stmtStack):
             log.debug(f'{INDENT*5} some rings started at pastEnd {stmtStack}')
@@ -202,23 +211,22 @@ class Lhs:
 
             log.debug(f'{INDENT*4} vv findCandBindings iteration {iterCount}')
 
-            log.debug(f'{INDENT*5} <<<')
             yield BoundLhs(self, sl.currentBinding())
-            log.debug(f'{INDENT*5} >>>')
 
-            log.debug(f'{INDENT*5} odometer:')
-            for l in stmtStack:
-                log.debug(f'{INDENT*6} {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
+            self._debugStmtStack('odometer', stmtStack)
 
             done = self._advanceAll(stmtStack)
 
-            log.debug(f'{INDENT*5} odometer after ({done=}):')
-            for l in stmtStack:
-                log.debug(f'{INDENT*6} {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
+            self._debugStmtStack('odometer after ({done=})', stmtStack)
 
             log.debug(f'{INDENT*4} ^^ findCandBindings iteration done')
             if done:
                 break
+
+    def _debugStmtStack(self, label, stmtStack):
+        log.debug(f'{INDENT*5} {label}:')
+        for l in stmtStack:
+            log.debug(f'{INDENT*6} {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
 
     def _advanceAll(self, stmtStack: List[StmtLooper]) -> bool:
         carry = True  # 1st elem always must advance
@@ -387,10 +395,10 @@ class BoundLhs:
 class Rule:
     lhsGraph: Graph
     rhsGraph: Graph
-    
+
     def __post_init__(self):
         self.lhs = Lhs(self.lhsGraph)
-        # 
+        #
         self.rhsBnodeMap = {}
 
     def applyRule(self, workingSet: Graph, implied: Graph, stats: Dict):
@@ -404,13 +412,12 @@ class Rule:
                     if isinstance(t, BNode):
                         existingRhsBnodes.add(t)
             # if existingRhsBnodes:
-                # log.debug(f'{INDENT*6} mapping rhs bnodes {existingRhsBnodes} to new ones')
+            # log.debug(f'{INDENT*6} mapping rhs bnodes {existingRhsBnodes} to new ones')
 
             for b in existingRhsBnodes:
 
                 key = tuple(sorted(bound.binding.binding.items())), b
                 self.rhsBnodeMap.setdefault(key, BNode())
-
 
                 bound.binding.addNewBindings(CandidateBinding({b: self.rhsBnodeMap[key]}))
 
@@ -489,7 +496,9 @@ class Inference:
 
         log.debug('')
         log.debug(f'{INDENT*2}-applying rule {i}')
-        log.debug(f'{INDENT*3} rule def lhs: {graphDump(r.lhsGraph)}')
+        log.debug(f'{INDENT*3} rule def lhs:')
+        for stmt in r.lhsGraph:
+            log.debug(f'{INDENT*4} {stmt}')
         log.debug(f'{INDENT*3} rule def rhs: {graphDump(r.rhsGraph)}')
 
 

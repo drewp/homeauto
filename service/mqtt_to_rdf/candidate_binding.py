@@ -1,3 +1,4 @@
+import logging
 from dataclasses import dataclass
 from typing import Dict, Iterable, Iterator, Union
 
@@ -6,7 +7,8 @@ from rdflib import BNode, Graph
 from rdflib.term import Node, Variable
 
 from inference_types import BindableTerm, BindingUnknown, Triple
-
+log = logging.getLogger()
+INDENT = '    '
 
 @dataclass
 class CandidateBinding:
@@ -24,7 +26,11 @@ class CandidateBinding:
                     self._applyTerm(stmt[1], returnBoundStatementsOnly), 
                     self._applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
+                log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
+
                 continue
+            log.debug(f'{INDENT*7} CB.apply took {stmt} to {bound}')
+
             yield bound
 
     def _applyTerm(self, term: Node, failUnbound=True):
