@@ -158,12 +158,12 @@ class TestBnodeGenerating(WithGraphEqual):
         self.assertNotEqual(stmt0Node, stmt1Node)
 
 
-# class TestSelfFulfillingRule(WithGraphEqual):
+class TestSelfFulfillingRule(WithGraphEqual):
 
-#     def test1(self):
-#         inf = makeInferenceWithRules("{ } => { :new :stmt :x } .")
-#         self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt :x ."))
-#         self.assertGraphEqual(inf.infer(N3(":any :any :any .")), N3(":new :stmt :x ."))
+    def test1(self):
+        inf = makeInferenceWithRules("{ } => { :new :stmt :x } .")
+        self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt :x ."))
+        self.assertGraphEqual(inf.infer(N3(":any :any :any .")), N3(":new :stmt :x ."))
 
 #     def test2(self):
 #         inf = makeInferenceWithRules("{ (2) math:sum ?x } => { :new :stmt ?x } .")
@@ -200,11 +200,11 @@ class TestBnodeGenerating(WithGraphEqual):
 #         self.assertGraphEqual(inf.infer(N3(":a :b 2 .")), N3(":new :stmt 0 ."))
 
 
-# class TestInferenceWithCustomFunctions(WithGraphEqual):
+class TestInferenceWithCustomFunctions(WithGraphEqual):
 
-#     def testAsFarenheit(self):
-#         inf = makeInferenceWithRules("{ :a :b ?x . ?x room:asFarenheit ?f } => { :new :stmt ?f } .")
-#         self.assertGraphEqual(inf.infer(N3(":a :b 12 .")), N3(":new :stmt 53.6 ."))
+    def testAsFarenheit(self):
+        inf = makeInferenceWithRules("{ :a :b ?x . ?x room:asFarenheit ?f } => { :new :stmt ?f } .")
+        self.assertGraphEqual(inf.infer(N3(":a :b 12 .")), N3(":new :stmt 53.6 ."))
 
 
 class TestUseCases(WithGraphEqual):
@@ -225,21 +225,21 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
-    def testTopicIsList(self):
-        inf = makeInferenceWithRules('''
-            { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
-            { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+    # def testTopicIsList(self):
+    #     inf = makeInferenceWithRules('''
+    #         { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+    #         { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
 
-            {
-            ?msg a :MqttMessage ;
-                :topic ( "frontdoorlock" "status" );
-                :onlineTerm ?onlineness . } => {
-            :frontDoorLockStatus :connectedStatus ?onlineness .
-            } .
-        ''')
+    #         {
+    #         ?msg a :MqttMessage ;
+    #             :topic ( "frontdoorlock" "status" );
+    #             :onlineTerm ?onlineness . } => {
+    #         :frontDoorLockStatus :connectedStatus ?onlineness .
+    #         } .
+    #     ''')
 
-        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
-        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+    #     out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
+    #     self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
     # def testPerformance0(self):
     #     inf = makeInferenceWithRules('''
@@ -322,15 +322,15 @@ class TestListPerformance(WithGraphEqual):
         implied = inf.infer(N3(":a :b (:e0 :e1) ."))
         self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
-    def testList3(self):
-        inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2) . } => { :new :stmt :here } .")
-        implied = inf.infer(N3(":a :b (:e0 :e1 :e2) ."))
-        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+    # def testList3(self):
+    #     inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2) . } => { :new :stmt :here } .")
+    #     implied = inf.infer(N3(":a :b (:e0 :e1 :e2) ."))
+    #     self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
-    def testList4(self):
-        inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
-        implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
-        self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+    # def testList4(self):
+    #     inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
+    #     implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
+    #     self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
 
 # def fakeStats():
