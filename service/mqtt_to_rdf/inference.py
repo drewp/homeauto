@@ -14,7 +14,7 @@ from rdflib import RDF, BNode, Graph, Namespace
 from rdflib.graph import ConjunctiveGraph, ReadOnlyGraphAggregate
 from rdflib.term import Node, Variable
 
-from candidate_binding import CandidateBinding
+from candidate_binding import BindingConflict, CandidateBinding
 from inference_types import BindingUnknown, ReadOnlyWorkingSet, Triple
 from lhs_evaluation import functionsFor, lhsStmtsUsedByFuncs
 
@@ -339,7 +339,10 @@ class Rule:
                 key = tuple(sorted(bound.binding.binding.items())), b
                 self.rhsBnodeMap.setdefault(key, BNode())
 
-                bound.binding.addNewBindings(CandidateBinding({b: self.rhsBnodeMap[key]}))
+                try:
+                    bound.binding.addNewBindings(CandidateBinding({b: self.rhsBnodeMap[key]}))
+                except BindingConflict:
+                    continue
 
             # for lhsBoundStmt in bound.binding.apply(bound.lhsStmtsWithoutEvals()):
             #     log.debug(f'{INDENT*6} adding to workingSet {lhsBoundStmt=}')

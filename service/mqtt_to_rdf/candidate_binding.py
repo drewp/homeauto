@@ -7,8 +7,14 @@ from rdflib import BNode, Graph
 from rdflib.term import Node, Variable
 
 from inference_types import BindableTerm, BindingUnknown, Triple
+
 log = logging.getLogger('cbind')
 INDENT = '    '
+
+
+class BindingConflict(ValueError):
+    pass
+
 
 @dataclass
 class CandidateBinding:
@@ -21,10 +27,8 @@ class CandidateBinding:
     def apply(self, g: Union[Graph, Iterable[Triple]], returnBoundStatementsOnly=True) -> Iterator[Triple]:
         for stmt in g:
             try:
-                bound = (
-                    self.applyTerm(stmt[0], returnBoundStatementsOnly), 
-                    self.applyTerm(stmt[1], returnBoundStatementsOnly), 
-                    self.applyTerm(stmt[2], returnBoundStatementsOnly))
+                bound = (self.applyTerm(stmt[0], returnBoundStatementsOnly), self.applyTerm(stmt[1], returnBoundStatementsOnly),
+                         self.applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
                 log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
 
@@ -45,7 +49,7 @@ class CandidateBinding:
     def addNewBindings(self, newBindings: 'CandidateBinding'):
         for k, v in newBindings.binding.items():
             if k in self.binding and self.binding[k] != v:
-                raise ValueError(f'conflict- thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
+                raise BindingConflict(f'thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
             self.binding[k] = v
 
     def copy(self):
