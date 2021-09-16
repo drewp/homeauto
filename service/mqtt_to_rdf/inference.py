@@ -12,11 +12,11 @@ from typing import (Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union,
 from prometheus_client import Histogram, Summary
 from rdflib import RDF, BNode, Graph, Namespace
 from rdflib.graph import ConjunctiveGraph, ReadOnlyGraphAggregate
-from rdflib.term import Node, Variable
+from rdflib.term import Node, URIRef, Variable
 
 from candidate_binding import BindingConflict, CandidateBinding
 from inference_types import BindingUnknown, ReadOnlyWorkingSet, Triple
-from lhs_evaluation import functionsFor, lhsStmtsUsedByFuncs
+from lhs_evaluation import functionsFor, lhsStmtsUsedByFuncs, rulePredicates
 
 log = logging.getLogger('infer')
 INDENT = '    '
@@ -132,6 +132,8 @@ class StmtLooper:
 
     def _advanceWithFunctions(self) -> bool:
         pred: Node = self.lhsStmt[1]
+        if not isinstance(pred, URIRef):
+            raise NotImplementedError
 
         for functionType in functionsFor(pred):
             fn = functionType(self.lhsStmt, self.parent.graph)
@@ -205,6 +207,10 @@ class Lhs:
             yield BoundLhs(self, CandidateBinding({}))
             return
 
+        if self._checkPredicateCounts(knownTrue):
+            stats['_checkPredicateCountsCulls'] += 1
+            return
+
         log.debug(f'{INDENT*4} build new StmtLooper stack')
 
         try:
@@ -240,6 +246,15 @@ class Lhs:
         log.debug(f'{INDENT*5} {label}:')
         for l in stmtStack:
             log.debug(f'{INDENT*6} {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
+
+    def _checkPredicateCounts(self, knownTrue):
+        """raise NoOptions quickly in some cases"""
+        myPreds = set(p for s, p, o in self.graph if isinstance(p, URIRef))
+        myPreds -= rulePredicates()
+        myPreds -= {RDF.first, RDF.rest}
+        if any((None, p, None) not in knownTrue for p in set(myPreds)):
+            return True
+        return False
 
     def _assembleRings(self, knownTrue: ReadOnlyWorkingSet) -> List[StmtLooper]:
         """make StmtLooper for each stmt in our LHS graph, but do it in a way that they all

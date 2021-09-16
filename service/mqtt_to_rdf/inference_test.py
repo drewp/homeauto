@@ -229,21 +229,21 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
         self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
-    # def testTopicIsList(self):
-    #     inf = makeInferenceWithRules('''
-    #         { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
-    #         { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+    def testTopicIsList(self):
+        inf = makeInferenceWithRules('''
+            { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+            { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
 
-    #         {
-    #         ?msg a :MqttMessage ;
-    #             :topic ( "frontdoorlock" "status" );
-    #             :onlineTerm ?onlineness . } => {
-    #         :frontDoorLockStatus :connectedStatus ?onlineness .
-    #         } .
-    #     ''')
+            {
+            ?msg a :MqttMessage ;
+                :topic ( "frontdoorlock" "status" );
+                :onlineTerm ?onlineness . } => {
+            :frontDoorLockStatus :connectedStatus ?onlineness .
+            } .
+        ''')
 
-    #     out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
-    #     self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+        out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
+        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
 
     def testPerformance0(self):
         inf = makeInferenceWithRules('''
@@ -269,28 +269,28 @@ class TestUseCases(WithGraphEqual):
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
-    # def testPerformance1(self):
-    #     inf = makeInferenceWithRules('''
-    #         {
-    #           ?msg a :MqttMessage;
-    #             :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
-    #             :bodyFloat ?valueC .
-    #           ?valueC math:greaterThan -999 .
-    #           ?valueC room:asFarenheit ?valueF .
-    #         } => {
-    #           :airQualityIndoorTemperature :temperatureF ?valueF .
-    #         } .
-    #     ''')
-    #     out = inf.infer(
-    #         N3('''
-    #         <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
-    #             :body "23.9" ;
-    #             :bodyFloat 2.39e+01 ;
-    #             :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
-    #     '''))
-    #     vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
-    #     valueF = cast(Decimal, vlit.toPython())
-    #     self.assertAlmostEqual(float(valueF), 75.02)
+    def testPerformance1(self):
+        inf = makeInferenceWithRules('''
+            {
+              ?msg a :MqttMessage;
+                :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" );
+                :bodyFloat ?valueC .
+              ?valueC math:greaterThan -999 .
+              ?valueC room:asFarenheit ?valueF .
+            } => {
+              :airQualityIndoorTemperature :temperatureF ?valueF .
+            } .
+        ''')
+        out = inf.infer(
+            N3('''
+            <urn:uuid:c6e1d92c-0ee1-11ec-bdbd-2a42c4691e9a> a :MqttMessage ;
+                :body "23.9" ;
+                :bodyFloat 2.39e+01 ;
+                :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
+        '''))
+        vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+        valueF = cast(Decimal, vlit.toPython())
+        self.assertAlmostEqual(float(valueF), 75.02)
 
     def testEmitBnodes(self):
         inf = makeInferenceWithRules('''
@@ -302,14 +302,17 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('''
             :airQualityOutdoor a :AirQualitySensor; :label "air_quality_outdoor" .
         '''))
-        self.assertEqual(out.serialize(format='n3'), b'''@prefix ns1: <http://example.com/> .
+        out.bind('', ROOM)
+        out.bind('ex', EX)
+        self.assertEqual(out.serialize(format='n3'), b'''@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix ex: <http://example.com/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xml: <http://www.w3.org/XML/1998/namespace> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-[] a ns1:MqttStatementSource ;
-    ns1:mqttTopic ( "air_quality_outdoor" "sensor" "bme280_temperature" "state" ) .
+[] a ex:MqttStatementSource ;
+    ex:mqttTopic ( "air_quality_outdoor" "sensor" "bme280_temperature" "state" ) .
 
 ''')
 
