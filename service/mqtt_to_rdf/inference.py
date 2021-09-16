@@ -271,10 +271,10 @@ class Lhs:
 
         stmtsToAdd.sort(key=lightSortKey)
 
-        for perm in itertools.permutations(stmtsToAdd):
+        for i, perm in enumerate(itertools.permutations(stmtsToAdd)):
             stmtStack: List[StmtLooper] = []
             prev: Optional[StmtLooper] = None
-            log.debug(f'{INDENT*5} try stmts in this order: {" -> ".join(graphDump([p]) for p in perm)}')
+            log.debug(f'{INDENT*5} [perm {i}] try stmts in this order: {" -> ".join(graphDump([p]) for p in perm)}')
 
             for s in perm:
                 try:
@@ -406,8 +406,7 @@ class Inference:
         stats['timeSpent'] = round(time.time() - startTime, 3)
         stats['impliedStmts'] = len(implied)
         log.info(f'{INDENT*0} Inference done {dict(stats)}. Implied:')
-        for st in implied:
-            log.info(f'{INDENT*1} {st}')
+        log.info(graphDump(implied))
         return implied
 
     def _iterateAllRules(self, workingSet: Graph, implied: Graph, stats):
