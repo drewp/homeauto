@@ -23,7 +23,8 @@ ROOM = Namespace('http://projects.bigasterisk.com/room/')
 def N3(txt: str):
     g = ConjunctiveGraph()
     prefix = """
-@prefix : <http://example.com/> .
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix ex: <http://example.com/> .
 @prefix room: <http://projects.bigasterisk.com/room/> .
 @prefix math: <http://www.w3.org/2000/10/swap/math#> .
 """
@@ -65,6 +66,13 @@ class TestInferenceWithoutVars(WithGraphEqual):
 
         implied = inf.infer(N3(":a :b :c ."))
         self.assertGraphEqual(implied, N3(":a :b :new1, :new2 ."))
+
+
+class TestNonRuleStatements(WithGraphEqual):
+
+    def test(self):
+        inf = makeInferenceWithRules(":d :e :f . { :a :b :c . } => { :a :b :new . } .")
+        self.assertCountEqual(inf.nonRuleStatements(), [(ROOM.d, ROOM.e, ROOM.f)])
 
 
 class TestInferenceWithVars(WithGraphEqual):
@@ -137,19 +145,20 @@ class TestBnodeMatching(WithGraphEqual):
         implied = inf.infer(N3("[] :a :b ."))
         self.assertGraphEqual(implied, N3(":new :stmt :here ."))
 
+
 class TestBnodeGenerating(WithGraphEqual):
 
     def testRuleBnodeMakesNewBnode(self):
         inf = makeInferenceWithRules("{ [ :a :b ] . } => { [ :c :d ] } .")
         implied = inf.infer(N3("[ :a :b ] ."))
-        ruleNode =   list(inf.rules[0].rhsGraph)[0]
+        ruleNode = list(inf.rules[0].rhsGraph)[0]
         stmt0Node = list(implied)[0][0]
         self.assertNotEqual(ruleNode, stmt0Node)
 
     def testRuleBnodeMakesNewBnodesEachTime(self):
         inf = makeInferenceWithRules("{ [ :a ?x ] . } => { [ :c :d ] } .")
         implied = inf.infer(N3("[ :a :b, :e ] ."))
-        ruleNode =   list(inf.rules[0].rhsGraph)[0]
+        ruleNode = list(inf.rules[0].rhsGraph)[0]
         stmt0Node = list(implied)[0][0]
         stmt1Node = list(implied)[1][0]
 
@@ -169,10 +178,11 @@ class TestSelfFulfillingRule(WithGraphEqual):
         inf = makeInferenceWithRules("{ (2) math:sum ?x } => { :new :stmt ?x } .")
         self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt 2 ."))
 
+
 #     @unittest.skip("too hard for now")
-    # def test3(self):
-    #     inf = makeInferenceWithRules("{ :a :b :c . :a :b ?x . } => { :new :stmt ?x } .")
-    #     self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt :c ."))
+# def test3(self):
+#     inf = makeInferenceWithRules("{ :a :b :c . :a :b ?x . } => { :new :stmt ?x } .")
+#     self.assertGraphEqual(inf.infer(N3("")), N3(":new :stmt :c ."))
 
 
 class TestInferenceWithMathFunctions(WithGraphEqual):
@@ -227,7 +237,7 @@ class TestUseCases(WithGraphEqual):
         ''')
 
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic :foo .'))
-        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+        self.assertIn((ROOM['frontDoorLockStatus'], ROOM['connectedStatus'], ROOM['Online']), out)
 
     def testTopicIsList(self):
         inf = makeInferenceWithRules('''
@@ -243,7 +253,7 @@ class TestUseCases(WithGraphEqual):
         ''')
 
         out = inf.infer(N3('[] a :MqttMessage ; :body "online" ; :topic ( "frontdoorlock" "status" ) .'))
-        self.assertIn((EX['frontDoorLockStatus'], EX['connectedStatus'], EX['Online']), out)
+        self.assertIn((ROOM['frontDoorLockStatus'], ROOM['connectedStatus'], ROOM['Online']), out)
 
     def testPerformance0(self):
         inf = makeInferenceWithRules('''
@@ -265,7 +275,7 @@ class TestUseCases(WithGraphEqual):
                 :topic :topic1 .
             '''))
 
-        vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+        vlit = cast(Literal, out.value(ROOM['airQualityIndoorTemperature'], ROOM['temperatureF']))
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
@@ -288,7 +298,7 @@ class TestUseCases(WithGraphEqual):
                 :bodyFloat 2.39e+01 ;
                 :topic ( "air_quality_indoor" "sensor" "bme280_temperature" "state" ) .
         '''))
-        vlit = cast(Literal, out.value(EX['airQualityIndoorTemperature'], EX['temperatureF']))
+        vlit = cast(Literal, out.value(ROOM['airQualityIndoorTemperature'], ROOM['temperatureF']))
         valueF = cast(Decimal, vlit.toPython())
         self.assertAlmostEqual(float(valueF), 75.02)
 
@@ -304,15 +314,17 @@ class TestUseCases(WithGraphEqual):
         '''))
         out.bind('', ROOM)
         out.bind('ex', EX)
-        self.assertEqual(out.serialize(format='n3'), b'''@prefix : <http://projects.bigasterisk.com/room/> .
+        self.assertEqual(
+            out.serialize(format='n3'), b'''\
+@prefix : <http://projects.bigasterisk.com/room/> .
 @prefix ex: <http://example.com/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix xml: <http://www.w3.org/XML/1998/namespace> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-[] a ex:MqttStatementSource ;
-    ex:mqttTopic ( "air_quality_outdoor" "sensor" "bme280_temperature" "state" ) .
+[] a :MqttStatementSource ;
+    :mqttTopic ( "air_quality_outdoor" "sensor" "bme280_temperature" "state" ) .
 
 ''')
 
@@ -342,7 +354,6 @@ class TestListPerformance(WithGraphEqual):
 
 # def fakeStats():
 #     return defaultdict(lambda: 0)
-
 
 # class TestLhsFindCandidateBindings(WithGraphEqual):
 
