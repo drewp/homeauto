@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import (Dict, Iterator, List, Optional, Sequence, Set, Tuple, Union, cast)
 
 from prometheus_client import Histogram, Summary
-from rdflib import RDF, BNode, Graph, Namespace
+from rdflib import RDF, BNode, Graph, Literal, Namespace
 from rdflib.graph import ConjunctiveGraph, ReadOnlyGraphAggregate
 from rdflib.term import Node, URIRef, Variable
 
@@ -405,7 +405,11 @@ class Inference:
         for stmt in g:
             if stmt[1] == LOG['implies']:
                 self.rules.append(Rule(stmt[0], stmt[2]))
-            # other stmts should go to a default working set?
+            else:
+                self._nonRuleStmts.append(stmt)
+
+    def nonRuleStatements(self) -> List[Triple]:
+        return self._nonRuleStmts
 
     @INFER_CALLS.time()
     def infer(self, graph: Graph):
@@ -417,8 +421,10 @@ class Inference:
         log.info(f'{INDENT*0} Begin inference of graph len={n} with rules len={len(self.rules)}:')
         startTime = time.time()
         stats: Dict[str, Union[int, float]] = defaultdict(lambda: 0)
+
         # everything that is true: the input graph, plus every rule conclusion we can make
         workingSet = Graph()
+        workingSet += self._nonRuleStmts
         workingSet += graph
 
         # just the statements that came from RHS's of rules that fired.
