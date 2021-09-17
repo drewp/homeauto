@@ -6,6 +6,8 @@ import json
 import logging
 import os
 
+from rdfdb.patch import Patch
+
 from mqtt_message import graphFromMessage
 import os
 import time
@@ -396,6 +398,9 @@ if __name__ == '__main__':
                                 inference=inference))
     log.info(f'set up {len(srcs)} sources')
 
+    peg = PatchableGraph()
+    peg.patch(Patch(addQuads=[(s,p,o,URIRef('/config')) for s,p,o in expandedConfig]))
+
     port = 10018
     reactor.listenTCP(port,
                       cyclone.web.Application([
@@ -405,6 +410,9 @@ if __name__ == '__main__':
                           }),
                           (r"/build/(bundle.js)", cyclone.web.StaticFileHandler, {
                               "path": "build"
+                          }),
+                          (r"/graph/config", CycloneGraphHandler, {
+                              'masterGraph': peg,
                           }),
                           (r"/graph/mqtt", CycloneGraphHandler, {
                               'masterGraph': masterGraph
