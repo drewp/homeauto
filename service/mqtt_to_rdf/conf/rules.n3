@@ -1,0 +1,49 @@
+@prefix : <http://projects.bigasterisk.com/room/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+
+:airQualityIndoor a :AirQualitySensor; rdfs:label "air_quality_indoor" .
+:airQualityOutdoor a :AirQualitySensor; rdfs:label "air_quality_outdoor" .
+
+{ ?s a :AirQualitySensor; rdfs:label ?name . } => {
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_temperature" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_pressure" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_humidity" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_eco2_value" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_total_volatile_organic_compound" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_10m_concentration" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_25m_concentration" "state") ] .
+  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_100m_concentration" "state") ] .
+} .
+
+{
+  ?msg a :MqttMessage;
+    :topic (?sensorName "sensor" "bme280_temperature" "state");
+    :bodyFloat ?valueC . 
+  ?valueC math:greaterThan -999 .
+  ?valueC :asFarenheit ?valueF .
+} => {
+  :airQualityTODOIndoorTemperature :temperatureF ?valueF .
+  :influxMeasurements :measurement [ 
+    :meas "temperatureF"; 
+    :pointsAtLeastEvery 30; 
+    :tag [:key "host"; :value ?sensorName],
+         [:key "location"; :value "TODOfrontRoomShelf"]] .
+   } .
+
+#################################################################
+
+:frontDoorLockStatus a :MqttStatementSource;
+  :mqttTopic ("frontdoorlock" "status").
+
+{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+{ ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+
+{
+  ?msg a :MqttMessage ;
+     :topic ( "frontdoorlock" "status" );
+     :onlineTerm ?onlineness . } => {
+  :frontDoorLockStatus :connectedStatus ?onlineness .
+} .
