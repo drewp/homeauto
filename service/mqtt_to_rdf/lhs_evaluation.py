@@ -7,7 +7,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 from prometheus_client import Summary
 from rdflib import RDF, Literal, Namespace, URIRef
 from rdflib.graph import Graph
-from rdflib.term import Node, Variable
+from rdflib.term import BNode, Node, Variable
 
 from inference_types import BindableTerm, Triple
 
@@ -89,6 +89,11 @@ class Function:
             raise TypeError(f'expected Variable, got {objVar!r}')
         return CandidateBinding({cast(BindableTerm, objVar): value})
 
+    def usedStatements(self) -> Set[Triple]:
+        '''stmts in self.graph (not including self.stmt, oddly) that are part of
+        this function setup and aren't to be matched literally'''
+        return set()
+    
 
 class SubjectFunction(Function):
     """function that depends only on the subject term"""
@@ -144,7 +149,7 @@ class Sum(ListFunction):
         f = Literal(sum(self.getNumericOperands(existingBinding)))
         return self.valueInObjectTerm(f)
 
-### registeration is done
+### registration is done
 
 _byPred: Dict[URIRef, Type[Function]] = dict((cls.pred, cls) for cls in registeredFunctionTypes)
 def functionsFor(pred: URIRef) -> Iterator[Type[Function]]:
@@ -158,8 +163,7 @@ def lhsStmtsUsedByFuncs(graph: Graph) -> Set[Triple]:
     usedByFuncs: Set[Triple] = set()  # don't worry about matching these
     for s in graph:
         for cls in functionsFor(pred=s[1]):
-            if issubclass(cls, ListFunction):
-                usedByFuncs.update(cls(s, graph).usedStatements())
+            usedByFuncs.update(cls(s, graph).usedStatements())
     return usedByFuncs
 
 
