@@ -224,6 +224,10 @@ def serializeWithNs(graph: Graph, hidePrefixes=False) -> str:
     return n3
 
 
+class EmptyTopicError(ValueError):
+    pass
+
+
 class MqttStatementSource:
 
     def __init__(self, uri: URIRef, config: Graph, masterGraph: PatchableGraph, mqtt, internalMqtt, debugPageData,
@@ -238,6 +242,8 @@ class MqttStatementSource:
         self.inference = inference
 
         self.mqttTopic = self.topicFromConfig(self.config)
+        if self.mqttTopic == b'':
+            raise EmptyTopicError(f"empty topic for {uri=}")
         log.debug(f'new mqttTopic {self.mqttTopic}')
 
         self.debugSub = {
