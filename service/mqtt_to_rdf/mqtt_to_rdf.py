@@ -347,6 +347,33 @@ class DebugPageData(cyclone.sse.SSEHandler):
         self.loop.stop()
 
 
+@dataclass
+class WatchFiles:
+    # could be merged with rdfdb.service and GraphFile code
+    globPattern: str
+    outGraph: Graph
+
+    def __post_init__(self):
+        self.lastUpdate = 0
+        task.LoopingCall(self.refresh).start(1)
+        log.info(f'start watching {self.globPattern}')
+
+    def refresh(self):
+        files = glob.glob(self.globPattern)
+        for fn in files:
+            if os.path.getmtime(fn) > self.lastUpdate:
+                break
+        else:
+            return
+        self.lastUpdate = time.time()
+        self.outGraph.remove((None, None, None))
+        log.info('reread config')
+        for fn in files:
+            # todo: handle read errors
+            self.outGraph.parse(fn, format='n3')
+        # and notify this change,so we can recalc the latest output
+
+
 if __name__ == '__main__':
     arg = docopt("""
     Usage: mqtt_to_rdf.py [options]
@@ -358,15 +385,18 @@ if __name__ == '__main__':
     logging.getLogger('mqtt').setLevel(logging.INFO)
     logging.getLogger('mqtt_client').setLevel(logging.INFO)
     logging.getLogger('infer').setLevel(logging.INFO)
+    logging.getLogger('cbind').setLevel(logging.INFO)
+    # log.setLevel(logging.DEBUG)
     log.info('log start')
 
-    config = Graph()
-    for fn in Path('.').glob('conf/*.n3'):
-        if not arg['--cs'] or str(arg['--cs']) in str(fn):
-            log.debug(f'loading {fn}')
-            config.parse(str(fn), format='n3')
-        else:
-            log.debug(f'skipping {fn}')
+    config = ConjunctiveGraph()
+    watcher = WatchFiles('conf/rules.n3', config)
+    # for fn in Path('.').glob('conf/*.n3'):
+    #     if not arg['--cs'] or str(arg['--cs']) in str(fn):
+    #         log.debug(f'loading {fn}')
+    #         config.parse(str(fn), format='n3')
+    #     else:
+    #         log.debug(f'skipping {fn}')
 
     masterGraph = PatchableGraph()
 
