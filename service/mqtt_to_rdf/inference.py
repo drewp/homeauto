@@ -252,9 +252,10 @@ class Lhs:
         """make ChunkLooper for each stmt in our LHS graph, but do it in a way that they all
         start out valid (or else raise NoOptions). static chunks have already been confirmed."""
 
-        log.info(f'{INDENT*2} stats={dict(stats)}')
-        log.info(f'{INDENT*2} taking permutations of {len(self.graph.patternChunks)=}')
-        for i, perm in enumerate(itertools.permutations(self.graph.patternChunks)):
+        log.info(f' {INDENT*4} stats={dict(stats)}')
+        chunks = self.graph.patternChunks.union(self.graph.chunksUsedByFuncs)
+        log.info(f' {INDENT*4} taking permutations of {len(chunks)=}')
+        for i, perm in enumerate(itertools.permutations(chunks)):
             stmtStack: List[ChunkLooper] = []
             prev: Optional[ChunkLooper] = None
             if log.isEnabledFor(logging.DEBUG):

@@ -27,8 +27,8 @@ class Chunk:  # rename this
     """
     # all immutable
     primary: Triple
-    subjList: Optional[List[Node]]
-    objList: Optional[List[Node]]
+    subjList: Optional[List[Node]] = None
+    objList: Optional[List[Node]] = None
 
     def __post_init__(self):
         self.predicate = self.primary[1]
@@ -80,15 +80,15 @@ class Chunk:  # rename this
         return bool(list(functionsFor(cast(URIRef, self.predicate))))
 
     def isStatic(self) -> bool:
-        return (stmtIsStatic(self.primary) and all(termIsStatic(s) for s in (self.subjList or [])) and
-                all(termIsStatic(s) for s in (self.objList or [])))
+        return (_stmtIsStatic(self.primary) and all(_termIsStatic(s) for s in (self.subjList or [])) and
+                all(_termIsStatic(s) for s in (self.objList or [])))
 
 
-def stmtIsStatic(stmt: Triple) -> bool:
-    return all(termIsStatic(t) for t in stmt)
+def _stmtIsStatic(stmt: Triple) -> bool:
+    return all(_termIsStatic(t) for t in stmt)
 
 
-def termIsStatic(term: Node) -> bool:
+def _termIsStatic(term: Node) -> bool:
     return isinstance(term, (URIRef, Literal))
 
 
