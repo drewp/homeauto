@@ -17,6 +17,7 @@ from rdflib.term import Node, URIRef, Variable
 from candidate_binding import BindingConflict, CandidateBinding
 from inference_types import BindingUnknown, ReadOnlyWorkingSet, Triple
 from lhs_evaluation import functionsFor, lhsStmtsUsedByFuncs, rulePredicates
+from rdf_debug import graphDump
 
 log = logging.getLogger('infer')
 INDENT = '    '
@@ -471,20 +472,3 @@ class Inference:
         for stmt in sorted(r.lhsGraph, reverse=True):
             log.debug(f'{INDENT*4} {stmt}')
         log.debug(f'{INDENT*3} rule def rhs: {graphDump(r.rhsGraph)}')
-
-
-def graphDump(g: Union[Graph, List[Triple]], oneLine=True):
-    # this is very slow- debug only!
-    if not log.isEnabledFor(logging.DEBUG):
-        return "(skipped dump)"
-    if not isinstance(g, Graph):
-        g2 = Graph()
-        g2 += g
-        g = g2
-    g.bind('', ROOM)
-    g.bind('ex', Namespace('http://example.com/'))
-    lines = cast(bytes, g.serialize(format='n3')).decode('utf8').splitlines()
-    lines = [line for line in lines if not line.startswith('@prefix')]
-    if oneLine:
-        lines = [line.strip() for line in lines]
-    return ' '.join(lines)
