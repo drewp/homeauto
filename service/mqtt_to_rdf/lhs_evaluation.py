@@ -28,36 +28,6 @@ def _numericNode(n: Node):
     return val
 
 
-def _parseList(graph: ChunkedGraph, subj: Node) -> Tuple[List[Node], Set[Triple]]:
-    """"Do like Collection(g, subj) but also return all the 
-    triples that are involved in the list"""
-    out = []
-    used = set()
-    cur = subj
-    while cur != RDF.nil:
-        elem = graph.value(cur, RDF.first)
-        if elem is None:
-            raise ValueError('bad list')
-        out.append(elem)
-        used.add((cur, RDF.first, out[-1]))
-
-        next = graph.value(cur, RDF.rest)
-        if next is None:
-            raise ValueError('bad list')
-        used.add((cur, RDF.rest, next))
-
-        cur = next
-    return out, used
-
-
-_registeredFunctionTypes: List[Type['Function']] = []
-
-
-def register(cls: Type['Function']):
-    _registeredFunctionTypes.append(cls)
-    return cls
-
-
 class Function:
     """any rule stmt that runs a function (not just a statement match)"""
     pred: URIRef
@@ -88,16 +58,13 @@ class Function:
             raise TypeError(f'expected Variable, got {objVar!r}')
         return CandidateBinding({cast(BindableTerm, objVar): value})
 
-    def usedStatements(self) -> Set[Triple]:
-        '''stmts in self.graph (not including self.stmt, oddly) that are part of
-        this function setup and aren't to be matched literally'''
-        return set()
-
 
 class SubjectFunction(Function):
     """function that depends only on the subject term"""
 
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
+        if self.chunk.primary[0] is None:
+            raise ValueError(f'expected one operand on {self.chunk}')
         return [existingBinding.applyTerm(self.chunk.primary[0])]
 
 
@@ -105,6 +72,8 @@ class SubjectObjectFunction(Function):
     """a filter function that depends on the subject and object terms"""
 
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
+        if self.chunk.primary[0] is None or self.chunk.primary[2] is None:
+            raise ValueError(f'expected one operand on each side of {self.chunk}')
         return [existingBinding.applyTerm(self.chunk.primary[0]), existingBinding.applyTerm(self.chunk.primary[2])]
 
 
@@ -112,14 +81,27 @@ class ListFunction(Function):
     """function that takes an rdf list as input"""
 
     def usedStatements(self) -> Set[Triple]:
+        raise NotImplementedError
+        if self.chunk.subjist is None:
+            raise ValueError(f'expected subject list on {self.chunk}')
         _, used = _parseList(self.ruleGraph, self.chunk.primary[0])
         return used
 
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
-        operands, _ = _parseList(self.ruleGraph, self.chunk.primary[0])
-        return [existingBinding.applyTerm(x) for x in operands]
+        if self.chunk.subjList is None:
+            raise ValueError(f'expected subject list on {self.chunk}')
+        return [existingBinding.applyTerm(x) for x in self.chunk.subjList]
 
-import inference_functions # calls register() on some classes
+
+_registeredFunctionTypes: List[Type['Function']] = []
+
+
+def register(cls: Type['Function']):
+    _registeredFunctionTypes.append(cls)
+    return cls
+
+
+import inference_functions  # calls register() on some classes
 
 _byPred: Dict[URIRef, Type[Function]] = dict((cls.pred, cls) for cls in _registeredFunctionTypes)
 
