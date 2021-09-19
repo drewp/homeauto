@@ -8,8 +8,7 @@ from rdflib.namespace import RDF
 from rdflib.term import BNode, Literal, Node, URIRef, Variable
 
 from candidate_binding import CandidateBinding
-from inference_types import BindingUnknown, Inconsistent, Triple
-from rdf_debug import graphDump
+from inference_types import BindingUnknown, Inconsistent
 
 log = logging.getLogger('infer')
 
@@ -20,13 +19,16 @@ ChunkPrimaryTriple = Tuple[Optional[Node], Node, Optional[Node]]
 
 @dataclass
 class Chunk:  # rename this
-    """a statement, maybe with variables in it, except *the object can be an rdf list*.
-    This is done to optimize list comparisons (a lot) at the very minor expense of not
-    handling certain exotic cases, such as a branching list.
+    """A statement, maybe with variables in it, except *the subject or object
+    can be rdf lists*. This is done to optimize list comparisons (a lot) at the
+    very minor expense of not handling certain exotic cases, such as a branching
+    list.
 
-    Also the subject could be a list, e.g. for (?x ?y) math:sum ?z .
+    Example: (?x ?y) math:sum ?z . <-- this becomes one Chunk.
 
-    Also a function call in a rule is always contained in exactly one chunk.
+    A function call in a rule is always contained in exactly one chunk.
+
+    https://www.w3.org/TeamSubmission/n3/#:~:text=Implementations%20may%20treat%20list%20as%20a%20data%20type
     """
     # all immutable
     primary: ChunkPrimaryTriple
@@ -71,7 +73,8 @@ class Chunk:  # rename this
     def myMatches(self, g: 'ChunkedGraph') -> List['Chunk']:
         """Chunks from g where self, which may have BindableTerm wildcards, could match that chunk in g."""
         out: List['Chunk'] = []
-        log.debug(f'{INDENT*6} {self}.myMatches({g}')
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(f'{INDENT*6} {self}.myMatches({g}')
         for ch in g.allChunks():
             if self.matches(ch):
                 out.append(ch)

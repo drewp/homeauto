@@ -48,7 +48,6 @@ class ChunkLooper:
     lhsChunk: Chunk
     prev: Optional['ChunkLooper']
     workingSet: 'ChunkedGraph'
-    parent: 'Lhs'  # just for lhs.graph, really
 
     def __repr__(self):
         return f'{self.__class__.__name__}{self._shortId}{"<pastEnd>" if self.pastEnd() else ""}'
@@ -61,7 +60,8 @@ class ChunkLooper:
         self._pastEnd = False
         self._seenBindings: List[CandidateBinding] = []
 
-        log.debug(f'{INDENT*6} introducing {self!r}({self.lhsChunk}, {self._myWorkingSetMatches=})')
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(f'{INDENT*6} introducing {self!r}({self.lhsChunk}, {self._myWorkingSetMatches=})')
 
         self.restart()
 
@@ -124,7 +124,7 @@ class ChunkLooper:
         log.debug(f'{INDENT*6} advanceWithFunctions {pred}')
 
         for functionType in functionsFor(pred):
-            fn = functionType(self.lhsChunk, self.parent.graph)
+            fn = functionType(self.lhsChunk)
             log.debug(f'{INDENT*7} ChunkLooper{self._shortId} advanceWithFunctions, {functionType=}')
 
             try:
@@ -263,7 +263,10 @@ class Lhs:
 
             for s in perm:
                 try:
-                    elem = ChunkLooper(s, prev, knownTrue, parent=self)
+                    # These are getting rebuilt a lot which takes time. It would
+                    # be nice if they could accept a changing `prev` order
+                    # (which might already be ok).
+                    elem = ChunkLooper(s, prev, knownTrue)
                 except NoOptions:
                     log.debug(f'{INDENT*6} permutation didnt work, try another')
                     break

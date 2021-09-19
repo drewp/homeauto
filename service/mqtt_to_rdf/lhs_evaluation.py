@@ -32,11 +32,10 @@ class Function:
     """any rule stmt that runs a function (not just a statement match)"""
     pred: URIRef
 
-    def __init__(self, chunk: Chunk, ruleGraph: ChunkedGraph):
+    def __init__(self, chunk: Chunk):
         self.chunk = chunk
         if chunk.predicate != self.pred:
             raise TypeError
-        self.ruleGraph = ruleGraph
 
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
         raise NotImplementedError
@@ -80,13 +79,6 @@ class SubjectObjectFunction(Function):
 class ListFunction(Function):
     """function that takes an rdf list as input"""
 
-    def usedStatements(self) -> Set[Triple]:
-        raise NotImplementedError
-        if self.chunk.subjist is None:
-            raise ValueError(f'expected subject list on {self.chunk}')
-        _, used = _parseList(self.ruleGraph, self.chunk.primary[0])
-        return used
-
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
         if self.chunk.subjList is None:
             raise ValueError(f'expected subject list on {self.chunk}')
@@ -111,15 +103,3 @@ def functionsFor(pred: URIRef) -> Iterator[Type[Function]]:
         yield _byPred[pred]
     except KeyError:
         return
-
-
-# def lhsStmtsUsedByFuncs(graph: ChunkedGraph) -> Set[Chunk]:
-#     usedByFuncs: Set[Triple] = set()  # don't worry about matching these
-#     for s in graph:
-#         for cls in functionsFor(pred=s[1]):
-#             usedByFuncs.update(cls(s, graph).usedStatements())
-#     return usedByFuncs
-
-
-def rulePredicates() -> Set[URIRef]:
-    return set(c.pred for c in _registeredFunctionTypes)

@@ -22,10 +22,10 @@ class TestPerf(unittest.TestCase):
         expandedConfig = inference.infer(config)
         expandedConfig += inference.nonRuleStatements()
 
-        for loop in range(10):
+        for loop in range(50):
             # g = N3('''
             # <urn:uuid:2f5bbe1e-177f-11ec-9f97-8a12f6515350> a :MqttMessage ;
-            #     :body "online" ;   
+            #     :body "online" ;
             #     :onlineTerm :Online ;
             #     :topic ( "frontdoorlock" "status") .
             # ''')
@@ -33,7 +33,7 @@ class TestPerf(unittest.TestCase):
 
             # g = N3('''
             # <urn:uuid:2f5bbe1e-177f-11ec-9f97-8a12f6515350> a :MqttMessage ;
-            #     :body "zz" ;   
+            #     :body "zz" ;
             #     :bodyFloat 12.2;
             #     :onlineTerm :Online ;
             #     :topic ( "air_quality_outdoor" "sensor" "bme280_temperature" "state") .

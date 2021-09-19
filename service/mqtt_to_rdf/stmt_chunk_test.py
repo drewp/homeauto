@@ -62,14 +62,17 @@ class TestListCollection(unittest.TestCase):
     def testListUsedTwice(self):
         cg = ChunkedGraph(N3('(:u :v) :b :c, :d .'), functionsFor)
 
-        self.assertSetEqual(cg.staticChunks, set([
-            Chunk((None, ROOM.b, ROOM.c), subjList=[ROOM.u, ROOM.v]),
-            Chunk((None, ROOM.b, ROOM.d), subjList=[ROOM.u, ROOM.v])
-        ]))
+        self.assertSetEqual(
+            cg.staticChunks,
+            set([
+                Chunk((None, ROOM.b, ROOM.c), subjList=[ROOM.u, ROOM.v]),
+                Chunk((None, ROOM.b, ROOM.d), subjList=[ROOM.u, ROOM.v])
+            ]))
 
     def testUnusedListFragment(self):
         cg = ChunkedGraph(N3(':a rdf:first :b .'), functionsFor)
         self.assertFalse(cg)
+
 
 class TestApplyChunky(unittest.TestCase):
     binding = CandidateBinding({Variable('x'): ROOM.xval})
