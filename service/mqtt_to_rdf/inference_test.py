@@ -27,6 +27,7 @@ def N3(txt: str):
 @prefix ex: <http://example.com/> .
 @prefix room: <http://projects.bigasterisk.com/room/> .
 @prefix math: <http://www.w3.org/2000/10/swap/math#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 """
     g.parse(StringInputSource((prefix + txt).encode('utf8')), format='n3')
     return g

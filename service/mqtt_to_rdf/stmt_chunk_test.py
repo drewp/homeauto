@@ -1,3 +1,4 @@
+from time import clock_gettime
 import unittest
 
 from rdflib.term import Variable
@@ -40,6 +41,35 @@ class TestChunkedGraph(unittest.TestCase):
         self.assertTrue(cg.noPredicatesAppear([ROOM.d, ROOM.e]))
         self.assertFalse(cg.noPredicatesAppear([ROOM.b, ROOM.d]))
 
+
+class TestListCollection(unittest.TestCase):
+
+    def testSubjList(self):
+        cg = ChunkedGraph(N3('(:u :v) :b :c .'), functionsFor)
+        expected = Chunk((None, ROOM.b, ROOM.c), subjList=[ROOM.u, ROOM.v])
+        self.assertEqual(cg.staticChunks, set([expected]))
+
+    def testObjList(self):
+        cg = ChunkedGraph(N3(':a :b (:u :v) .'), functionsFor)
+        expected = Chunk((ROOM.a, ROOM.b, None), objList=[ROOM.u, ROOM.v])
+        self.assertSetEqual(cg.staticChunks, set([expected]))
+
+    def testVariableInListMakesAPatternChunk(self):
+        cg = ChunkedGraph(N3(':a :b (?x :v) .'), functionsFor)
+        expected = Chunk((ROOM.a, ROOM.b, None), objList=[Variable('x'), ROOM.v])
+        self.assertSetEqual(cg.patternChunks, set([expected]))
+
+    def testListUsedTwice(self):
+        cg = ChunkedGraph(N3('(:u :v) :b :c, :d .'), functionsFor)
+
+        self.assertSetEqual(cg.staticChunks, set([
+            Chunk((None, ROOM.b, ROOM.c), subjList=[ROOM.u, ROOM.v]),
+            Chunk((None, ROOM.b, ROOM.d), subjList=[ROOM.u, ROOM.v])
+        ]))
+
+    def testUnusedListFragment(self):
+        cg = ChunkedGraph(N3(':a rdf:first :b .'), functionsFor)
+        self.assertFalse(cg)
 
 class TestApplyChunky(unittest.TestCase):
     binding = CandidateBinding({Variable('x'): ROOM.xval})
