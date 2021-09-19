@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, Iterable, Iterator, Union
+from typing import Dict, Iterator
 
 from prometheus_client import Summary
 from rdflib import BNode, Graph
@@ -24,11 +24,13 @@ class CandidateBinding:
         b = " ".join("%s=%s" % (k, v) for k, v in sorted(self.binding.items()))
         return f'CandidateBinding({b})'
 
-    def apply(self, g: Union[Graph, Iterable[Triple]], returnBoundStatementsOnly=True) -> Iterator[Triple]:
+    def apply(self, g: Graph, returnBoundStatementsOnly=True) -> Iterator[Triple]:
         for stmt in g:
             try:
-                bound = (self.applyTerm(stmt[0], returnBoundStatementsOnly), self.applyTerm(stmt[1], returnBoundStatementsOnly),
-                         self.applyTerm(stmt[2], returnBoundStatementsOnly))
+                bound = (
+                    self.applyTerm(stmt[0], returnBoundStatementsOnly),  #
+                    self.applyTerm(stmt[1], returnBoundStatementsOnly),  #
+                    self.applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
                 log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
 
