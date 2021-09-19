@@ -83,15 +83,17 @@ class ChunkLooper:
             augmentedWorkingSet = list(
                 applyChunky(self.prev.currentBinding(), self._myWorkingSetMatches, returnBoundStatementsOnly=False))
 
-        log.debug(f'{INDENT*6} {self}.advance has {augmentedWorkingSet=}')
+        log.debug(f'{INDENT*6} --> {self}.advance has {augmentedWorkingSet=} {self._current=}')
 
         if self._advanceWithPlainMatches(augmentedWorkingSet):
+            log.debug(f'{INDENT*6} <-- {self}.advance finished with plain matches')
             return
 
         if self._advanceWithFunctions():
+            log.debug(f'{INDENT*6} <-- {self}.advance finished with function matches')
             return
 
-        log.debug(f'{INDENT*6} {self} is past end')
+        log.debug(f'{INDENT*6} <-- {self}.advance had nothing and is now past end')
         self._pastEnd = True
 
     def _advanceWithPlainMatches(self, augmentedWorkingSet: Sequence[Chunk]) -> bool:
@@ -119,9 +121,14 @@ class ChunkLooper:
         if not isinstance(pred, URIRef):
             raise NotImplementedError
 
+        log.debug(f'{INDENT*6} advanceWithFunctions {pred}')
+
         for functionType in functionsFor(pred):
             fn = functionType(self.lhsChunk, self.parent.graph)
+            log.debug(f'{INDENT*7} ChunkLooper{self._shortId} advanceWithFunctions, {functionType=}')
+
             try:
+
                 out = fn.bind(self._prevBindings())
             except BindingUnknown:
                 pass
@@ -229,21 +236,21 @@ class Lhs:
 
     def _debugChunkStack(self, label: str, chunkStack: List[ChunkLooper]):
         log.debug(f'{INDENT*5} {label}:')
-        for l in chunkStack:
-            log.debug(f'{INDENT*6} {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
+        for i, l in enumerate(chunkStack):
+            log.debug(f'{INDENT*6} [{i}] {l} curbind={l.currentBinding() if not l.pastEnd() else "<end>"}')
 
     def _checkPredicateCounts(self, knownTrue):
         """raise NoOptions quickly in some cases"""
 
         if self.graph.noPredicatesAppear(self.myPreds):
-            log.info(f'{INDENT*2} checkPredicateCounts does cull because not all {self.myPreds=} are in knownTrue')
+            log.debug(f'{INDENT*3} checkPredicateCounts does cull because not all {self.myPreds=} are in knownTrue')
             return True
-        log.info(f'{INDENT*2} checkPredicateCounts does not cull because all {self.myPreds=} are in knownTrue')
+        log.debug(f'{INDENT*3} checkPredicateCounts does not cull because all {self.myPreds=} are in knownTrue')
         return False
 
     def _assembleRings(self, knownTrue: ChunkedGraph, stats) -> List[ChunkLooper]:
         """make ChunkLooper for each stmt in our LHS graph, but do it in a way that they all
-        start out valid (or else raise NoOptions)"""
+        start out valid (or else raise NoOptions). static chunks have already been confirmed."""
 
         log.info(f'{INDENT*2} stats={dict(stats)}')
         log.info(f'{INDENT*2} taking permutations of {len(self.graph.patternChunks)=}')
@@ -264,7 +271,7 @@ class Lhs:
             else:
                 return stmtStack
             if i > 5000:
-                raise NotImplementedError(f'trying too many permutations {len(self.graph.patternChunks)=}')
+                raise NotImplementedError(f'trying too many permutations {len(chunks)=}')
 
         log.debug(f'{INDENT*6} no perms worked- rule cannot match anything')
         raise NoOptions()

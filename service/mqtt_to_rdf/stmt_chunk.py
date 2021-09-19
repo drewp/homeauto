@@ -58,7 +58,7 @@ class Chunk:  # rename this
     def myMatches(self, g: 'ChunkedGraph') -> List['Chunk']:
         """Chunks from g where self, which may have BindableTerm wildcards, could match that chunk in g."""
         out: List['Chunk'] = []
-        log.debug(f'{self}.myMatches({g}')
+        log.debug(f'{INDENT*6} {self}.myMatches({g}')
         for ch in g.allChunks():
             if self.matches(ch):
                 out.append(ch)
@@ -113,7 +113,7 @@ def applyChunky(cb: CandidateBinding, g: Iterable[Chunk], returnBoundStatementsO
 
 class ChunkedGraph:
     """a Graph converts 1-to-1 with a ChunkedGraph, where the Chunks have
-    combined some statements together. (The only excpetion is that bnodes for
+    combined some statements together. (The only exception is that bnodes for
     rdf lists are lost)"""
 
     def __init__(
