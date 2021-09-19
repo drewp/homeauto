@@ -19,7 +19,7 @@ LOG = Namespace('http://www.w3.org/2000/10/swap/log#')
 MATH = Namespace('http://www.w3.org/2000/10/swap/math#')
 
 
-def numericNode(n: Node):
+def _numericNode(n: Node):
     if not isinstance(n, Literal):
         raise TypeError(f'expected Literal, got {n=}')
     val = n.toPython()
@@ -28,7 +28,7 @@ def numericNode(n: Node):
     return val
 
 
-def parseList(graph: ChunkedGraph, subj: Node) -> Tuple[List[Node], Set[Triple]]:
+def _parseList(graph: ChunkedGraph, subj: Node) -> Tuple[List[Node], Set[Triple]]:
     """"Do like Collection(g, subj) but also return all the 
     triples that are involved in the list"""
     out = []
@@ -50,11 +50,11 @@ def parseList(graph: ChunkedGraph, subj: Node) -> Tuple[List[Node], Set[Triple]]
     return out, used
 
 
-registeredFunctionTypes: List[Type['Function']] = []
+_registeredFunctionTypes: List[Type['Function']] = []
 
 
 def register(cls: Type['Function']):
-    registeredFunctionTypes.append(cls)
+    _registeredFunctionTypes.append(cls)
     return cls
 
 
@@ -74,7 +74,7 @@ class Function:
     def getNumericOperands(self, existingBinding: CandidateBinding) -> List[Union[int, float, Decimal]]:
         out = []
         for op in self.getOperandNodes(existingBinding):
-            out.append(numericNode(op))
+            out.append(_numericNode(op))
 
         return out
 
@@ -112,46 +112,16 @@ class ListFunction(Function):
     """function that takes an rdf list as input"""
 
     def usedStatements(self) -> Set[Triple]:
-        _, used = parseList(self.ruleGraph, self.chunk.primary[0])
+        _, used = _parseList(self.ruleGraph, self.chunk.primary[0])
         return used
 
     def getOperandNodes(self, existingBinding: CandidateBinding) -> List[Node]:
-        operands, _ = parseList(self.ruleGraph, self.chunk.primary[0])
+        operands, _ = _parseList(self.ruleGraph, self.chunk.primary[0])
         return [existingBinding.applyTerm(x) for x in operands]
 
+import inference_functions # calls register() on some classes
 
-@register
-class Gt(SubjectObjectFunction):
-    pred = MATH['greaterThan']
-
-    def bind(self, existingBinding: CandidateBinding) -> Optional[CandidateBinding]:
-        [x, y] = self.getNumericOperands(existingBinding)
-        if x > y:
-            return CandidateBinding({})  # no new values; just allow matching to keep going
-
-
-@register
-class AsFarenheit(SubjectFunction):
-    pred = ROOM['asFarenheit']
-
-    def bind(self, existingBinding: CandidateBinding) -> Optional[CandidateBinding]:
-        [x] = self.getNumericOperands(existingBinding)
-        f = cast(Literal, Literal(Decimal(x) * 9 / 5 + 32))
-        return self.valueInObjectTerm(f)
-
-
-@register
-class Sum(ListFunction):
-    pred = MATH['sum']
-
-    def bind(self, existingBinding: CandidateBinding) -> Optional[CandidateBinding]:
-        f = Literal(sum(self.getNumericOperands(existingBinding)))
-        return self.valueInObjectTerm(f)
-
-
-### registration is done
-
-_byPred: Dict[URIRef, Type[Function]] = dict((cls.pred, cls) for cls in registeredFunctionTypes)
+_byPred: Dict[URIRef, Type[Function]] = dict((cls.pred, cls) for cls in _registeredFunctionTypes)
 
 
 def functionsFor(pred: URIRef) -> Iterator[Type[Function]]:
@@ -170,4 +140,4 @@ def functionsFor(pred: URIRef) -> Iterator[Type[Function]]:
 
 
 def rulePredicates() -> Set[URIRef]:
-    return set(c.pred for c in registeredFunctionTypes)
+    return set(c.pred for c in _registeredFunctionTypes)
