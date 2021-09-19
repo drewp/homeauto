@@ -138,7 +138,7 @@ class ChunkedGraph:
     def noPredicatesAppear(self, preds: Iterable[Node]) -> bool:
         return self.allPredicatesExceptFunctions().isdisjoint(preds)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.chunksUsedByFuncs) or bool(self.staticChunks) or bool(self.patternChunks)
 
     def __repr__(self):
