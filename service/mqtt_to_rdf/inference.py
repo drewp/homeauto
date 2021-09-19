@@ -198,7 +198,7 @@ class Lhs:
             stats['staticStmtCulls'] += 1
             return
 
-        if not self.graph.patternChunks:
+        if not self.graph.patternChunks and not self.graph.chunksUsedByFuncs:
             # static only
             yield BoundLhs(self, CandidateBinding({}))
             return
