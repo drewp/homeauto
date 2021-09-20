@@ -220,6 +220,15 @@ class TestInferenceWithCustomFunctions(WithGraphEqual):
         inf = makeInferenceWithRules("{ :a :b ?x . ?x room:asFarenheit ?f } => { :new :stmt ?f } .")
         self.assertGraphEqual(inf.infer(N3(":a :b 12 .")), N3(":new :stmt 53.6 ."))
 
+    def testChildResource(self):
+        inf = makeInferenceWithRules("{ :a :b ?x . (:c ?x) room:childResource ?y .} => { :new :stmt ?y  } .")
+        self.assertGraphEqual(inf.infer(N3(':a :b "foo" .')), N3(":new :stmt <http://projects.bigasterisk.com/room/c/foo> ."))
+
+    def testChildResourceSegmentQuoting(self):
+        inf = makeInferenceWithRules("{ :a :b ?x . (:c ?x) room:childResource ?y .} => { :new :stmt ?y  } .")
+        self.assertGraphEqual(inf.infer(N3(':a :b "b / w -> #." .')),
+                              N3(":new :stmt <http://projects.bigasterisk.com/room/c/b%20%2F%20w%20-%3E%20%23.> ."))
+
 
 class TestUseCases(WithGraphEqual):
 
