@@ -7,6 +7,8 @@ import rdflib.plugins.parsers.notation3
 import rdflib.term
 from rdflib import BNode
 
+ROOM = rdflib.Namespace('http://projects.bigasterisk.com/room/')
+
 
 def patchSlimReprs():
     """From: rdflib.term.URIRef('foo')
@@ -15,7 +17,10 @@ def patchSlimReprs():
 
     def ur(self):
         clsName = "U" if self.__class__ is rdflib.term.URIRef else self.__class__.__name__
-        return """%s(%s)""" % (clsName, super(rdflib.term.URIRef, self).__repr__())
+        s = super(rdflib.term.URIRef, self).__str__()
+        if s.startswith(str(ROOM)):
+            s = ':' + s[len(ROOM):]
+        return """%s(%s)""" % (clsName, s)
 
     rdflib.term.URIRef.__repr__ = ur
 
@@ -27,13 +32,13 @@ def patchSlimReprs():
 
     def vr(self):
         clsName = "V" if self.__class__ is rdflib.term.Variable else self.__class__.__name__
-        return """%s(%s)""" % (clsName, super(rdflib.term.Variable, self).__repr__())
+        return """%s(%s)""" % (clsName, '?' + super(rdflib.term.Variable, self).__str__())
 
     rdflib.term.Variable.__repr__ = vr
 
 
 def patchBnodeCounter():
-    """From: rdflib.terms.BNode('ne7bb4a51624993acdf51cc5d4e8add30e1') 
+    """From: rdflib.terms.BNode('ne7bb4a51624993acdf51cc5d4e8add30e1' 
          To: BNode('f-6-1')
     """
     serial = itertools.count()
