@@ -18,6 +18,33 @@ ChunkPrimaryTriple = Tuple[Optional[Node], Node, Optional[Node]]
 
 
 @dataclass
+class AlignedRuleChunk:
+    """a possible association between a rule chunk and a workingSet chunk. Use
+    matches() to see if the rule actually fits (and then we might cache some of
+    that work when computing the new bindings"""
+    ruleChunk: 'Chunk'
+    workingSetChunk: 'Chunk'
+
+    def totalBindingIfThisStmtWereTrue(self, prevBindings: CandidateBinding) -> CandidateBinding:
+        outBinding = prevBindings.copy()
+        for rt, ct in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
+            if isinstance(rt, (Variable, BNode)):
+                if outBinding.contains(rt) and outBinding.applyTerm(rt) != ct:
+                    msg = f'{rt=} {ct=} {outBinding=}' if log.isEnabledFor(logging.DEBUG) else ''
+                    raise Inconsistent(msg)
+                outBinding.addNewBindings(CandidateBinding({rt: ct}))
+        return outBinding
+
+    # could combine this and totalBindingIf into a single ChunkMatch object
+    def matches(self) -> bool:
+        """could this rule, with its BindableTerm wildcards, match workingSetChunk?"""
+        for selfTerm, otherTerm in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
+            if not isinstance(selfTerm, (Variable, BNode)) and selfTerm != otherTerm:
+                return False
+        return True
+
+
+@dataclass
 class Chunk:  # rename this
     """A statement, maybe with variables in it, except *the subject or object
     can be rdf lists*. This is done to optimize list comparisons (a lot) at the
@@ -45,8 +72,8 @@ class Chunk:  # rename this
     def __hash__(self):
         return hash(self.sortKey)
 
-    def __gt__(self, other):
-        return self.sortKey > other.sortKey
+    def __lt__(self, other):
+        return self.sortKey < other.sortKey
 
     def _allTerms(self) -> Iterator[Node]:
         """the terms in `primary` plus the lists. Output order is undefined but stable between same-sized Chunks"""
@@ -60,33 +87,17 @@ class Chunk:  # rename this
         else:
             yield from cast(List[Node], self.objList)
 
-    def totalBindingIfThisStmtWereTrue(self, prevBindings: CandidateBinding, proposed: 'Chunk') -> CandidateBinding:
-        outBinding = prevBindings.copy()
-        for rt, ct in zip(self._allTerms(), proposed._allTerms()):
-            if isinstance(rt, (Variable, BNode)):
-                if outBinding.contains(rt) and outBinding.applyTerm(rt) != ct:
-                    msg = f'{rt=} {ct=} {outBinding=}' if log.isEnabledFor(logging.DEBUG) else ''
-                    raise Inconsistent(msg)
-                outBinding.addNewBindings(CandidateBinding({rt: ct}))
-        return outBinding
-
-    def myMatches(self, g: 'ChunkedGraph') -> List['Chunk']:
-        """Chunks from g where self, which may have BindableTerm wildcards, could match that chunk in g."""
-        out: List['Chunk'] = []
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(f'{INDENT*6} {self}.myMatches({g}')
-        for ch in g.allChunks():
-            if self.matches(ch):
-                out.append(ch)
-        return out
-
-    # could combine this and totalBindingIf into a single ChunkMatch object
-    def matches(self, other: 'Chunk') -> bool:
-        """does this Chunk with potential BindableTerm wildcards match other?"""
-        for selfTerm, otherTerm in zip(self._allTerms(), other._allTerms()):
-            if not isinstance(selfTerm, (Variable, BNode)) and selfTerm != otherTerm:
-                return False
-        return True
+    def ruleMatchesFrom(self, workingSet: 'ChunkedGraph') -> Iterator[AlignedRuleChunk]:
+        """Chunks from workingSet where self, which may have BindableTerm wildcards, could match that workingSet Chunk."""
+        # if log.isEnabledFor(logging.DEBUG):
+        #     log.debug(f'{INDENT*6} computing {self}.ruleMatchesFrom({workingSet}')
+        allChunksIter = workingSet.allChunks()
+        if "stable failures please":
+            allChunksIter = sorted(allChunksIter)
+        for chunk in allChunksIter:
+            aligned = AlignedRuleChunk(self, chunk)
+            if aligned.matches():
+                yield aligned
 
     def __repr__(self):
         pre = ('+'.join('%s' % elem for elem in self.subjList) + '+' if self.subjList else '')
@@ -117,17 +128,19 @@ def _termIsStatic(term: Optional[Node]) -> bool:
     return isinstance(term, (URIRef, Literal)) or term is None
 
 
-def applyChunky(cb: CandidateBinding, g: Iterable[Chunk], returnBoundStatementsOnly=True) -> Iterator[Chunk]:
-    for chunk in g:
+def applyChunky(cb: CandidateBinding,
+                g: Iterable[AlignedRuleChunk],
+                returnBoundStatementsOnly=True) -> Iterator[AlignedRuleChunk]:
+    for aligned in g:
         try:
-            bound = chunk.apply(cb, returnBoundStatementsOnly=returnBoundStatementsOnly)
+            bound = aligned.ruleChunk.apply(cb, returnBoundStatementsOnly=returnBoundStatementsOnly)
         except BindingUnknown:
-            log.debug(f'{INDENT*7} CB.apply cant bind {chunk} using {cb.binding}')
+            log.debug(f'{INDENT*7} CB.apply cant bind {aligned} using {cb.binding}')
 
             continue
-        log.debug(f'{INDENT*7} CB.apply took {chunk} to {bound}')
+        log.debug(f'{INDENT*7} CB.apply took {aligned} to {bound}')
 
-        yield bound
+        yield AlignedRuleChunk(bound, aligned.workingSetChunk)
 
 
 class ChunkedGraph:

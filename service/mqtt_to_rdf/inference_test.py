@@ -1,16 +1,14 @@
 """
 also see https://github.com/w3c/N3/tree/master/tests/N3Tests
 """
-from collections import defaultdict
+import unittest
 from decimal import Decimal
 from typing import cast
-import unittest
 
 from rdflib import ConjunctiveGraph, Graph, Literal, Namespace
-from rdflib.graph import ReadOnlyGraphAggregate
 from rdflib.parser import StringInputSource
 
-from inference import Inference, Lhs
+from inference import Inference
 from rdflib_debug_patches import patchBnodeCounter, patchSlimReprs
 
 patchSlimReprs()
@@ -145,6 +143,39 @@ class TestBnodeMatching(WithGraphEqual):
         inf = makeInferenceWithRules("{ ?z :a :b  . } => { :new :stmt :here } .")
         implied = inf.infer(N3("[] :a :b ."))
         self.assertGraphEqual(implied, N3(":new :stmt :here ."))
+
+
+class TestBnodeAliasingSetup(WithGraphEqual):
+
+    def setUp(self):
+        self.inf = makeInferenceWithRules("""
+          {
+            ?var0 :a ?x; :b ?y  .
+          } => {
+            :xVar :value ?x .
+            :yVar :value ?y .
+          } .
+          """)
+
+    def assertResult(self, actual):
+        self.assertGraphEqual(actual, N3("""
+          :xVar :value :x0, :x1 .
+          :yVar :value :y0, :y1 .
+        """))
+
+    def testMatchesDistinctStatements(self):
+        implied = self.inf.infer(N3("""
+          :stmt0 :a :x0; :b :y0 .
+          :stmt1 :a :x1; :b :y1 .
+        """))
+        self.assertResult(implied)
+
+    def testMatchesDistinctBnodes(self):
+        implied = self.inf.infer(N3("""
+          [ :a :x0; :b :y0 ] .
+          [ :a :x1; :b :y1 ] .
+        """))
+        self.assertResult(implied)
 
 
 class TestBnodeGenerating(WithGraphEqual):

@@ -21,7 +21,7 @@ class CandidateBinding:
     binding: Dict[BindableTerm, Node]
 
     def __repr__(self):
-        b = " ".join("%s=%s" % (k, v) for k, v in sorted(self.binding.items()))
+        b = " ".join("%r=%r" % (var, value) for var, value in sorted(self.binding.items()))
         return f'CandidateBinding({b})'
 
     def apply(self, g: Graph, returnBoundStatementsOnly=True) -> Iterator[Triple]:
@@ -32,10 +32,12 @@ class CandidateBinding:
                     self.applyTerm(stmt[1], returnBoundStatementsOnly),  #
                     self.applyTerm(stmt[2], returnBoundStatementsOnly))
             except BindingUnknown:
-                log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(f'{INDENT*7} CB.apply cant bind {stmt} using {self.binding}')
 
                 continue
-            log.debug(f'{INDENT*7} CB.apply took {stmt} to {bound}')
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(f'{INDENT*7} CB.apply took {stmt} to {bound}')
 
             yield bound
 
@@ -53,6 +55,11 @@ class CandidateBinding:
             if k in self.binding and self.binding[k] != v:
                 raise BindingConflict(f'thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
             self.binding[k] = v
+
+    def subtract(self, removeBindings: 'CandidateBinding'):
+        for k, v in removeBindings.binding.items():
+            if k in self.binding:
+                del self.binding[k]
 
     def copy(self):
         return CandidateBinding(self.binding.copy())
