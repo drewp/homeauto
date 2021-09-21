@@ -390,28 +390,3 @@ class TestListPerformance(WithGraphEqual):
     #     inf = makeInferenceWithRules("{ :a :b (:e0 :e1 :e2 :e3) . } => { :new :stmt :here } .")
     #     implied = inf.infer(N3(":a :b (:e0 :e1 :e2 :e3) ."))
     #     self.assertGraphEqual(implied, N3(":new :stmt :here ."))
-
-
-# def fakeStats():
-#     return defaultdict(lambda: 0)
-
-# class TestLhsFindCandidateBindings(WithGraphEqual):
-
-#     def testBnodeMatchesStmt(self):
-#         l = Lhs(N3("[] :a :b ."))
-#         ws = ReadOnlyGraphAggregate([N3("[] :a :b .")])
-#         cands = list(l.findCandidateBindings(ws, fakeStats()))
-#         self.assertEqual(len(cands), 1)
-
-#     def testVarMatchesStmt(self):
-#         l = Lhs(N3("?x :a :b ."))
-#         ws = ReadOnlyGraphAggregate([N3("[] :a :b .")])
-#         cands = list(l.findCandidateBindings(ws, fakeStats()))
-#         self.assertEqual(len(cands), 1)
-
-#     def testListsOnlyMatchEachOther(self):
-#         l = Lhs(N3(":a :b (:e0 :e1) ."))
-#         ws = ReadOnlyGraphAggregate([N3(":a :b (:e0 :e1) .")])
-#         stats = fakeStats()
-#         cands = list(l.findCandidateBindings(ws, stats))
-#         self.assertLess(stats['permCountFailingVerify'], 20)
