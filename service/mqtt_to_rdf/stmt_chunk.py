@@ -8,7 +8,7 @@ from rdflib.namespace import RDF
 from rdflib.term import BNode, Literal, Node, URIRef, Variable
 
 from candidate_binding import CandidateBinding
-from inference_types import BindingUnknown, Inconsistent
+from inference_types import Inconsistent
 
 log = logging.getLogger('infer')
 
@@ -128,10 +128,10 @@ class Chunk:  # rename this
     def isStatic(self) -> bool:
         return all(_termIsStatic(s) for s in self._allTerms())
 
-    def apply(self, cb: CandidateBinding, returnBoundStatementsOnly=True) -> 'Chunk':
+    def apply(self, cb: CandidateBinding) -> 'Chunk':
         """Chunk like this one but with cb substitutions applied. If the flag is
         True, we raise BindingUnknown instead of leaving a term unbound"""
-        fn = lambda t: cb.applyTerm(t, returnBoundStatementsOnly)
+        fn = lambda t: cb.applyTerm(t, failUnbound=False)
         return Chunk(
             (
                 fn(self.primary[0]) if self.primary[0] is not None else None,  #
@@ -147,10 +147,9 @@ def _termIsStatic(term: Optional[Node]) -> bool:
 
 
 def applyChunky(cb: CandidateBinding,
-                g: Iterable[AlignedRuleChunk],
-                returnBoundStatementsOnly=True) -> Iterator[AlignedRuleChunk]:
+                g: Iterable[AlignedRuleChunk]) -> Iterator[AlignedRuleChunk]:
     for aligned in g:
-        bound = aligned.ruleChunk.apply(cb, returnBoundStatementsOnly=returnBoundStatementsOnly)
+        bound = aligned.ruleChunk.apply(cb)
         try:
             yield AlignedRuleChunk(bound, aligned.workingSetChunk)
         except Inconsistent:

@@ -90,7 +90,7 @@ class ChunkLooper:
             augmentedWorkingSet = self._alignedMatches
         else:
             augmentedWorkingSet = list(
-                applyChunky(self.prev.currentBinding(), self._alignedMatches, returnBoundStatementsOnly=False))
+                applyChunky(self.prev.currentBinding(), self._alignedMatches))
 
         if self._advanceWithPlainMatches(augmentedWorkingSet):
             ringlog.debug(f'{INDENT*6} <-- {self}.advance finished with plain matches')
