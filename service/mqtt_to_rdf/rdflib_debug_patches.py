@@ -37,14 +37,18 @@ def patchSlimReprs():
     rdflib.term.Variable.__repr__ = vr
 
 
-def patchBnodeCounter():
-    """From: rdflib.terms.BNode('ne7bb4a51624993acdf51cc5d4e8add30e1' 
+def patchBnodeCounter(always=False):
+    """From: rdflib.terms.BNode('ne7bb4a51624993acdf51cc5d4e8add30e1'
          To: BNode('f-6-1')
+
+    BNode creation can override this, which might matter when adding BNodes that
+    are known to be the same as each other. Set `always` to disregard this and
+    always get short ids.
     """
     serial = itertools.count()
 
     def n(cls, value=None, _sn_gen='', _prefix='') -> BNode:
-        if value is None:
+        if always or value is None:
             value = 'N-%s' % next(serial)
         return rdflib.term.Identifier.__new__(cls, value)
 
