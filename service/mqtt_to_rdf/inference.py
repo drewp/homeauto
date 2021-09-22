@@ -436,7 +436,7 @@ class Inference:
         rulesIterations = 0
         delta = 1
         stats['initWorkingSet'] = cast(int, workingSet.__len__())
-        while delta > 0 and rulesIterations <= self.rulesIterationLimit:
+        while delta > 0:
             log.debug('')
             log.info(f'{INDENT*1}*iteration {rulesIterations}')
 
@@ -445,6 +445,8 @@ class Inference:
             delta += len(implied)
             rulesIterations += 1
             log.info(f'{INDENT*2} this inference iteration added {delta} more implied stmts')
+            if rulesIterations >= self.rulesIterationLimit:
+                raise ValueError(f"rule too complex after {rulesIterations=}")
         stats['iterations'] = rulesIterations
         stats['timeSpent'] = round(time.time() - startTime, 3)
         stats['impliedStmts'] = len(implied)
