@@ -1,17 +1,13 @@
-from time import clock_gettime
 import unittest
 
-from rdflib.term import Variable
+from rdflib import Namespace, Variable
 
+from candidate_binding import CandidateBinding
 from inference_test import N3
-from rdflib import ConjunctiveGraph, Graph, Literal, Namespace, Variable
-
-from stmt_chunk import ChunkedGraph, Chunk, applyChunky
+from lhs_evaluation import functionsFor
+from stmt_chunk import AlignedRuleChunk, Chunk, ChunkedGraph, applyChunky
 
 ROOM = Namespace('http://projects.bigasterisk.com/room/')
-
-from lhs_evaluation import functionsFor
-from candidate_binding import CandidateBinding
 
 
 class TestChunkedGraph(unittest.TestCase):
@@ -77,23 +73,17 @@ class TestListCollection(unittest.TestCase):
 class TestApplyChunky(unittest.TestCase):
     binding = CandidateBinding({Variable('x'): ROOM.xval})
 
-    def testBoundStatementsOnly(self):
-        ret = list(
-            applyChunky(self.binding,
-                        g=[Chunk((ROOM.a, ROOM.b, Variable('x'))),
-                           Chunk((ROOM.ay, ROOM.by, Variable('y')))],
-                        returnBoundStatementsOnly=True))
-        self.assertEqual(ret, [Chunk((ROOM.a, ROOM.b, ROOM.xval))])
-
     def testAllStatements(self):
+        rule0 = Chunk((ROOM.a, Variable('pred'), Variable('x')))
+        rule1 = Chunk((ROOM.a, Variable('pred'), Variable('x')))
         ret = list(
             applyChunky(self.binding,
-                        g=[Chunk((ROOM.a, ROOM.b, Variable('x'))),
-                           Chunk((ROOM.ay, ROOM.by, Variable('y')))],
-                        returnBoundStatementsOnly=False))
+                        g=[
+                           AlignedRuleChunk(ruleChunk=rule0, workingSetChunk=Chunk((ROOM.a, ROOM.b, ROOM.xval))),
+                           AlignedRuleChunk(ruleChunk=rule1, workingSetChunk=Chunk((ROOM.a, ROOM.b, ROOM.yval))),
+                        ]))
         self.assertCountEqual(
             ret,
             [
-                Chunk((ROOM.a, ROOM.b, ROOM.xval)),  #
-                Chunk((ROOM.ay, ROOM.by, Variable('y')))
+                AlignedRuleChunk(ruleChunk=Chunk((ROOM.a, Variable('pred'), ROOM.xval)), workingSetChunk=Chunk((ROOM.a, ROOM.b, ROOM.xval)))
             ])
