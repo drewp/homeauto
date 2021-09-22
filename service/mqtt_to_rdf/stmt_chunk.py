@@ -19,23 +19,39 @@ ChunkPrimaryTriple = Tuple[Optional[Node], Node, Optional[Node]]
 
 @dataclass
 class AlignedRuleChunk:
-    """a possible association between a rule chunk and a workingSet chunk. Use
-    matches() to see if the rule actually fits (and then we might cache some of
-    that work when computing the new bindings"""
+    """a possible association between a rule chunk and a workingSet chunk. You can test
+    whether the association would still be possible under various additional bindings."""
     ruleChunk: 'Chunk'
     workingSetChunk: 'Chunk'
 
-    def totalBindingIfThisStmtWereTrue(self, prevBindings: CandidateBinding) -> CandidateBinding:
-        outBinding = prevBindings.copy()
+    def __post_init__(self):
+        if not self.matches():
+            raise Inconsistent()
+
+    def newBindingIfMatched(self, prevBindings: CandidateBinding) -> CandidateBinding:
+        """supposing this rule did match the statement, what new bindings would
+        that produce?
+
+        raises Inconsistent if the existing bindings mean that our aligned
+        chunks can no longer match.
+        """
+        outBinding = CandidateBinding({})
         for rt, ct in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
             if isinstance(rt, (Variable, BNode)):
-                if outBinding.contains(rt) and outBinding.applyTerm(rt) != ct:
-                    msg = f'{rt=} {ct=} {outBinding=}' if log.isEnabledFor(logging.DEBUG) else ''
+                if prevBindings.contains(rt) and prevBindings.applyTerm(rt) != ct:
+                    msg = f'{rt=} {ct=} {prevBindings=}' if log.isEnabledFor(logging.DEBUG) else ''
                     raise Inconsistent(msg)
+                if outBinding.contains(rt) and outBinding.applyTerm(rt) != ct:
+                    # maybe this can happen, for stmts like ?x :a ?x .
+                    raise Inconsistent("outBinding inconsistent with itself")
                 outBinding.addNewBindings(CandidateBinding({rt: ct}))
+            else:
+                if rt != ct:
+                    # getting here means prevBindings was set to something our
+                    # rule statement disagrees with.
+                    raise Inconsistent(f'{rt=} != {ct=}')
         return outBinding
 
-    # could combine this and totalBindingIf into a single ChunkMatch object
     def matches(self) -> bool:
         """could this rule, with its BindableTerm wildcards, match workingSetChunk?"""
         for selfTerm, otherTerm in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
@@ -95,9 +111,11 @@ class Chunk:  # rename this
         if "stable failures please":
             allChunksIter = sorted(allChunksIter)
         for chunk in allChunksIter:
-            aligned = AlignedRuleChunk(self, chunk)
-            if aligned.matches():
-                yield aligned
+            try:
+                aligned = AlignedRuleChunk(self, chunk)
+            except Inconsistent:
+                continue
+            yield aligned
 
     def __repr__(self):
         pre = ('+'.join('%s' % elem for elem in self.subjList) + '+' if self.subjList else '')
@@ -132,15 +150,11 @@ def applyChunky(cb: CandidateBinding,
                 g: Iterable[AlignedRuleChunk],
                 returnBoundStatementsOnly=True) -> Iterator[AlignedRuleChunk]:
     for aligned in g:
+        bound = aligned.ruleChunk.apply(cb, returnBoundStatementsOnly=returnBoundStatementsOnly)
         try:
-            bound = aligned.ruleChunk.apply(cb, returnBoundStatementsOnly=returnBoundStatementsOnly)
-        except BindingUnknown:
-            log.debug(f'{INDENT*7} CB.apply cant bind {aligned} using {cb.binding}')
-
-            continue
-        log.debug(f'{INDENT*7} CB.apply took {aligned} to {bound}')
-
-        yield AlignedRuleChunk(bound, aligned.workingSetChunk)
+            yield AlignedRuleChunk(bound, aligned.workingSetChunk)
+        except Inconsistent:
+            pass
 
 
 class ChunkedGraph:

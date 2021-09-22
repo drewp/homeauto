@@ -61,7 +61,8 @@ class ChunkLooper:
         self._shortId = next(_chunkLooperShortId)
         self._alignedMatches = list(self.lhsChunk.ruleMatchesFrom(self.workingSet))
 
-        self._current = CandidateBinding({}) # only ours- do not store prev, since it could change without us
+        # only ours- do not store prev, since it could change without us
+        self._current = CandidateBinding({})
         self._pastEnd = False
         self._seenBindings: List[CandidateBinding] = []  # combined bindings (up to our ring) that we've returned
 
@@ -78,7 +79,9 @@ class ChunkLooper:
         return self.prev.currentBinding()
 
     def advance(self):
-        """update to a new set of bindings we haven't seen (since last restart), or go into pastEnd mode"""
+        """update _current to a new set of valid bindings we haven't seen (since
+        last restart), or go into pastEnd mode. Note that _current is just our
+        contribution, but returned valid bindings include all prev rings."""
         if self._pastEnd:
             raise NotImplementedError('need restart')
         ringlog.debug('')
@@ -88,7 +91,6 @@ class ChunkLooper:
         else:
             augmentedWorkingSet = list(
                 applyChunky(self.prev.currentBinding(), self._alignedMatches, returnBoundStatementsOnly=False))
-
 
         if self._advanceWithPlainMatches(augmentedWorkingSet):
             ringlog.debug(f'{INDENT*6} <-- {self}.advance finished with plain matches')
@@ -108,19 +110,13 @@ class ChunkLooper:
 
         for aligned in augmentedWorkingSet:
             try:
-                fullBinding = aligned.totalBindingIfThisStmtWereTrue(self._prevBindings())
-            except Inconsistent:
-                ringlog.debug(f'{INDENT*7} ChunkLooper{self._shortId} - {aligned} would be inconsistent with prev bindings')
+                newBinding = aligned.newBindingIfMatched(self._prevBindings())
+            except Inconsistent as exc:
+                ringlog.debug(
+                    f'{INDENT*7} ChunkLooper{self._shortId} - {aligned} would be inconsistent with prev bindings ({exc})')
                 continue
 
-            newBinding = fullBinding.copy()
-            newBinding.subtract(self._prevBindings())
-
-            ringlog.debug(f'{INDENT*7} {newBinding=} {self._seenBindings=}')
-            if fullBinding not in self._seenBindings:
-                self._seenBindings.append(fullBinding.copy())
-                self._current = newBinding
-                ringlog.debug(f'{INDENT*7} new binding from {self} -> {fullBinding}')
+            if self._testAndKeepNewBinding(newBinding):
                 return True
         return False
 
@@ -142,14 +138,20 @@ class ChunkLooper:
                 pass
             else:
                 if newBinding is not None:
-                    fullBinding: CandidateBinding = self._prevBindings().copy()
-                    fullBinding.addNewBindings(newBinding)
-                    if fullBinding not in self._seenBindings:
-                        self._seenBindings.append(fullBinding)
-                        self._current = newBinding
-                        ringlog.debug(f'{INDENT*7} new binding from {self} -> {fullBinding}')
+                    if self._testAndKeepNewBinding(newBinding):
                         return True
 
+        return False
+
+    def _testAndKeepNewBinding(self, newBinding):
+        fullBinding: CandidateBinding = self._prevBindings().copy()
+        fullBinding.addNewBindings(newBinding)
+        isNew = fullBinding not in self._seenBindings
+        ringlog.debug(f'{INDENT*7} {self} considering {newBinding=} to make {fullBinding}. {isNew=}')
+        if isNew:
+            self._seenBindings.append(fullBinding.copy())
+            self._current = newBinding
+            return True
         return False
 
     def _boundOperands(self, operands) -> List[Node]:
@@ -296,15 +298,15 @@ class Lhs:
         raise NoOptions()
 
     def _advanceTheStack(self, looperRings: List[ChunkLooper]) -> bool:
-        carry = True  # 1st elem always must advance
-        for i, ring in enumerate(looperRings):
+        carry = True  # last elem always must advance
+        for i, ring in reversed(list(enumerate(looperRings))):
             # unlike normal odometer, advancing any earlier ring could invalidate later ones
             if carry:
                 odolog.debug(f'{INDENT*4} advanceAll [{i}] {ring} carry/advance')
                 ring.advance()
                 carry = False
             if ring.pastEnd():
-                if ring is looperRings[-1]:
+                if ring is looperRings[0]:
                     allRingsDone = [r.pastEnd() for r in looperRings]
                     odolog.debug(f'{INDENT*4} advanceAll [{i}] {ring} says we done   {allRingsDone=}')
                     return True
