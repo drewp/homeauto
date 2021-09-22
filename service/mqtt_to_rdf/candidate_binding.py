@@ -12,7 +12,7 @@ log = logging.getLogger('cbind')
 INDENT = '    '
 
 
-class BindingConflict(ValueError):
+class BindingConflict(ValueError):  # might be the same as `Inconsistent`
     pass
 
 
@@ -55,11 +55,6 @@ class CandidateBinding:
             if k in self.binding and self.binding[k] != v:
                 raise BindingConflict(f'thought {k} would be {self.binding[k]} but another Evaluation said it should be {v}')
             self.binding[k] = v
-
-    def subtract(self, removeBindings: 'CandidateBinding'):
-        for k, v in removeBindings.binding.items():
-            if k in self.binding:
-                del self.binding[k]
 
     def copy(self):
         return CandidateBinding(self.binding.copy())

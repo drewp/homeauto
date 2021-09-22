@@ -63,9 +63,10 @@ class ChunkLooper:
 
         self._current = CandidateBinding({}) # only ours- do not store prev, since it could change without us
         self._pastEnd = False
-        self._seenBindings: List[CandidateBinding] = [] # combined bindings (up to our ring) that we've returned
+        self._seenBindings: List[CandidateBinding] = []  # combined bindings (up to our ring) that we've returned
 
         if ringlog.isEnabledFor(logging.DEBUG):
+            ringlog.debug('')
             ringlog.debug(f'{INDENT*6} introducing {self!r}({self.lhsChunk}, {self._alignedMatches=})')
 
         self.restart()
@@ -88,7 +89,6 @@ class ChunkLooper:
             augmentedWorkingSet = list(
                 applyChunky(self.prev.currentBinding(), self._alignedMatches, returnBoundStatementsOnly=False))
 
-        ringlog.debug(f'{INDENT*6} --> {self}.advance has {augmentedWorkingSet=} {self._current=}')
 
         if self._advanceWithPlainMatches(augmentedWorkingSet):
             ringlog.debug(f'{INDENT*6} <-- {self}.advance finished with plain matches')
@@ -234,7 +234,7 @@ class Lhs:
 
             yield BoundLhs(self, lastRing.currentBinding())
 
-            self._debugChunkStack('odometer', chunkStack)
+            # self._debugChunkStack('odometer', chunkStack)
 
             done = self._advanceTheStack(chunkStack)
 
