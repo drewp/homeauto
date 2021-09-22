@@ -401,6 +401,24 @@ class TestUseCases(WithGraphEqual):
 
 ''')
 
+    def testRemap(self):
+        inf = makeInferenceWithRules('''
+            {
+            ?sensor a :AirQualitySensor; :label ?name .
+            (:mqttSource ?name) :childResource ?base .
+            } => {
+            ?sensor :statementSourceBase ?base .
+            } .
+        ''')
+        out = inf.infer(N3('''
+            :airQualityIndoor a :AirQualitySensor; :label "air_quality_indoor" .
+            :airQualityOutdoor a :AirQualitySensor; :label "air_quality_outdoor" .
+        '''))
+        self.assertGraphEqual(out, N3('''
+            :airQualityIndoor  :statementSourceBase <http://projects.bigasterisk.com/room/mqttSource/air_quality_indoor> .
+            :airQualityOutdoor :statementSourceBase <http://projects.bigasterisk.com/room/mqttSource/air_quality_outdoor> .
+        '''))
+
 
 class TestListPerformance(WithGraphEqual):
 

@@ -118,8 +118,8 @@ class Chunk:  # rename this
             yield aligned
 
     def __repr__(self):
-        pre = ('+'.join('%s' % elem for elem in self.subjList) + '+' if self.subjList else '')
-        post = ('+' + '+'.join('%s' % elem for elem in self.objList) if self.objList else '')
+        pre = ('+'.join(repr(elem) for elem in self.subjList) + '+' if self.subjList else '')
+        post = ('+' + '+'.join(repr(elem) for elem in self.objList) if self.objList else '')
         return pre + repr(self.primary) + post
 
     def isFunctionCall(self, functionsFor) -> bool:

@@ -473,6 +473,6 @@ class Inference:
         log.debug('')
         log.debug(f'{INDENT*2}-applying rule {i}')
         log.debug(f'{INDENT*3} rule def lhs:')
-        for stmt in sorted(r.lhsGraph, reverse=True):
+        for stmt in sorted(r.lhs.graph.allChunks()):
             log.debug(f'{INDENT*4} {stmt}')
         log.debug(f'{INDENT*3} rule def rhs: {graphDump(r.rhsGraph)}')
