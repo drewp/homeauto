@@ -117,18 +117,27 @@ class TestInferenceWithVars(WithGraphEqual):
             :new :stmt2 :new .
             """))
 
-    def testVarLinksTwoStatements(self):
-        inf = makeInferenceWithRules("{ :a :b ?x . :d :e ?x } => { :new :stmt ?x } .")
-        implied = inf.infer(N3(":a :b :c  ."))
-        self.assertGraphEqual(implied, N3(""))
-        implied = inf.infer(N3(":a :b :c . :d :e :f ."))
-        self.assertGraphEqual(implied, N3(""))
-        implied = inf.infer(N3(":a :b :c . :d :e :c ."))
-        self.assertGraphEqual(implied, N3(":new :stmt :c ."))
-
     def testRuleMatchesStaticStatement(self):
         inf = makeInferenceWithRules("{ :a :b ?x . :a :b :c . } => { :new :stmt ?x } .")
         implied = inf.infer(N3(":a :b :c  ."))
+        self.assertGraphEqual(implied, N3(":new :stmt :c ."))
+
+
+class TestVarLinksTwoStatements(WithGraphEqual):
+
+    def setUp(self):
+        self.inf = makeInferenceWithRules("{ :a :b ?x . :d :e ?x } => { :new :stmt ?x } .")
+
+    def testOnlyOneStatementPresent(self):
+        implied = self.inf.infer(N3(":a :b :c  ."))
+        self.assertGraphEqual(implied, N3(""))
+
+    def testObjectsConflict(self):
+        implied = self.inf.infer(N3(":a :b :c . :d :e :f ."))
+        self.assertGraphEqual(implied, N3(""))
+
+    def testObjectsAgree(self):
+        implied = self.inf.infer(N3(":a :b :c . :d :e :c ."))
         self.assertGraphEqual(implied, N3(":new :stmt :c ."))
 
 
