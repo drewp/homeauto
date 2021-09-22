@@ -186,6 +186,30 @@ class TestBnodeAliasingSetup(WithGraphEqual):
         """))
         self.assertResult(implied)
 
+    def testProdCase(self):
+        inf = makeInferenceWithRules('''
+            {
+            :AirQualitySensor :nameRemap [
+                :sensorName ?sensorName;
+                :measurementName ?measurement
+                ] .
+            } => {
+            :a :b ?sensorName.
+            :d :e ?measurement.
+            } .
+        ''')
+        implied = inf.infer(
+            N3('''
+            :AirQualitySensor :nameRemap
+              [:sensorName "bme280_pressure"; :measurementName "pressure"],
+              [:sensorName "bme280_temperature"; :measurementName "temperature"] .
+        '''))
+
+        self.assertGraphEqual(implied, N3('''
+          :a :b "bme280_pressure", "bme280_temperature" .
+          :d :e "pressure", "temperature" .
+        '''))
+
 
 class TestBnodeGenerating(WithGraphEqual):
 

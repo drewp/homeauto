@@ -1,14 +1,13 @@
 import logging
 from decimal import Decimal
-from typing import (Dict, Iterator, List, Optional, Set, Tuple, Type, Union, cast)
+from typing import Dict, Iterator, List, Optional, Type, Union, cast
 
-from prometheus_client import Summary
-from rdflib import RDF, Literal, Namespace, URIRef
+from rdflib import Literal, Namespace, URIRef
 from rdflib.term import Node, Variable
 
 from candidate_binding import CandidateBinding
-from inference_types import BindableTerm, Triple
-from stmt_chunk import Chunk, ChunkedGraph
+from inference_types import BindableTerm
+from stmt_chunk import Chunk
 
 log = logging.getLogger('infer')
 

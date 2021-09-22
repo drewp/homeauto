@@ -1,14 +1,14 @@
 import itertools
 import logging
 from dataclasses import dataclass
-from typing import Iterable, Iterator, List, Optional, Set, Tuple, cast
+from typing import Iterable, Iterator, List, Optional, Set, Tuple, Type, Union, cast
 
 from rdflib.graph import Graph
 from rdflib.namespace import RDF
-from rdflib.term import BNode, Literal, Node, URIRef, Variable
+from rdflib.term import Literal, Node, URIRef, Variable
 
 from candidate_binding import CandidateBinding
-from inference_types import Inconsistent
+from inference_types import Inconsistent, RuleUnboundBnode, WorkingSetBnode
 
 log = logging.getLogger('infer')
 
@@ -37,7 +37,7 @@ class AlignedRuleChunk:
         """
         outBinding = CandidateBinding({})
         for rt, ct in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
-            if isinstance(rt, (Variable, BNode)):
+            if isinstance(rt, (Variable, RuleUnboundBnode)):
                 if prevBindings.contains(rt) and prevBindings.applyTerm(rt) != ct:
                     msg = f'{rt=} {ct=} {prevBindings=}' if log.isEnabledFor(logging.DEBUG) else ''
                     raise Inconsistent(msg)
@@ -55,7 +55,7 @@ class AlignedRuleChunk:
     def matches(self) -> bool:
         """could this rule, with its BindableTerm wildcards, match workingSetChunk?"""
         for selfTerm, otherTerm in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
-            if not isinstance(selfTerm, (Variable, BNode)) and selfTerm != otherTerm:
+            if not isinstance(selfTerm, (Variable, RuleUnboundBnode)) and selfTerm != otherTerm:
                 return False
         return True
 
@@ -164,6 +164,7 @@ class ChunkedGraph:
     def __init__(
             self,
             graph: Graph,
+            bnodeType: Union[Type[RuleUnboundBnode], Type[WorkingSetBnode]],
             functionsFor  # get rid of this- i'm just working around a circular import
     ):
         self.chunksUsedByFuncs: Set[Chunk] = set()
@@ -197,6 +198,11 @@ class ChunkedGraph:
             if o in firstNodes:
                 objList = gatherList(o)
                 o = None
+            from rdflib import BNode
+            if isinstance(s, BNode): s = bnodeType(s)
+            if isinstance(p, BNode): p = bnodeType(p)
+            if isinstance(o, BNode): o = bnodeType(o)
+
             c = Chunk((s, p, o), subjList=subjList, objList=objList)
 
             if c.isFunctionCall(functionsFor):
