@@ -1,12 +1,11 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, Iterator
+from typing import Dict, Iterable, Iterator, Union
 
-from prometheus_client import Summary
-from rdflib import BNode, Graph
+from rdflib import Graph
 from rdflib.term import Node, Variable
 
-from inference_types import BindableTerm, BindingUnknown, Triple
+from inference_types import BindableTerm, BindingUnknown, RuleUnboundBnode, Triple
 
 log = logging.getLogger('cbind')
 INDENT = '    '
@@ -20,11 +19,20 @@ class BindingConflict(ValueError):  # might be the same as `Inconsistent`
 class CandidateBinding:
     binding: Dict[BindableTerm, Node]
 
+    def __post_init__(self):
+        for n in self.binding.values():
+            if isinstance(n, RuleUnboundBnode):
+                raise TypeError(repr(self))
+
     def __repr__(self):
         b = " ".join("%r=%r" % (var, value) for var, value in sorted(self.binding.items()))
         return f'CandidateBinding({b})'
 
-    def apply(self, g: Graph, returnBoundStatementsOnly=True) -> Iterator[Triple]:
+    def key(self):
+        """note this is only good for the current value, and self.binding is mutable"""
+        return tuple(sorted(self.binding.items()))
+
+    def apply(self, g: Union[Graph, Iterable[Triple]], returnBoundStatementsOnly=True) -> Iterator[Triple]:
         for stmt in g:
             try:
                 bound = (
@@ -42,7 +50,7 @@ class CandidateBinding:
             yield bound
 
     def applyTerm(self, term: Node, failUnbound=True):
-        if isinstance(term, (Variable, BNode)):
+        if isinstance(term, (Variable, RuleUnboundBnode)):
             if term in self.binding:
                 return self.binding[term]
             else:
