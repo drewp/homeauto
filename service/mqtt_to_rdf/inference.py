@@ -85,6 +85,7 @@ class ChunkLooper:
         if self._pastEnd:
             raise NotImplementedError('need restart')
         ringlog.debug('')
+        self._currentIsFromFunc = None
         augmentedWorkingSet: List[AlignedRuleChunk] = []
         if self.prev is None:
             augmentedWorkingSet = self._alignedMatches
@@ -139,6 +140,7 @@ class ChunkLooper:
                 pass
             else:
                 if newBinding is not None:
+                    self._currentIsFromFunc = fn
                     if self._testAndKeepNewBinding(newBinding):
                         return True
 
@@ -182,6 +184,14 @@ class ChunkLooper:
         self.advance()
         if self.pastEnd():
             raise NoOptions()
+
+    def prevMayHaveChanged(self):
+        # This is a total patch for a test failure. This should be generalized
+        # to a Looper that can keep itself correct when prev changes.
+        if self._currentIsFromFunc:
+            self._advanceWithFunctions()
+            if self.pastEnd():
+                self.restart()
 
 
 @dataclass
@@ -324,12 +334,18 @@ class Lhs:
                 yield perm
 
     def _advanceTheStack(self, looperRings: List[ChunkLooper]) -> bool:
+
+        def freshenRight(i):
+            for ring in looperRings[i + 1:]:
+                ring.prevMayHaveChanged()
+
         carry = True  # last elem always must advance
         for i, ring in reversed(list(enumerate(looperRings))):
             # unlike normal odometer, advancing any earlier ring could invalidate later ones
             if carry:
                 odolog.debug(f'{INDENT*4} advanceAll [ring={i}] {ring} carry/advance')
                 ring.advance()
+                freshenRight(i)
                 carry = False
             if ring.pastEnd():
                 if ring is looperRings[0]:
@@ -338,6 +354,7 @@ class Lhs:
                     return True
                 odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} restart')
                 ring.restart()
+                freshenRight(i)
                 carry = True
         return False
 
