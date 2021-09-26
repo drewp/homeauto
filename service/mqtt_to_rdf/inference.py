@@ -7,7 +7,7 @@ import logging
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Dict, Iterator, List, Optional, Union, cast
+from typing import Dict, Iterator, List, Optional, Tuple, Union, cast
 
 from prometheus_client import Histogram, Summary
 from rdflib import Graph, Namespace
@@ -131,8 +131,10 @@ class ChunkLooper:
             ringlog.debug(f'{INDENT*7} ChunkLooper{self._shortId} advanceWithFunctions, {functionType=}')
 
             try:
-
+                log.debug(f'fn.bind {self._prevBindings()} ...')
+                #fullBinding = self._prevBindings().copy()
                 newBinding = fn.bind(self._prevBindings())
+                log.debug(f'...makes {newBinding=}')
             except BindingUnknown:
                 pass
             else:
@@ -142,7 +144,7 @@ class ChunkLooper:
 
         return False
 
-    def _testAndKeepNewBinding(self, newBinding):
+    def _testAndKeepNewBinding(self, newBinding: CandidateBinding):
         fullBinding: CandidateBinding = self._prevBindings().copy()
         fullBinding.addNewBindings(newBinding)
         isNew = fullBinding not in self._seenBindings
@@ -221,6 +223,8 @@ class Lhs:
         except NoOptions:
             ringlog.debug(f'{INDENT*5} start up with no options; 0 bindings')
             return
+        log.debug('')
+        log.debug('')
         self._debugChunkStack('time to spin: initial odometer is', chunkStack)
         self._assertAllRingsAreValid(chunkStack)
 
@@ -268,11 +272,15 @@ class Lhs:
         chunks = list(self.graph.patternChunks.union(self.graph.chunksUsedByFuncs))
         chunks.sort(key=None)
         odolog.info(f' {INDENT*3} taking permutations of {len(chunks)=}')
-        for i, perm in enumerate(itertools.permutations(chunks)):
+
+        permsTried = 0
+
+        for perm in self._partitionedGraphPermutations():
             looperRings: List[ChunkLooper] = []
             prev: Optional[ChunkLooper] = None
             if odolog.isEnabledFor(logging.DEBUG):
-                odolog.debug(f'{INDENT*4} [perm {i}] try rule chunks in this order: {"  THEN  ".join(repr(p) for p in perm)}')
+                odolog.debug(
+                    f'{INDENT*4} [perm {permsTried}] try rule chunks in this order: {"  THEN  ".join(repr(p) for p in perm)}')
 
             for ruleChunk in perm:
                 try:
@@ -290,26 +298,45 @@ class Lhs:
                 # starting rings. The rules might be tricky enough that this
                 # permutation won't get us to the solution.
                 return looperRings
-            if i > 50000:
+            if permsTried > 50000:
                 raise NotImplementedError(f'trying too many permutations {len(chunks)=}')
+            permsTried += 1
 
         odolog.debug(f'{INDENT*5} no perms worked- rule cannot match anything')
         raise NoOptions()
+
+    def _unpartitionedGraphPermutations(self) -> Iterator[Tuple[Chunk, ...]]:
+        for perm in itertools.permutations(sorted(list(self.graph.patternChunks.union(self.graph.chunksUsedByFuncs)))):
+            yield perm
+
+    def _partitionedGraphPermutations(self) -> Iterator[Tuple[Chunk, ...]]:
+        """always puts function chunks after pattern chunks
+
+        (and, if we cared, static chunks could go before that. Currently they're
+        culled out elsewhere, but that's done as a special case)
+        """
+        tupleOfNoChunks: Tuple[Chunk, ...] = ()
+        pats = sorted(self.graph.patternChunks)
+        funcs = sorted(self.graph.chunksUsedByFuncs)
+        for patternPart in itertools.permutations(pats) if pats else [tupleOfNoChunks]:
+            for funcPart in itertools.permutations(funcs) if funcs else [tupleOfNoChunks]:
+                perm = patternPart + funcPart
+                yield perm
 
     def _advanceTheStack(self, looperRings: List[ChunkLooper]) -> bool:
         carry = True  # last elem always must advance
         for i, ring in reversed(list(enumerate(looperRings))):
             # unlike normal odometer, advancing any earlier ring could invalidate later ones
             if carry:
-                odolog.debug(f'{INDENT*4} advanceAll [{i}] {ring} carry/advance')
+                odolog.debug(f'{INDENT*4} advanceAll [ring={i}] {ring} carry/advance')
                 ring.advance()
                 carry = False
             if ring.pastEnd():
                 if ring is looperRings[0]:
                     allRingsDone = [r.pastEnd() for r in looperRings]
-                    odolog.debug(f'{INDENT*4} advanceAll [{i}] {ring} says we done   {allRingsDone=}')
+                    odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} says we done   {allRingsDone=}')
                     return True
-                odolog.debug(f'{INDENT*4} advanceAll [{i}] {ring} restart')
+                odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} restart')
                 ring.restart()
                 carry = True
         return False

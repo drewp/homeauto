@@ -404,10 +404,10 @@ class TestUseCases(WithGraphEqual):
     def testRemap(self):
         inf = makeInferenceWithRules('''
             {
-            ?sensor a :AirQualitySensor; :label ?name .
-            (:mqttSource ?name) :childResource ?base .
+              ?sensor a :AirQualitySensor; :label ?name .
+              (:mqttSource ?name) :childResource ?base .
             } => {
-            ?sensor :statementSourceBase ?base .
+              ?sensor :statementSourceBase ?base .
             } .
         ''')
         out = inf.infer(N3('''
