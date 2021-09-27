@@ -5,9 +5,14 @@ import itertools
 import rdflib
 import rdflib.plugins.parsers.notation3
 import rdflib.term
-from rdflib import BNode
+from rdflib import BNode, RDF
 
 ROOM = rdflib.Namespace('http://projects.bigasterisk.com/room/')
+
+ABBREVIATE = {
+    '': ROOM,
+    'rdf': RDF,
+}
 
 
 def patchSlimReprs():
@@ -18,8 +23,11 @@ def patchSlimReprs():
     def ur(self):
         clsName = "U" if self.__class__ is rdflib.term.URIRef else self.__class__.__name__
         s = super(rdflib.term.URIRef, self).__str__()
-        if s.startswith(str(ROOM)):
-            s = ':' + s[len(ROOM):]
+        for short, long in ABBREVIATE.items():
+            if s.startswith(str(long)):
+                s = short + ':' + s[len(str(long)):]
+                break
+
         return """%s(%s)""" % (clsName, s)
 
     rdflib.term.URIRef.__repr__ = ur
