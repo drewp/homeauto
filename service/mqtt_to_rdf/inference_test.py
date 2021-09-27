@@ -4,7 +4,7 @@ also see https://github.com/w3c/N3/tree/master/tests/N3Tests
 import unittest
 from decimal import Decimal
 from typing import cast
-
+from pathlib import Path
 from rdflib import ConjunctiveGraph, Graph, Literal, Namespace
 from rdflib.parser import StringInputSource
 
@@ -189,13 +189,13 @@ class TestBnodeAliasingSetup(WithGraphEqual):
     def testProdCase(self):
         inf = makeInferenceWithRules('''
             {
-            :AirQualitySensor :nameRemap [
-                :sensorName ?sensorName;
-                :measurementName ?measurement
-                ] .
+                :AirQualitySensor :nameRemap [
+                    :sensorName ?sensorName;
+                    :measurementName ?measurement
+                    ] .
             } => {
-            :a :b ?sensorName.
-            :d :e ?measurement.
+                :a :b ?sensorName.
+                :d :e ?measurement.
             } .
         ''')
         implied = inf.infer(
@@ -413,7 +413,7 @@ class TestUseCases(WithGraphEqual):
         out = inf.infer(N3('''
             :airQualityIndoor a :AirQualitySensor; :label "air_quality_indoor" .
             :airQualityOutdoor a :AirQualitySensor; :label "air_quality_outdoor" .
-        '''))
+        '''), Path('/tmp/log.html'))
         self.assertGraphEqual(out, N3('''
             :airQualityIndoor  :statementSourceBase <http://projects.bigasterisk.com/room/mqttSource/air_quality_indoor> .
             :airQualityOutdoor :statementSourceBase <http://projects.bigasterisk.com/room/mqttSource/air_quality_outdoor> .

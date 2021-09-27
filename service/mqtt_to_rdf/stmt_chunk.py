@@ -57,6 +57,7 @@ class AlignedRuleChunk:
         for selfTerm, otherTerm in zip(self.ruleChunk._allTerms(), self.workingSetChunk._allTerms()):
             if not isinstance(selfTerm, (Variable, RuleUnboundBnode)) and selfTerm != otherTerm:
                 return False
+
         return True
 
 
@@ -146,8 +147,7 @@ def _termIsStatic(term: Optional[Node]) -> bool:
     return isinstance(term, (URIRef, Literal)) or term is None
 
 
-def applyChunky(cb: CandidateBinding,
-                g: Iterable[AlignedRuleChunk]) -> Iterator[AlignedRuleChunk]:
+def applyChunky(cb: CandidateBinding, g: Iterable[AlignedRuleChunk]) -> Iterator[AlignedRuleChunk]:
     for aligned in g:
         bound = aligned.ruleChunk.apply(cb)
         try:
@@ -199,9 +199,12 @@ class ChunkedGraph:
                 objList = gatherList(o)
                 o = None
             from rdflib import BNode
-            if isinstance(s, BNode): s = bnodeType(s)
-            if isinstance(p, BNode): p = bnodeType(p)
-            if isinstance(o, BNode): o = bnodeType(o)
+            if isinstance(s, BNode):
+                s = bnodeType(s)
+            if isinstance(p, BNode):
+                p = bnodeType(p)
+            if isinstance(o, BNode):
+                o = bnodeType(o)
 
             c = Chunk((s, p, o), subjList=subjList, objList=objList)
 

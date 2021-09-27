@@ -6,6 +6,7 @@ rdflib-jsonld==0.5.0
 rdflib==4.2.2
 rx==3.2.0
 service_identity==21.1.0
+simple-html==0.6.0
 twisted-mqtt==0.3.9
 
 cycloneerr
