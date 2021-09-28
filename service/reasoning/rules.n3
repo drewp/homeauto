@@ -17,22 +17,22 @@
 # { ?d :deviceName "drew-phone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 # { ?d :deviceName "Kelsis-iPhone"; :connected bigast:wifiAccessPoints . } => { :auth :near :home } .
 
-{ env: :localHour 8 } => { env: :localHour :awakeTime } .
-{ env: :localHour 9 } => { env: :localHour :awakeTime } .
-{ env: :localHour 10 } => { env: :localHour :awakeTime } .
-{ env: :localHour 11 } => { env: :localHour :awakeTime } .
-{ env: :localHour 12 } => { env: :localHour :awakeTime } .
-{ env: :localHour 13 } => { env: :localHour :awakeTime } .
-{ env: :localHour 14 } => { env: :localHour :awakeTime } .
-{ env: :localHour 15 } => { env: :localHour :awakeTime } .
-{ env: :localHour 16 } => { env: :localHour :awakeTime } .
-{ env: :localHour 17 } => { env: :localHour :awakeTime } .
-{ env: :localHour 18 } => { env: :localHour :awakeTime } .
-{ env: :localHour 19 } => { env: :localHour :awakeTime } .
-{ env: :localHour 20 } => { env: :localHour :awakeTime } .
-{ env: :localHour 21 } => { env: :localHour :awakeTime } .
-{ env: :localHour 22 } => { env: :localHour :awakeTime } .
-{ env: :localHour 23 } => { env: :localHour :awakeTime } .
+# { env: :localHour 8 } => { env: :localHour :awakeTime } .
+# { env: :localHour 9 } => { env: :localHour :awakeTime } .
+# { env: :localHour 10 } => { env: :localHour :awakeTime } .
+# { env: :localHour 11 } => { env: :localHour :awakeTime } .
+# { env: :localHour 12 } => { env: :localHour :awakeTime } .
+# { env: :localHour 13 } => { env: :localHour :awakeTime } .
+# { env: :localHour 14 } => { env: :localHour :awakeTime } .
+# { env: :localHour 15 } => { env: :localHour :awakeTime } .
+# { env: :localHour 16 } => { env: :localHour :awakeTime } .
+# { env: :localHour 17 } => { env: :localHour :awakeTime } .
+# { env: :localHour 18 } => { env: :localHour :awakeTime } .
+# { env: :localHour 19 } => { env: :localHour :awakeTime } .
+# { env: :localHour 20 } => { env: :localHour :awakeTime } .
+# { env: :localHour 21 } => { env: :localHour :awakeTime } .
+# { env: :localHour 22 } => { env: :localHour :awakeTime } .
+# { env: :localHour 23 } => { env: :localHour :awakeTime } .
 
 #{
 #  # this won't update right, currently, since I don't let the exact
@@ -65,18 +65,20 @@
 
 { sensor:bedGreenButton :buttonState :press } => {
   :headboardWhite :brightness 0.0 .
+  :bedHeadboard :color "#000000" .
   :anim1 :position :end .
 } .
 
 { sensor:bedRedButton :buttonState :press . :headboardWhite :brightness 0.0 . } => {
-  :headboardWhite :brightness 0.2 . 
+  :headboardWhite :brightness 0.2 .
+  :bedHeadboard :color "#333333" .
 } .
 
 { sensor:bedRedButton :buttonState :press . :headboardWhite :brightness 0.2 . } => {
   :headboardWhite :brightness 1.0 .
+  :bedHeadboard :color "#ffffff" .
 } .
 
-@prefix sensor:   <http://bigasterisk.com/homeauto/sensor/> .
 { sensor:buttonAriBed :buttonState :press } => {
   :starTrekLight :brightness 0.0 .
 } .
@@ -90,22 +92,33 @@
 } .
 
 { sensor:motionChanging :sees :motionStart90 . dev:calendar :twilight :daytime .} => {
-  :changingCam :grab <http://bang:9057/changing-day.jpg> .
+  :changingCam :grab <http://bang:9057/snapshot/changing-day.jpg> .
   } .
 
 { sensor:motionChanging :sees :motionStart90 . dev:calendar :twilight :withinTwilight .} => {
-  :changingCam :grab <http://bang:9057/changing-night.jpg> .
+  :changingCam :grab <http://bang:9057/snapshot/changing-night.jpg> .
   } .
 
-{ :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 0.0 . } => {
-  :livingRoomLamp1 :brightness 1.0 .
-  :livingRoomLamp2 :brightness 1.0 .
-  :livingRoomLamp3 :brightness 1.0 .
+{ :bookSwitch :buttonState :press . :livingRoomLamp3 :brightness 0.0 . } => {
+  :livingRoomLamp1       :brightness 1.0 .
+  :livingRoomLamp2       :brightness 1.0 .
+  :livingRoomLamp3       :brightness 1.0 .
+  :livingLampShelf       :brightness 1.0 .
+  :livingLampMantleEntry :brightness 1.0 .
+  :livingLampMantleChair :brightness 1.0 .
+  :livingLampToyShelf    :brightness 1.0 .
+  :livingLampPiano       :brightness 1.0 .
+                  
 } .
-{ :bookSwitch :buttonState :press . :livingRoomLamp1 :brightness 1.0 . } => {
-  :livingRoomLamp1 :brightness 0.0 .
-  :livingRoomLamp2 :brightness 0.0 .
-  :livingRoomLamp3 :brightness 0.0 .
+{ :bookSwitch :buttonState :press . :livingRoomLamp3 :brightness 1.0 . } => {
+  :livingRoomLamp1       :brightness 0.0 .
+  :livingRoomLamp2       :brightness 0.0 .
+  :livingRoomLamp3       :brightness 0.0 .
+  :livingLampShelf       :brightness 0.0 .
+  :livingLampMantleEntry :brightness 0.0 .
+  :livingLampMantleChair :brightness 0.0 .
+  :livingLampToyShelf    :brightness 0.0 .
+  :livingLampPiano       :brightness 0.0 .
 } .
 
 # { :frontBedPostSwitch1 :buttonState :press . :starTrekLight :brightness 0.0 . } => {
@@ -141,7 +154,7 @@
 } .
 
 
-{ <http://bigasterisk.com/homeauto/sensor/motionGarageDoorInside> :seesRecently :motion . } => {
+{ sensor:motionGarageDoorInside :seesRecently :motion . } => {
   :garageOverhead :brightness 1.0 .
 } .
 
@@ -201,3 +214,7 @@
   :frontWindow :line3 "Open" .
 } .
 
+{  :wallButton1 :state :pressed } => { :yay :button :b1 }.
+{  :wallButton2 :state :pressed } => { :yay :button :b2 }.
+{  :wallButton3 :state :pressed } => { :yay :button :b3 }.
+{  :wallButton4 :state :pressed } => { :yay :button :b4 }.

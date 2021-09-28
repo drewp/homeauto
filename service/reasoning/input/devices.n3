@@ -11,80 +11,89 @@
 :off :putValue "off" .
 
 
-#<http://bigasterisk.com/host/bang/monitor>      :putUrl "http://bang:9095/monitor"; :zeroValue "off" .
-#<http://bigasterisk.com/host/dash/monitor>      :putUrl "http://dash:9095/monitor" .
-<http://bigasterisk.com/host/frontdoor/monitor> :putUrl "http://frontdoor:9095/monitor"; :matchPredicate :powerState .
-reasoning:defaultOutput reasoning:default [
-  :subject <http://bigasterisk.com/host/frontdoor/monitor>;
-  :predicate :powerState;
-  :defaultObject "off"
-] .
-
-:storageCeilingLedCross :putUrl <http://bang:9059/output>; :putPredicate :brightness .
-reasoning:defaultOutput reasoning:default [
-  :subject :storageCeilingLedCross;
-  :predicate :brightness;
-  :defaultObject 0.0
-] .
-
-:storageCeilingLedLong :putUrl <http://bang:9059/output>; :putPredicate :brightness .
-reasoning:defaultOutput reasoning:default [
-  :subject :storageCeilingLedLong;
-  :predicate :brightness;
-  :defaultObject 0.0
-] .
-
-:garageOverhead :putUrl <http://garage.vpn-home.bigasterisk.com:9059/output>; :putPredicate :brightness .
-reasoning:defaultOutput reasoning:default [
-  :subject :garageOverhead;
-  :predicate :brightness;
-  :defaultObject 0.0
-] .
-
-:headboardWhite :putUrl <http://bed.vpn-home.bigasterisk.com:9059/output>; :putPredicate :brightness .
-# no default, follows switch (which should be moved to edit /store)
-
-:bedLedStrip :putUrl <http://bed.vpn-home.bigasterisk.com:9059/output>; :putPredicate :color .
-reasoning:defaultOutput reasoning:default [
-  :subject :bedLedStrip;
-  :predicate :color;
-  :defaultObject "#000000"
-] .
-
-:starTrekLight :putUrl <http://frontbed:9059/output>; :putPredicate :brightness .
-
-:kitchenLight :putUrl <http://bang:10008/output>; :putPredicate :brightness .
-# no default, follows switch
-
-:kitchenCounterLight :putUrl <http://bang:10008/output>; :putPredicate :brightness .
-# no default, follows switch
-
-:changingWhite :putUrl <http://changing:9059/output>; :putPredicate :brightness .
-reasoning:defaultOutput reasoning:default [
-  :subject :changingWhite;
-  :predicate :brightness;
-  :defaultObject 0.0
-] .
-
-:changingCamPost a :OneShotPost; :subject :changingCam; :predicate :grab .
-bang: a :OneShotPost; :subject bang:; :predicate :postAction .
-
-:livingRoomLamp1 :putUrl <http://living:9059/output>; :putPredicate :brightness .
-# no default, follows switch
-
-:loftDeskStrip :putUrl <http://frontbed:9059/output>; :putPredicate :x .
-# no default, follows switch
-
-:frontDoorLock
-  :matchPredicate :putState;
-  :putUrl <http://bang:10011/output>;
-  :refreshPutValue "2s";
-  :putPredicate :state .
-reasoning:defaultOutput reasoning:default [
-  :subject :frontDoorLock;
-  :predicate :putState;
-  :defaultObject :locked
-] .
-
-:frontDoorOled :putUrl <http://frontdoor:10013/output>; :putPredicate :state .
-:frontWindow :putPredicate :line1, :line2, :line3, :line4; :putUrl <http://bang:10008/output> .
+# #<http://bigasterisk.com/host/bang/monitor>      :putUrl "http://bang:9095/monitor"; :zeroValue "off" .
+# #<http://bigasterisk.com/host/dash/monitor>      :putUrl "http://dash:9095/monitor" .
+# <http://bigasterisk.com/host/frontdoor/monitor> :putUrl "http://frontdoor:9095/monitor"; :matchPredicate :powerState .
+# reasoning:defaultOutput reasoning:default [
+#   :subject <http://bigasterisk.com/host/frontdoor/monitor>;
+#   :predicate :powerState;
+#   :defaultObject "off"
+# ] .
+# 
+# :storageCeilingLedCross :putUrl <http://bang:9059/output>; :putPredicate :brightness .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :storageCeilingLedCross;
+#   :predicate :brightness;
+#   :defaultObject 0.0
+# ] .
+# 
+# :storageCeilingLedLong :putUrl <http://bang:9059/output>; :putPredicate :brightness .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :storageCeilingLedLong;
+#   :predicate :brightness;
+#   :defaultObject 0.0
+# ] .
+# 
+# :garageOverhead :putUrl <http://bang5:10314/output>; :putPredicate :brightness .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :garageOverhead;
+#   :predicate :brightness;
+#   :defaultObject 0.0
+# ] .
+# 
+# :headboardWhite :putUrl <http://bang5:10315/output>; :putPredicate :brightness .
+# # no default, follows switch (which should be moved to edit /store)
+# 
+# :bedLedStrip :putUrl <http://bang5:10315/output>; :putPredicate :color .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :bedLedStrip;
+#   :predicate :color;
+#   :defaultObject "#000000"
+# ] .
+# 
+# :starTrekLight :putUrl <http://bang5:10317/output>; :putPredicate :brightness .
+# 
+# :kitchenLight :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# # no default, follows switch
+# 
+# :kitchenCounterLight :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# # no default, follows switch
+# 
+# :changingWhite :putUrl <http://bang5:10316/output>; :putPredicate :brightness .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :changingWhite;
+#   :predicate :brightness;
+#   :defaultObject 0.0
+# ] .
+# 
+# :changingCamPost a :OneShotPost; :subject :changingCam; :predicate :grab .
+# bang:            a :OneShotPost; :subject bang:; :predicate :postAction .
+# 
+# :livingRoomLamp1       :putUrl <http://bang5:10311/output>; :putPredicate :brightness .
+# :livingRoomLamp2       :putUrl <http://bang5:10311/output>; :putPredicate :brightness .
+# :livingRoomLamp3       :putUrl <http://bang5:10311/output>; :putPredicate :brightness .
+# :livingLampShelf       :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# :livingLampShelf       :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# :livingLampMantleEntry :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# :livingLampMantleChair :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# :livingLampToyShelf    :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# :livingLampPiano       :putUrl <http://bang:10008/output>; :putPredicate :brightness .
+# 
+# # no default, follows switch
+# 
+# :loftDeskStrip :putUrl <http://bang5:10317/output>; :putPredicate :x .
+# # no default, follows switch
+# 
+# :frontDoorLock
+#   :matchPredicate :putState;
+#   :putUrl <http://bang:10011/output>;
+#   :refreshPutValue "2s";
+#   :putPredicate :state .
+# reasoning:defaultOutput reasoning:default [
+#   :subject :frontDoorLock;
+#   :predicate :putState;
+#   :defaultObject :locked
+# ] .
+# 
+# :frontDoorOled :putUrl <http://frontdoor:10013/output>; :putPredicate :state .
+# :frontWindow :putPredicate :line1, :line2, :line3, :line4; :putUrl <http://bang:10008/output> .
