@@ -1,12 +1,17 @@
 import logging
+from typing import cast
 import unittest
 
 from rdflib.graph import ConjunctiveGraph
 
 from inference import Inference
 from inference_test import N3
+from rdflib_debug_patches import patchBnodeCounter, patchSlimReprs
 
-logging.basicConfig(level=logging.INFO)
+patchSlimReprs()
+patchBnodeCounter(always=False)
+
+logging.basicConfig(level=logging.DEBUG)
 
 # ~/.venvs/mqtt_to_rdf/bin/nosetests --with-watcher --logging-level=INFO --with-timer -s --nologcapture infer_perf_test
 
@@ -21,6 +26,8 @@ class TestPerf(unittest.TestCase):
         inference.setRules(config)
         expandedConfig = inference.infer(config)
         expandedConfig += inference.nonRuleStatements()
+        print(cast(bytes, expandedConfig.serialize(format='n3')).decode('utf8'))
+        self.fail()
 
         for loop in range(50):
             # g = N3('''
