@@ -18,3 +18,14 @@
   
   .
 
+{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+{ ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+
+
+{
+  ?msg a :MqttMessage ;
+     :topic ( "frontdoorlock" "status" );
+     :onlineTerm ?onlinenessStr . } => {
+  :frontDoorLockStatus :connectedStatus ?onlineness .
+} .
+ 

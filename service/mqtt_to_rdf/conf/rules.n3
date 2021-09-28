@@ -7,16 +7,37 @@
 :airQualityIndoor a :AirQualitySensor; rdfs:label "air_quality_indoor" .
 :airQualityOutdoor a :AirQualitySensor; rdfs:label "air_quality_outdoor" .
 
-{ ?s a :AirQualitySensor; rdfs:label ?name . } => {
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_temperature" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_pressure" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_humidity" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_eco2_value" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_total_volatile_organic_compound" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_10m_concentration" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_25m_concentration" "state") ] .
-  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_100m_concentration" "state") ] .
+:AirQualitySensor :nameRemap
+  [:sensorName "bme280_humidity"; :measurementName "humidity"],
+  [:sensorName "bme280_pressure"; :measurementName "pressure"],
+  [:sensorName "bme280_temperature"; :measurementName "temperature"] .
+
+{ 
+  ?sensor a :AirQualitySensor; rdfs:label ?name . 
+  (:mqttSource ?name) :childResource ?base . 
+} => {
+  ?sensor :statementSourceBase ?base .
 } .
+
+{
+  :AirQualitySensor :nameRemap [
+    :sensorName ?sensorName;
+    :measurementName ?measurement 
+    ] .
+  ?sensor a :AirQualitySensor; rdfs:label ?name; :statementSourceBase ?base . 
+  (?base ?measurement) :childResource ?src .
+} => {
+  ?src a :MqttStatementSource; :mqttTopic (?name "sensor" ?sensorName "state")  .
+} .
+
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_pressure" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "bme280_humidity" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_eco2_value" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "ccs811_total_volatile_organic_compound" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_10m_concentration" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_25m_concentration" "state") ] .
+#  [ a :MqttStatementSource; :mqttTopic (?name "sensor" "particulate_matter_100m_concentration" "state") ] .
+#} .
 
 {
   ?msg a :MqttMessage;
@@ -35,15 +56,15 @@
 
 #################################################################
 
-:frontDoorLockStatus a :MqttStatementSource;
-  :mqttTopic ("frontdoorlock" "status").
-
-{ ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
-{ ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
-
-{
-  ?msg a :MqttMessage ;
-     :topic ( "frontdoorlock" "status" );
-     :onlineTerm ?onlineness . } => {
-  :frontDoorLockStatus :connectedStatus ?onlineness .
-} .
+# :frontDoorLockStatus a :MqttStatementSource;
+#   :mqttTopic ("frontdoorlock" "status").
+# 
+# { ?msg :body "online" . } => { ?msg :onlineTerm :Online . } .
+# { ?msg :body "offline" . } => { ?msg :onlineTerm :Offline . } .
+# 
+# {
+#   ?msg a :MqttMessage ;
+#      :topic ( "frontdoorlock" "status" );
+#      :onlineTerm ?onlineness . } => {
+#   :frontDoorLockStatus :connectedStatus ?onlineness .
+# } .

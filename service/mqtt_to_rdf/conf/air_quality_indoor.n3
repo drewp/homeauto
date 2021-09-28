@@ -2,10 +2,26 @@
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix fr: <http://bigasterisk.com/foaf/> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix math: <http://www.w3.org/2000/10/swap/math#> .
+
 #air_quality_indoor/sensor/bme280_temperature/state 23.7
 #air_quality_indoor/sensor/bme280_pressure/state 1006.5
 #air_quality_indoor/sensor/bme280_humidity/state 40.5
 
+{
+  ?msg a :MqttMessage;
+    :topic ("air_quality_indoor" "sensor" "bme280_temperature" "state");
+    :bodyFloat ?valueC . 
+  ?valueC math:greaterThan -999 .
+  ?valueC :asFarenheit ?valueF .
+} => {
+  :airQualityIndoorTemperature :temperatureF ?valueF .
+  :influxMeasurements :measurement [ 
+    :meas "temperatureF"; 
+    :pointsAtLeastEvery 30; 
+    :tag [:key "host"; :value "air_quality_indoor"],
+         [:key "location"; :value "frontRoomShelf"]] .
+   } .
 
 :airQualityIndoorTemperature a :MqttStatementSource;
   :mqttTopic ("air_quality_indoor" "sensor" "bme280_temperature" "state");
@@ -109,7 +125,7 @@
          [:key "location"; :value "frontRoomShelf"]] .
 
 :airQualityIndoorPm100 a :MqttStatementSource;
-  :mqttTopic ("air_quality_indoor" "sensor" "particulate_matter_100m_concentration" "state");
+  :mqttTopic ("air_quality_indoor" "sensor" "" "state");
   :parser xsd:double;
   :graphStatements [
     :outputPredicate :pm100;  

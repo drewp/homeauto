@@ -1,6 +1,8 @@
 @prefix : <http://projects.bigasterisk.com/room/> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix fr: <http://bigasterisk.com/foaf/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix fr: <http://bigasterisk.com/foaf/> .
 
 # to discover new codes:
 # mosquitto_sub -v -t rfsetup/rf_received
