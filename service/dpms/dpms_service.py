@@ -1,19 +1,6 @@
 #!bin/python
 
 """
-sample supervisord block
-
-[program:dpms_9095]
-directory=/my/proj/homeauto/service/dpms
-command=/my/proj/homeauto/service/dpms/bin/python dpms.py
-user=drewp
-
-On one box, this goes super slow when avahi daemon is running. Maybe
-it's for an attempted dns lookup of the requesting IP address, which I
-wish I could switch off.
-
---
-
 may need this:
 ps axf | grep /run/gdm
 18339 tty7     Ss+    0:00      \_ /usr/bin/X :0 -background none -verbose -auth /run/gdm/auth-for-gdm-iQoCDZ/database -nolisten tcp vt7
@@ -26,47 +13,89 @@ import cyclone.web
 from influxdb import InfluxDBClient
 import subprocess, sys, socket, time, os
 from rdflib import Namespace, URIRef
-from logsetup import log, enableTwistedLog
+from standardservice.logsetup import log, verboseLogging
+from cycloneerr import PrettyErrorHandler
+import dpms
 
-from dpms import DPMS, DPMSModeOn
 DEV = Namespace("http://projects.bigasterisk.com/device/")
 ROOM = Namespace("http://projects.bigasterisk.com/room/")
 
-sys.path.append("/my/site/magma")
 from patchablegraph import PatchableGraph, CycloneGraphEventsHandler, CycloneGraphHandler
-#sys.path.append("../../lib")
-#from localdisplay import setDisplayToLocalX
 
 influx = InfluxDBClient('bang6', 9060, 'root', 'root', 'main')
 
-os.environ['DISPLAY'] = ':0.0'
-
-dpms = DPMS()
 host = socket.gethostname()
 
-def getMonitorState():
-    level, enabled = dpms.Info()
-    return 'on' if level == DPMSModeOn else 'off'
+os.environ['DISPLAY'] = ':0.0'
+d = dpms.DPMS()
 
-class Root(cyclone.web.RequestHandler):
+
+def getMonitorState():
+    return 'on' if d.Info()[0] == dpms.DPMSModeOn else 'off'
+
+class Root(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         getMonitorState() # to make it fail if xset isn't working
+        self.set_header('content-type', 'text/html')
         self.write('''
-          Get and put the <a href="monitor">monitor power</a> with dpms.
-          <a href="graph">rdf graph</a> available.''')
-    
-class Monitor(cyclone.web.RequestHandler):
+        <!doctype html>
+<html>
+  <head>
+    <title>dpms</title>
+    <meta charset="utf-8" />
+    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
+    <script src="/lib/require/require-2.3.3.js"></script>
+    <script src="/rdf/common_paths_and_ns.js"></script>
+
+    <link rel="import" href="/rdf/streamed-graph.html">
+    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+  </head>
+  <body>
+    <template id="t" is="dom-bind">
+
+      Get and put the <a href="monitor">monitor power</a> with dpms.
+
+      <streamed-graph url="graph/dpms/events" graph="{{graph}}"></streamed-graph>
+      <div id="out"></div>
+      <script type="module" src="/rdf/streamed_graph_view.js"></script>
+    </template>
+    <style>
+     .served-resources {
+         margin-top: 4em;
+         border-top: 1px solid gray;
+         padding-top: 1em;
+     }
+     .served-resources a {
+         padding-right: 2em;
+     }
+    </style>
+
+      <div class="served-resources">
+        <a href="stats/">/stats/</a>
+        <a href="graph/dpms">/graph/dpms</a>
+        <a href="graph/dpms/events">/graph/dpms/events</a>
+        <a href="monitor">/monitor (put)</a>
+    </div>
+
+  </body>
+</html>
+''')
+
+
+class Monitor(PrettyErrorHandler, cyclone.web.RequestHandler):
     def get(self):
         self.set_header('content-type', 'text/plain')
         self.write(getMonitorState())
 
     def put(self):
-        body = self.request.body.strip()
-        if body in ['on', 'off']:
-            subprocess.check_call(['xset', 'dpms', 'force', body])
-            self.set_status(204)
-        else:
+        body = self.request.body.decode('ascii').strip()
+        if body not in ['on', 'off']:
             raise NotImplementedError("body must be 'on' or 'off'")
+        d.ForceLevel(dpms.DPMSModeOff if body == 'off' else dpms.DPMSModeOn)
+        self.set_status(204)
 
 class Poller(object):
     def __init__(self):
@@ -95,6 +124,8 @@ class Poller(object):
 
             self.lastSent = state
             self.lastSentTime = now
+
+verboseLogging(False)
 
 masterGraph = PatchableGraph()
 poller = Poller()
