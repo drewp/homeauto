@@ -4,7 +4,7 @@ import etcd3
 
 from twisted.python.filepath import FilePath
 
-etcd = etcd3.client(host='bang', port=9022)
+etcd = etcd3.client(host='etcd-homeauto', port=9022)
 
 prefix, = sys.argv[1:]
 

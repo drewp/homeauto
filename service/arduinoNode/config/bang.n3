@@ -46,8 +46,9 @@ pin:d5 :connectedTo :storageCeilingLedCross .
 
 pin:d6 :connectedTo :storageCeilingLedLong .
 :storageCeilingLedLong a :LedOutput .
-  
-pin:d7 :connectedTo ow: .
+
+# too slow
+#pin:d7 :connectedTo ow: .
 ow: a :OneWire;
   :connectedTo ow:dev-1052790f02080086, ow:dev-2809b8a503000035 .
 ow:dev-1052790f02080086 a :TemperatureSensor;

@@ -2,33 +2,17 @@
 <html>
   <head>
     <title>environment</title>
-    <meta charset="utf-8" />
-    <script src="/lib/polymer/1.0.9/webcomponentsjs/webcomponents.min.js"></script>
-    <script src="/lib/require/require-2.3.3.js"></script>
-    <script src="/rdf/common_paths_and_ns.js"></script>
+    <meta charset="utf-8">
+    <script src="/lib/webcomponents/2.4.0/webcomponents-bundle.js"></script>
 
-    <link rel="import" href="/rdf/streamed-graph.html">
-    <link rel="import" href="/lib/polymer/1.0.9/polymer/polymer.html">
-
+    <script type="module" src="/rdf/streamed-graph.bundle.js"></script>
+    <link rel="stylesheet" href="/rdf/streamed-graph.css">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
   </head>
-  <body>
-    <template id="t" is="dom-bind">
-      <streamed-graph url="graph/events" graph="{{graph}}"></streamed-graph>
-      <div id="out"></div>
-      <script type="module" src="/rdf/streamed_graph_view.js"></script>
-    </template>
-    <style>
-     .served-resources {
-         margin-top: 4em;
-         border-top: 1px solid gray;
-         padding-top: 1em;
-     }
-     .served-resources a {
-         padding-right: 2em;
-     }
-    </style>
+  <body class="rdfBrowsePage">
+      <streamed-graph url="graph/events" expanded="true"></streamed-graph>
+
 
       <div class="served-resources">
         <a href="stats/">/stats/</a>

@@ -42,13 +42,13 @@ class DeviceType(object):
 
     # subclasses may add args to this
     def __init__(self, graph, uri, pinNumber):
-        scales.init(self, self.__class__.__name__)
-        self._stats = scales.collection(self.__class__.__name__,
-                                        scales.PmfStat('poll'),
-                                        scales.PmfStat('output'),
-        )
         self.graph, self.uri = graph, uri
         self.pinNumber = pinNumber
+        scales.init(self, self.__class__.__name__)
+        self.stats = scales.collection(self.__class__.__name__,
+                                       scales.PmfStat('poll'),
+                                       scales.PmfStat('output'),
+        )
         self.hostStateInit()
 
     def hostStateInit(self):

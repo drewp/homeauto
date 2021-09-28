@@ -178,7 +178,7 @@ class Board(object):
         t1 = time.time()
         self.ser.write("\x60\x00") # "poll everything"
         for i in self._polledDevs:
-            with i._stats.poll.time():
+            with i.stats.poll.time():
                 try:
                     now = time.time()
                     new = i.readFromPoll(self.ser.read)
@@ -250,7 +250,7 @@ class Board(object):
                         unused.discard(stmt)
             if stmtsForDev:
                 log.info("output goes to action handler for %s" % dev.uri)
-                with dev._stats.output.time():
+                with dev.stats.output.time():
                     self.ser.write("\x60" + chr(self._devCommandNum[dev.uri]))
                     dev.sendOutput(stmtsForDev, self.ser.write, self.ser.read)
                     if self.ser.read(1) != 'k':

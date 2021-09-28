@@ -36,26 +36,11 @@ devs = {
         'root': 'h801_counter',
         'hasWhite': True,
     },
-    ROOM['livingLampShelf']: {
-        'root': 'sonoff_0/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
-    ROOM['livingLampMantleEntry']: {
-        'root': 'sonoff_1/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
-    ROOM['livingLampMantleChair']: {
-        'root': 'sonoff_2/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
-    ROOM['livingLampToyShelf']: {
-        'root': 'sonoff_3/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
-    ROOM['livingLampPiano']: {
-        'root': 'sonoff_4/switch/sonoff_basic_relay/command',
-        'values': 'binary',
-    },
+    ROOM['livingLampShelf']:       { 'root': 'sonoff_0/switch/sonoff_basic_relay/command', 'values': 'binary', },
+    ROOM['livingLampMantleEntry']: { 'root': 'sonoff_1/switch/sonoff_basic_relay/command', 'values': 'binary', },
+    ROOM['livingLampMantleChair']: { 'root': 'sonoff_2/switch/sonoff_basic_relay/command', 'values': 'binary', },
+    ROOM['livingLampToyShelf']:    { 'root': 'sonoff_3/switch/sonoff_basic_relay/command', 'values': 'binary', },
+    ROOM['livingLampPiano']:       { 'root': 'sonoff_4/switch/sonoff_basic_relay/command', 'values': 'binary', },
     ROOM['theater']: {
         'root': 'theater_blaster/ir_out',
         'values': 'theaterOutputs',
@@ -65,38 +50,15 @@ devs = {
         'hasWhite': True,
     },
     # https://github.com/Koenkk/zigbee2mqtt.io/blob/new_api/docs/information/mqtt_topics_and_message_structure.md#general
-    ROOM['frontRoom1']: {
-        'root': 'zigbee2mqtt/frontRoom1/set',
-        'hasBrightness': True,
-        'defaults': {
-            'transition': 0,
-        }
-    },
-    ROOM['frontRoom2']: {
-        'root': 'zigbee2mqtt/frontRoom2/set',
-        'hasBrightness': True,
-        'defaults': {
-            'transition': 0,
-        }
-    },
-    ROOM['asherCeiling']: {
-        'root': 'zigbee2mqtt/asherCeiling/set',
-        'hasBrightness': True,
-        'defaults': {
-            'transition': 0,
-        }
-    },
-    ROOM['stairTop']: {
-        'root': 'zigbee2mqtt/stairTop/set',
-        'hasBrightness': True,
-        'defaults': {
-            'transition': 0,
-        }
-    },
-    ROOM['noname1']: { 'root': 'zigbee2mqtt/0xf0d1b8000001ffc6/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
-    ROOM['noname2']: { 'root': 'zigbee2mqtt/0xf0d1b80000023583/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
-    ROOM['noname3']: { 'root': 'zigbee2mqtt/0xf0d1b80000023708/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
-    ROOM['noname4']: { 'root': 'zigbee2mqtt/0xf0d1b80000022adc/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['frontRoom1']:   { 'root': 'zigbee-dash/frontRoom1/set',             'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['frontRoom2']:   { 'root': 'zigbee-dash/frontRoom2/set',             'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['asherCeiling']: { 'root': 'zigbee-frontbed/0xf0d1b80000022c86/set', 'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['asherBedBar']:  { 'root': 'bed_bar_asher/light/rgb/command',        'hasBrightness': True, 'defaults': {}},
+    ROOM['stairTop']:     { 'root': 'zigbee-dash/stairTop/set',               'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname1']:      { 'root': 'zigbee-bang/0xf0d1b8000001ffc6/set',     'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname2']:      { 'root': 'zigbee-bang/0xf0d1b80000023583/set',     'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname3']:      { 'root': 'zigbee-bang/0xf0d1b80000023708/set',     'hasBrightness': True, 'defaults': { 'transition': 0, } },
+    ROOM['noname4']:      { 'root': 'zigbee-bang/0xf0d1b80000022adc/set',     'hasBrightness': True, 'defaults': { 'transition': 0, } },
 }
 
 
@@ -138,7 +100,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                 if h.endswith(b'K'):  # accept "0.7*2200K" (brightness 0.7)
                     # see https://www.zigbee2mqtt.io/information/mqtt_topics_and_message_structure.html#zigbee2mqttfriendly_nameset
                     bright, kelvin = map(float, h[:-1].split(b'*'))
-                    msg['state'] = 'ON'                    
+                    msg['state'] = 'ON'
                     msg["color_temp"] = round(1000000 / kelvin, 2)
                     msg['brightness'] = int(bright * 255)  # 1..20 look about the same
                 else:
@@ -150,6 +112,7 @@ class OutputPage(PrettyErrorHandler, cyclone.web.RequestHandler):
                             'g': g,
                             'b': b
                         },
+                        'brightness': max(r, g, b),
                     }
 
                     if attrs.get('hasWhite', False):

@@ -2,8 +2,8 @@
 see ./reasoning for usage
 """
 
-import contextlib
 import os
+import logging
 
 from prometheus_client import Summary
 from rdflib import Graph, Namespace
@@ -11,6 +11,8 @@ from rdflib.graph import ConjunctiveGraph
 from rdflib.parser import StringInputSource
 
 from escapeoutputstatements import escapeOutputStatements
+
+log = logging.getLogger()
 
 READ_RULES_CALLS = Summary('read_rules_calls', 'calls')
 
@@ -77,8 +79,10 @@ def infer(graph: ConjunctiveGraph, rules: ConjunctiveGraph):
 
     implied = ConjunctiveGraph()
 
+    bailout_iterations = 100
     delta = 1
-    while delta > 0:
+    while delta > 0 and bailout_iterations > 0:
+        bailout_iterations -= 1
         delta = -len(implied)
 
         for r in rules:
@@ -102,42 +106,3 @@ def infer(graph: ConjunctiveGraph, rules: ConjunctiveGraph):
     for st in implied:
         log.info(f'  {st}')
     return implied
-
-    # based on fuxi/tools/rdfpipe.py
-    target = Graph()
-    tokenSet = generateTokenSet(graph)
-    with _dontChangeRulesStore(rules):
-        network = ReteNetwork(rules, inferredTarget=target)
-        network.feedFactsToAdd(tokenSet)
-
-    return target
-
-
-@contextlib.contextmanager
-def _dontChangeRulesStore(rules):
-    if not hasattr(rules, '_stashOriginalRules'):
-        rules._stashOriginalRules = rules.rules[:]
-    yield
-    for k in list(rules.formulae.keys()):
-        if not k.startswith('_:Formula'):
-            del rules.formulae[k]
-    rules.rules = rules._stashOriginalRules[:]
-
-
-import logging
-import time
-
-log = logging.getLogger()
-
-
-def logTime(func):
-
-    def inner(*args, **kw):
-        t1 = time.time()
-        try:
-            ret = func(*args, **kw)
-        finally:
-            log.info("Call to %s took %.1f ms" % (func.__name__, 1000 * (time.time() - t1)))
-        return ret
-
-    return inner

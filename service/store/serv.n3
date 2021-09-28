@@ -9,6 +9,7 @@ serv:store a :Service;
       :internalPort 10015;
       :prodDockerFlags (
       "-p" "10015:10015"
+      "-v" "/opt/homeauto_store:/opt/homeauto_store"
       "--net=host"
       );
       :localDockerFlags (

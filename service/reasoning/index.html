@@ -49,6 +49,9 @@
         <button data-url="oneShot" data-body=":frontBedPostSwitch3 :buttonState :press .">asher bed post 3</button>
         <button data-url="oneShot" data-body=":frontBedPostSwitch4 :buttonState :press .">asher bed post 4</button>
         <button data-url="oneShot" data-body=":frontBedPostSwitch5 :buttonState :press .">asher bed post 5</button>
+        <button data-url="oneShot" data-body=":changingCam :grab <http://bang:9057/snapshot/changing-day.jpg> .">changingCam/day</button>
+        <button data-url="oneShot" data-body=":changingCam :grab <http://bang:9057/snapshot/changing-night.jpg> .">changingCam/night</button>
+
         <script>
          Array.from(document.querySelectorAll("button[data-url]")).forEach((el) => {
            el.addEventListener("click", (ev) => {

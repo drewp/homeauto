@@ -6,7 +6,7 @@ data from http://aa.usno.navy.mil/data/docs/RS_OneYear.php (2013, san francisco)
 which I found via http://www.perceptiveautomation.com/userforum/viewtopic.php?t=8627&p=54621
 """
 _src = """
-       Jan.       Feb.       Mar.       Apr.       May        June       July       Aug.       Sept.      Oct.       Nov.       Dec.  
+       Jan.       Feb.       Mar.       Apr.       May        June       July       Aug.       Sept.      Oct.       Nov.       Dec.
 Day Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End  Begin End
      h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m   h m  h m
 01  0656 1731  0646 1801  0614 1830  0528 1859  0445 1929  0419 1957  0421 2007  0445 1947  0513 1905  0539 1818  0608 1738  0638 1720
