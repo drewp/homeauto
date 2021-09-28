@@ -25,26 +25,26 @@ ha:kitchenPiTemp a :OnboardTemperature;
     :predicate :temperatureF;
     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenPi"]] .
 
-pin:GPIO4 :gpioNumber 4; :connectedTo sensor:tempHumidKitchen .
-sensor:tempHumidKitchen a :TempHumidSensor;
-  :sees houseLoc:kitchenCounter;
-  :influxMeasurement [
-    :measurement "temperatureF";
-    :predicate :temperatureF;
-    :pointsAtLeastEvery 10;
-    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]], [
-    :measurement "humidity";
-    :predicate :humidity;
-    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]].
+# pin:GPIO4 :gpioNumber 4; :connectedTo sensor:tempHumidKitchen .
+# sensor:tempHumidKitchen a :TempHumidSensor;
+#   :sees houseLoc:kitchenCounter;
+#   :influxMeasurement [
+#     :measurement "temperatureF";
+#     :predicate :temperatureF;
+#     :pointsAtLeastEvery 10;
+#     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]], [
+#     :measurement "humidity";
+#     :predicate :humidity;
+#     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter"]].
 
-pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
-ow: a :OneWire; :connectedTo ow:dev-000003a5a94c .
-ow:dev-000003a5a94c a :TemperatureSensor;
-  :position houseLoc:kitchenCounter;
-  :influxMeasurement [
-    :measurement "temperatureF";
-    :predicate :temperatureF;
-    :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter_ds_test"]] .
+# pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
+# ow: a :OneWire; :connectedTo ow:dev-000003a5a94c .
+# ow:dev-000003a5a94c a :TemperatureSensor;
+#   :position houseLoc:kitchenCounter;
+#   :influxMeasurement [
+#     :measurement "temperatureF";
+#     :predicate :temperatureF;
+#     :tag [:key "host"; :value "kitchen"], [:key "location"; :value "kitchenCounter_ds_test"]] .
 
 pin:GPIO14 :gpioNumber 14; :connectedTo sensor:kitchenCounterButton1 .
 sensor:kitchenCounterButton1 a :Pushbutton .

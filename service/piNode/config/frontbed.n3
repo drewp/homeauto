@@ -36,8 +36,10 @@ pin:GPIO16 :gpioNumber 16; :connectedTo :frontBedPostSwitch5 . :frontBedPostSwit
 
 
 ha:frontbedPiTemp a :OnboardTemperature;
-  :influxMeasurement "temperatureF";
-  :influxTag [:key "location"; :value "frontbedPi"] .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "frontbed"], [:key "location"; :value "frontbedPi"]] .
 
 # pin number ignored; see /boot/config.txt
 pin:GPIO17 :gpioNumber 17; :connectedTo ow: .
@@ -89,7 +91,7 @@ pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
 :loftDeskStatus
   :startIndex 0;
   :endIndex 0;
-  :src "crib50.png";
+  :src "crib50.2.png";
   :x 0;
   :y 0;
   :height 1;
@@ -98,7 +100,7 @@ pin:GPIO18 :gpioNumber 18; :connectedTo :frontbedRgb .
 :loftDeskStrip
   :startIndex 1;
   :endIndex 50;
-  :src "crib50.png";
+  :src "crib50.2.png";
   :x 0;
   :y 0;
   :height 50;

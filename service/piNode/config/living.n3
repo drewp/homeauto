@@ -16,11 +16,13 @@ ha:piLiving a :PiBoard;
     pin:GPIO18,
     pin:GPIO4,
     pin:GPIO27,
+    pin:GPIO24,
     pin:GPIO22 .
 
 pin:GPIO17 :gpioNumber 17; :connectedTo sensor:tempHumidLivingRoomCeiling .
 pin:GPIO4  :gpioNumber 4;  :connectedTo :livingRoomLamp1 .
 pin:GPIO27 :gpioNumber 27; :connectedTo :livingRoomLamp2 .
+pin:GPIO24 :gpioNumber 24; :connectedTo :livingRoomLamp3 .
 pin:GPIO22 :gpioNumber 22; :connectedTo :bookSwitch .
 
 
@@ -59,4 +61,5 @@ sensor:tempHumidLivingRoomCeiling a :TempHumidSensor;
 
 :livingRoomLamp1 a :LedOutput .
 :livingRoomLamp2 a :LedOutput .
+:livingRoomLamp3 a :LedOutput .
 :bookSwitch a :Pushbutton; :style :inverted .

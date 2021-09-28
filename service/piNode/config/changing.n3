@@ -13,7 +13,8 @@ ha:piChanging a :PiBoard;
   :hasPin
     pin:GPIO4,
     pin:GPIO17,
-    pin:GPIO18 .
+    pin:GPIO18;
+  :hasI2cBus pin:I2cBus1 .
 
 ha:changingPiTemp a :OnboardTemperature;
   :influxMeasurement [
@@ -54,3 +55,10 @@ pin:GPIO18 :connectedTo :changingRgb .
   :height 6;
   :interpolate :slide;
   :rate 30 . # px/sec
+
+pin:I2cBus1 :connectedTo :babyMobileLights .
+:babyMobileLights a :PwmBoard;
+  :output
+    [:area :red; :channel 13],
+    [:area :led14; :channel 14],
+    [:area :led15; :channel 15] .

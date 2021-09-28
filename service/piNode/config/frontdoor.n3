@@ -28,8 +28,10 @@ ha:piFrontdoor a :PiBoard;
     pin:GPIO18 .   #
 
 ha:frontdoorPiTemp a :OnboardTemperature;
-  :influxMeasurement "temperatureF";
-  :influxTag [:key "location"; :value "frontdoorPi"] .
+  :influxMeasurement [
+    :measurement "temperatureF";
+    :predicate :temperatureF;
+    :tag [:key "host"; :value "frontdoor"], [:key "location"; :value "frontdoorPi"]] .
 
 pin:GPIO22 :gpioNumber 22; :connectedTo :frontDoorScreenButton1 . :frontDoorScreenButton1 a :Pushbutton .
 pin:GPIO27 :gpioNumber 27; :connectedTo :frontDoorScreenButton2 . :frontDoorScreenButton2 a :Pushbutton .

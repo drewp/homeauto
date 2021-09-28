@@ -8,6 +8,9 @@
 @prefix pin: <http://bigasterisk.com/homeauto/piBed/pin/> .
 @prefix ow:  <http://bigasterisk.com/homeauto/piBed/oneWire/> .
 
+# on cable from buttons, black is gnd, other 2 are the buttons.
+
+
 ha:piBed a :PiBoard;
   :hostname "bed";
   :onboardDevice ha:bedroomPiTemp;

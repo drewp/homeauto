@@ -9,6 +9,8 @@ from docopt import docopt
 import etcd3
 from greplin import scales
 from greplin.scales.cyclonehandler import StatsHandler
+import os
+#os.environ['PIGPIO_ADDR'] = 'pigpio' # (aka the docker host)
 import pigpio
 import treq
 
@@ -34,15 +36,18 @@ STATS = scales.collection('/root',
                           scales.PmfStat('pollAll'),
                           scales.PmfStat('sendOneshot'),
                           scales.PmfStat('outputStatements'),
-
+                          scales.IntStat('oneshotSuccess'),
+                          scales.IntStat('oneshotFail'),
 )
 
 class Config(object):
-    def __init__(self, masterGraph, hubHost):
-        self.etcd = etcd3.client(host=hubHost, port=9022)
+    def __init__(self, masterGraph):
+        log.info('connect to etcd-homeauto')
+        self.etcd = etcd3.client(host='etcd-homeauto', port=9022)
+        log.info('version %r', self.etcd.status().version)
+
 
         self.masterGraph = masterGraph
-        self.hubHost = hubHost
         self.configGraph = ConjunctiveGraph()
         self.boards = []
         self.etcPrefix = 'pi/'
@@ -96,7 +101,7 @@ class Config(object):
             return
 
         log.info("found config for board %r" % thisBoard)
-        self.boards = [Board(self.configGraph, self.masterGraph, thisBoard, self.hubHost)]
+        self.boards = [Board(self.configGraph, self.masterGraph, thisBoard)]
 
 
 class DeviceRunner(object):
@@ -175,11 +180,30 @@ class DeviceRunner(object):
             self.dev.sendOutput(stmts)
         self.syncMasterGraphToHostStatements()
 
+def sendOneshot(oneshot):
+    body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
+                     for s,p,o in oneshot)).encode('utf8')
+    url = 'http://reasoning:9071/oneShot'
+    log.debug('post to %r', url)
+    d = treq.post(
+              url=url.encode('ascii'),
+              headers={b'Content-Type': [b'text/n3']},
+              data=body,
+              timeout=5)
+
+    def ok(k):
+        log.debug('sendOneshot to %r success', url)
+        STATS.oneshotSuccess += 1
+    def err(e):
+        log.info('oneshot post to %r failed:  %s',
+                 url, e.getErrorMessage())
+        STATS.oneshotFail += 1
+    d.addCallbacks(ok, err)
+
 class Board(object):
     """similar to arduinoNode.Board but without the communications stuff"""
-    def __init__(self, graph, masterGraph, uri, hubHost):
+    def __init__(self, graph, masterGraph, uri):
         self.graph, self.uri = graph, uri
-        self.hubHost = hubHost
         self.masterGraph = masterGraph
 
         self.masterGraph.setToGraph(self.staticStmts())
@@ -192,18 +216,7 @@ class Board(object):
 
     @STATS.sendOneshot.time()
     def sendOneshot(self, oneshot):
-        body = (' '.join('%s %s %s .' % (s.n3(), p.n3(), o.n3())
-                         for s,p,o in oneshot)).encode('utf8')
-        url = 'http://%s:9071/oneShot' % self.hubHost
-        d = treq.post(
-                  url=url.encode('ascii'),
-                  headers={b'Content-Type': [b'text/n3']},
-                  data=body,
-                  timeout=5)
-        def err(e):
-            log.info('oneshot post to %r failed:  %s',
-                     url, e.getErrorMessage())
-        d.addErrback(err)
+        sendOneshot(oneshot)
 
     @STATS.outputStatements.time()
     def outputStatements(self, stmts: set):
@@ -221,7 +234,7 @@ class Board(object):
                 raise NotImplementedError(f'dev {devRunner.dev.uri} wanted only {wanted}')
         else:
             log.info("Board %s doesn't care about these statements:", self.uri)
-            for s in unused:
+            for s in unwanted:
                 log.warn("%r", s)
 
     def staticStmts(self):
@@ -274,7 +287,6 @@ def main():
 
     -v           Verbose
     --ow         Just report onewire device URIs and readings, then exit.
-    --hub=HOST   Hostname for etc3 and oneshot posts. [default: bang.vpn-home.bigasterisk.com]
     """)
     verboseLogging(arg['-v'])
 
@@ -287,7 +299,7 @@ def main():
     patchRandid()
 
     masterGraph = PatchableGraph()
-    config = Config(masterGraph, arg['--hub'])
+    config = Config(masterGraph)
 
     static = pkg_resources.resource_filename('homeauto_anynode', 'static/')
 
@@ -304,4 +316,5 @@ def main():
     log.warn('serving on 9059')
     reactor.run()
 
-main()
+if __name__ == '__main__':
+    main()
