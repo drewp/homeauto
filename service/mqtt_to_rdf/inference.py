@@ -348,22 +348,19 @@ class Lhs:
                 yield perm
 
     def _advanceTheStack(self, looperRings: List[ChunkLooper]) -> bool:
-
-        carry = True  # last elem always must advance
-        for i, ring in reversed(list(enumerate(looperRings))):
-            # unlike normal odometer, advancing any earlier ring could invalidate later ones
-            if carry:
-                odolog.debug(f'{INDENT*4} advanceAll [ring={i}] {ring} carry/advance')
-                ring.advance()
-                carry = False
-            if ring.pastEnd():
-                if ring is looperRings[0]:
-                    allRingsDone = [r.pastEnd() for r in looperRings]
-                    odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} says we done   {allRingsDone=}')
+        toRestart: List[ChunkLooper] = []
+        pos = len(looperRings) - 1
+        while True:
+            looperRings[pos].advance()
+            if looperRings[pos].pastEnd():
+                if pos == 0:
                     return True
-                odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} restart')
-                ring.restart()
-                carry = True
+                toRestart.append(looperRings[pos])
+                pos -= 1
+            else:
+                break
+        for ring in reversed(toRestart):
+            ring.restart()
         return False
 
     def _assertAllRingsAreValid(self, looperRings):
