@@ -1,4 +1,11 @@
 """
+currently:
+- serves simple.html
+- listens for simple POST requests
+- syncs mqtt frontdoorlock/switch/strike/state into an rdf graph
+- listens for PUT /output with a request for :frontDoorLock :state :unlocked
+
+------
 this service is generalized by mqtt_graph_bridge and rdf_from_mqtt, so delete when those are stable
 
 :frontDoorLock :state :locked/:unlocked
@@ -52,8 +59,8 @@ class OutputPage(cyclone.web.RequestHandler):
     def put(self):
         try:
             user = requestUser(self.request)
-        except KeyError:
-            log.warn('request without x-foaf-agent: %s', h)
+        except KeyError as e:
+            log.warn('request without x-foaf-agent: %r', e)
             self.set_status(403, 'need x-foaf-agent')
             return
         arg = self.request.arguments
@@ -87,7 +94,7 @@ class SimpleState(cyclone.web.RequestHandler):
         try:
             user = requestUser(self.request)
         except KeyError:
-            log.warn('request without x-foaf-agent: %s', h)
+            log.warn('request without x-foaf-agent: %s', self.request.headers)
             self.set_status(403, 'need x-foaf-agent')
             return
 
@@ -170,7 +177,7 @@ class BluetoothButton(cyclone.web.RequestHandler):
     def post(self):
         body = json.loads(self.request.body)
         log.info('POST bluetoothButton %r', body)
-        if body['addr'] == 'zz:zz:zz:zz:zz:zz' and body['key'] == 'top':
+        if body['addr'] == 'B8:27:EB:95:BE:1C' and body['key'] == 'top':
             log.info('unlock for %r', body['addr'])
             self.settings.mqtt.publish(
                 espName + b"/switch/strike/command", b'ON')

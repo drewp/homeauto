@@ -11,8 +11,8 @@ switch:
     name: "strike"
 
 wifi:
-  ssid: ''
-  password: ''
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
 
 mqtt:
   broker: '10.2.0.1'
