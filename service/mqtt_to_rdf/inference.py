@@ -200,20 +200,6 @@ class ChunkLooper:
         finally:
             debug(ringlog, self.slog, f'{INDENT*7} ChunkLooper{self._shortId} restarts: pastEnd={self.pastEnd()}')
 
-    def prevMayHaveChanged(self):
-        pass
-        # self._advanceWithFunctions()
-        # This is a total patch for a test failure. This should be generalized
-        # to a Looper that can keep itself correct when prev changes.
-        # if self.pastEnd():
-        #     self.restart()
-        # else:
-        #     self.advance()
-        # if self._currentIsFromFunc:
-        #     self._advanceWithFunctions()
-        #     if self.pastEnd():
-        #         self.restart()
-
 
 @dataclass
 class Lhs:
@@ -225,6 +211,7 @@ class Lhs:
 
     def __repr__(self):
         return f"Lhs({self.graph!r})"
+
     def findCandidateBindings(self, knownTrue: ChunkedGraph, stats, slog: Optional[StructuredLog],
                               ruleStatementsIterationLimit) -> Iterator['BoundLhs']:
         """distinct bindings that fit the LHS of a rule, using statements from
@@ -362,17 +349,12 @@ class Lhs:
 
     def _advanceTheStack(self, looperRings: List[ChunkLooper]) -> bool:
 
-        def freshenRight(i):
-            for ring in looperRings[i + 1:]:
-                ring.prevMayHaveChanged()
-
         carry = True  # last elem always must advance
         for i, ring in reversed(list(enumerate(looperRings))):
             # unlike normal odometer, advancing any earlier ring could invalidate later ones
             if carry:
                 odolog.debug(f'{INDENT*4} advanceAll [ring={i}] {ring} carry/advance')
                 ring.advance()
-                freshenRight(i)
                 carry = False
             if ring.pastEnd():
                 if ring is looperRings[0]:
@@ -381,7 +363,6 @@ class Lhs:
                     return True
                 odolog.debug(f'{INDENT*5} advanceAll [ring={i}] {ring} restart')
                 ring.restart()
-                freshenRight(i)
                 carry = True
         return False
 
