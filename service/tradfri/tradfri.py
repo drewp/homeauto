@@ -106,7 +106,7 @@ class Hub(object):
                 #import ipdb;ipdb.set_trace()
 
                 lightUri = devUri(dev)
-                print lc.raw
+                print(lc.raw)
                 if not lc.raw[0][ATTR_LIGHT_STATE]:
                     level = 0
                 else:
