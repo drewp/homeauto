@@ -1,3 +1,30 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mqtt-to-rdf-data
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  hostPath:
+    path: "/my/proj/homeauto/service/mqtt_to_rdf/conf"
+  capacity: { storage: 1Mi }
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  claimRef: { namespace: default, name: mqtt-to-rdf-data }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mqtt-to-rdf-data
+spec:
+  storageClassName: ""
+  volumeName: "mqtt-to-rdf-data"
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Mi
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +44,16 @@ spec:
           image: bang5:5000/mqtt_to_rdf_image
           imagePullPolicy: "Always"
           ports:
-          - containerPort: 10018
+            - containerPort: 10018 
+          volumeMounts:
+            - { name: data, mountPath: "/opt/conf" }
+          # resources:
+          #   limits:
+          #     cpu: "2"
+          #     memory: 100Mi
+      volumes:
+        - { name: data, persistentVolumeClaim: { claimName: mqtt-to-rdf-data } }
+
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

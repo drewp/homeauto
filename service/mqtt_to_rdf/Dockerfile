@@ -15,6 +15,5 @@ COPY src/ ./src
 RUN pnpm build
 
 COPY *.py *.html ./
-COPY conf/ ./conf
 
-CMD [ "python3", "./mqtt_to_rdf.py", "-v" ]
+CMD [ "python3", "./mqtt_to_rdf.py", "-v", "--cs=rules" ]
