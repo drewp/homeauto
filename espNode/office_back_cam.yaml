@@ -10,19 +10,24 @@
 
 # bang(pts/15):/my/proj/homeauto/espNode% catchsegv ./readcam.py --cam office_back_cam  --port 10021
 
-
+#red esp-tx
+#ora esp-rx
+#nc
+#blu gpio0
+#yel 3v3
+#nc
 
 esphome:
-  name: office_back_cam
+  name: workshop_cam
   platform: ESP32
   board: esp32cam
-  build_path: build
+  build_path: office_back_cam
 
 wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   domain: ''
-  use_address: '10.2.0.35'
+  use_address: 10.2.0.39
 
 mqtt:
   broker: '10.2.0.1'
@@ -36,84 +41,29 @@ logger:
   
 ota:
 
-api:
-  port: 6053
-  password: 'MyPassword'
-  
-# https://randomnerdtutorials.com/esp32-cam-ai-thinker-pinout/
-esp32_camera:
-  external_clock:
-    pin: GPIO0
-    frequency: 20MHz
-  i2c_pins:
-    sda: GPIO26
-    scl: GPIO27
-  data_pins: [GPIO5, GPIO18, GPIO19, GPIO21, GPIO36, GPIO39, GPIO34, GPIO35]
-  vsync_pin: GPIO25
-  href_pin: GPIO23
-  pixel_clock_pin: GPIO22
-  power_down_pin: GPIO32
-
-  name: camera
-
-  # https://github.com/esphome/esphome/blob/dev/esphome/components/esp32_camera/esp32_camera.cpp#L265 says a 'stream' is 5 sec long
-
-  # setting to 5 causes 'Setup Failed: ERROR'
-  max_framerate: 4 fps
-  # https://github.com/raphaelbs/esp32-cam-ai-thinker#capabilities says camera
-  # is likely ov2640 with these native resolutions:
-  # uxga=1600x1200 svga=800x600 cif=400x296
-  
-  #   160x120 (QQVGA)    'Got invalid frame', then no more
-  #   128x160 (QQVGA2)
-  #   176x144 (QCIF)     fps: 25 jpg: 20 img: 2KB burst of frames then stopped. 
-  #                      fps: 20 jpg: 20 no frames
-  #   240x176 (HQVGA)
-  #   320x240 (QVGA)     fps: 10 jpg: 20 some frames, 4.5KB
-  #   400x296 (CIF)
-  #   640x480 (VGA)      fps: 4 jpg: 10 works,  20KB
-  #   800x600 (SVGA)
-  #   1024x768 (XGA)
-  #   1280x1024 (SXGA)   fps: 1  works
-  #   1600x1200 (UXGA)
-
-  resolution: 640x480
-  
-  # 10 to 63. default=10. higher is
-  # worse. https://github.com/esphome/esphome/blob/6682c43dfaeb1c006943ae546145e5f22262cadb/esphome/components/esp32_camera/__init__.py#L84
-  # sets the lower limit to 10, but
-  # https://github.com/raphaelbs/esp32-cam-ai-thinker/blob/master/components/ov2640/sensors/ov2640.c#L345
-  # suggests that it might be 0 (for an ov2640, anyway).
-  jpeg_quality: 10
- 
-output:
-  - platform: gpio
-    pin: GPIO4
-    id: gpio_4
-
-light:
-  - platform: fastled_clockless
-    chipset: WS2812B
-    pin: GPIO13
-    num_leds: 1
-    rgb_order: GRB
-    name: "strip"
-  # - platform: monochromatic
-  #   name: "flash"
-  #   output: flash_out
-  - platform: binary
-    output: gpio_4
-    name: flash
+# light:
+#   - platform: fastled_clockless
+#     chipset: WS2812B
+#     pin: GPIO13
+#     num_leds: 1
+#     rgb_order: GRB
+#     name: "strip"
+#   # - platform: monochromatic
+#   #   name: "flash"
+#   #   output: flash_out
+#   - platform: binary
+#     output: gpio_4
+#     name: flash
 
   
-dallas:
-  - pin: GPIO15
-    update_interval: 10s
+# dallas:
+#   - pin: GPIO15
+#     update_interval: 10s
 
-sensor:
-  - platform: dallas
-    index: 0
-    name: temperature
+# sensor:
+#   - platform: dallas
+#     index: 0
+#     name: temperature
 
 # output:
 #   - platform: ledc

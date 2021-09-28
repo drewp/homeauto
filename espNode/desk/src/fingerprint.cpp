@@ -31,13 +31,12 @@ void BlinkSuccess() {
   finger.led_control(led_breathe, led_medium, led_purple, led_forever);
 }
 void BlinkClearSuccess() {
-  finger.led_control(led_breathe, led_medium, led_purple, 1);
+  finger.led_control(led_breathe, led_medium, led_purple, /*times=*/1);
 }
 void BlinkError() {
   finger.led_control(led_flash, led_medium, led_red, /*times=*/3);
   delay(500);
 }
-void BlinkDoorUnlocked() {}
 void BlinkStartEnroll() {
   finger.led_control(led_flash, led_slow, led_blue, led_forever);
 }
@@ -45,7 +44,7 @@ void BlinkStartEnrollRepeat() {
   finger.led_control(led_flash, led_medium, led_blue, led_forever);
 }
 void BlinkClearEnroll() {
-  finger.led_control(led_flash, led_slow, led_blue, 1);
+  finger.led_control(led_flash, led_slow, led_blue, /*times=*/1);
 }
 
 void (*queued)() = nullptr;
@@ -56,7 +55,7 @@ void ExecuteAnyQueued() {
     queued = nullptr;
   }
 }
-
+namespace {
 bool NeedToGetBackToMainLoopSoon() {
   return mqtt::HasPendingMessage() || queued;
 }
@@ -127,6 +126,9 @@ void LogFpmError(const std::string& log_mode, const std::string& caller,
       break;
     case FPM_DBREADFAIL:
       errStr = "Invalid model";
+      break;
+    case FPM_DBCLEARFAIL:
+      errStr = "Could not clear database";
       break;
     default:
       char buf[100];
@@ -203,7 +205,7 @@ void ReportFoundMatch(uint16_t fid, uint16_t score) {
   snprintf(msg, sizeof(msg), "Found id %d confidence %d", fid, score);
   LogDetect(msg);
 }
-
+}  // namespace
 void ScanLoop() {
   const std::string& log_mode = "scan";
   if (!GetImage(log_mode)) {
@@ -221,7 +223,7 @@ void ScanLoop() {
 
   ReportFoundMatch(fid, score);
 }
-
+namespace {
 bool get_free_id(const std::string& log_mode, int16_t* fid) {
   int16_t p = -1;
   for (int page = 0; page < (params.capacity / FPM_TEMPLATES_PER_PAGE) + 1;
@@ -305,7 +307,7 @@ void enroll_finger(const std::string& log_mode, int16_t fid) {
     return EnrollFailed(log_mode);
   }
 }
-
+}  // namespace
 void Enroll() {
   const std::string log_mode = "enroll";
   BlinkStartEnroll();
@@ -425,7 +427,14 @@ void DeleteModel(uint16_t fid) {
   }
 }
 
-void DeleteAll() {}
+void DeleteAll() {
+  int16_t p = finger.emptyDatabase();
+  if (p == FPM_OK) {
+    LogStore("Database cleared");
+  } else {
+    LogFpmError("deleteAll", "emptyDatabase", p);
+  }
+}
 
 void Setup() {
   fserial.begin(57600, SERIAL_8N1, 26 /*rx*/, 27 /*tx*/);

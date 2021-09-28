@@ -14,7 +14,7 @@ extern "C" {
 namespace mqtt {
 
 void Setup();
-void Publish(std::string subtopic, std::string msg);
+void Publish(const std::string& subtopic, const std::string& msg);
 void StopTimer();
 void ConnectToMqtt();
 bool HasPendingMessage();

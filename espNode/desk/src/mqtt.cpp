@@ -37,12 +37,15 @@ fingerprint/set/model/<fid> = binary model data
 
 Published from MCU:
 
+mode in {scan, enroll, download, setModel, deleteModel}
+
 fingerprint/<mode>/status = junk
 fingerprint/<mode>/error/<caller> = FPM error message
 fingerprint/store = some change to fingerprint storage
 fingerprint/detect = input finger
 fingerprint/model/<fid> = binary model data
 fingerprint/image/<fid> = binary image data
+fingerprint/temperature = "%.3fC"
 */
 void Publish(const std::string& subtopic, const std::string& msg) {
   std::string topic = "fingerprint/" + subtopic;
@@ -61,6 +64,7 @@ void SendTemperature() {
   snprintf(buf, sizeof(buf), "%.3fC", temp_c);
   mqttClient.publish("fingerprint/temperature", 1, /*retain=*/true, buf);
 }
+
 void onMqttConnect(bool sessionPresent) {
   Serial.println("Connected to MQTT.");
   Serial.print("Session present: ");
