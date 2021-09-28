@@ -1,4 +1,4 @@
-FROM bang6:5000/base_x86
+FROM bang5:5000/base_x86
 
 WORKDIR /opt
 
@@ -9,7 +9,7 @@ RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url
 # not sure why this doesn't work from inside requirements.txt
 RUN pip3 install --index-url https://projects.bigasterisk.com/ --extra-index-url https://pypi.org/simple -U 'https://github.com/drewp/cyclone/archive/python3.zip?v2'
 
-COPY *.py *.n3 *.html *.js  ./
+COPY *.py *.n3 *.html *.js *.mustache ./
 COPY build/ ./build
 
 EXPOSE 9070
